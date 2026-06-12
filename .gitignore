@@ -9,3 +9,4 @@ __pycache__/
 .terraform/
 *.tfstate*
 backend/.env
+frontend/dist/
