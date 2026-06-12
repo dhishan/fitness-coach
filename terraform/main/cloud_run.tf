@@ -48,7 +48,7 @@ resource "google_cloud_run_v2_service" "backend" {
       }
       env {
         name  = "CORS_ORIGINS"
-        value = jsonencode(["http://localhost:5173", "https://${var.ui_domain}"])
+        value = jsonencode(["http://localhost:5173", "https://${var.ui_domain}", "https://fitness-tracker-ble.web.app"])
       }
       env {
         name = "JWT_SECRET_KEY"
