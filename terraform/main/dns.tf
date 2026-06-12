@@ -17,7 +17,7 @@ resource "cloudflare_record" "ui" {
   zone_id = var.cloudflare_zone_id
   name    = "ui.fitness-tracker"
   type    = "CNAME"
-  content = "fitness-tracker-ui.web.app"
+  content = "fitness-tracker-ble.web.app"
   proxied = false
 }
 

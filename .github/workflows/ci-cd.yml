@@ -95,5 +95,5 @@ jobs:
           VITE_BUILD_ID: ${{ github.sha }}
         run: npm run -w frontend build
       - name: Deploy to Firebase Hosting
-        run: npx firebase-tools@13 deploy --only hosting:fitness-tracker-ui --project personal-projects-473219
+        run: npx firebase-tools@13 deploy --only hosting:fitness-tracker-ble --project personal-projects-473219
         working-directory: frontend

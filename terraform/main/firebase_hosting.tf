@@ -1,7 +1,7 @@
 resource "google_firebase_hosting_site" "ui" {
   provider = google-beta
   project  = var.project_id
-  site_id  = "fitness-tracker-ui"
+  site_id  = "fitness-tracker-ble"
 }
 
 resource "google_firebase_hosting_custom_domain" "ui" {
