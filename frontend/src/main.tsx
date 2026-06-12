@@ -8,3 +8,10 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const buildId = import.meta.env.VITE_BUILD_ID ?? 'dev'
+    navigator.serviceWorker.register(`/sw.js?v=${buildId}`).catch(() => {})
+  })
+}

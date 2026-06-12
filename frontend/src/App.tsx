@@ -10,6 +10,7 @@ import History from './pages/History'
 import HistoryDetail from './pages/HistoryDetail'
 import Coach from './pages/Coach'
 import SettingsSheet from './components/SettingsSheet'
+import UpdateBanner from './components/UpdateBanner'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -127,6 +128,7 @@ function AuthedLayout() {
       </nav>
 
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <UpdateBanner />
     </div>
   )
 }
