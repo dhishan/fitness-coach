@@ -66,6 +66,28 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
+      env {
+        name = "LANGFUSE_PUBLIC_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.langfuse_public.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "LANGFUSE_SECRET_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.langfuse_secret.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "LANGFUSE_BASE_URL"
+        value = "https://us.cloud.langfuse.com"
+      }
     }
   }
   lifecycle {
