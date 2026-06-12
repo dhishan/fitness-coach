@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import Workout from './pages/Workout'
 import History from './pages/History'
+import HistoryDetail from './pages/HistoryDetail'
 import Coach from './pages/Coach'
 import SettingsSheet from './components/SettingsSheet'
 
@@ -99,6 +100,7 @@ function AuthedLayout() {
           <Route path="/" element={<Home />} />
           <Route path="/workout" element={<Workout />} />
           <Route path="/history" element={<History />} />
+          <Route path="/history/:id" element={<HistoryDetail />} />
           <Route path="/coach" element={<Coach />} />
         </Routes>
       </main>
