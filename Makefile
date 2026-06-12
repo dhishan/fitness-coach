@@ -4,7 +4,7 @@ TF_ENV?=prod
 .PHONY: backend-install backend-dev backend-test terraform-init terraform-plan terraform-apply
 
 backend-install: ## install backend deps into .venv
-	cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+	cd backend && python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 
 backend-dev: ## run backend locally
 	cd backend && .venv/bin/uvicorn app.main:app --reload --port 8000
