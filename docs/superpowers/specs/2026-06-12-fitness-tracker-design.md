@@ -103,9 +103,10 @@ GET  /dashboard/exercise/{id}           top-set weight + volume series
 GET  /dashboard/muscle-split            ?weeks=N
 
 POST /chat/start                        spawn generation, return ids
-GET  /chat/conversations
-GET  /chat/conversations/{c}
+GET  /chat/conversations                history list incl. per-conversation cost
+GET  /chat/conversations/{c}            turns incl. per-turn token/cost
 GET  /chat/conversations/{c}/turns/{t}/stream?from_seq=N   resumable SSE
+GET  /usage/summary                     ?month=YYYY-MM  monthly tokens + cost
 ```
 
 Chat transport (proven pattern from expense-tracker `chat.py` lines ~2290-2403, `chat_store.py`, `mobile/src/services/api.ts`):
@@ -117,7 +118,7 @@ Chat transport (proven pattern from expense-tracker `chat.py` lines ~2290-2403, 
 
 Client autosaves via `PUT /workouts/{id}` after every set entry.
 
-Phase 2: MCP via **FastMCP sub-app mounted at `/mcp`** on the same FastAPI instance, streamable HTTP transport, session manager wired into the app lifespan (pattern: expense-tracker `backend/app/mcp_server.py` + `main.py`). Auth middleware resolves the user in priority order: Cloudflare Access JWT header -> app-issued bearer JWT -> dev-only `X-Mcp-User-Id` header (ENVIRONMENT=development only); resolved user stashed in a ContextVar. Tools wrap existing service functions: `log_workout`, `get_workouts`, `get_exercise_progress`, `get_alternatives`, `get_dashboard_summary`. Phase 2 also adds the model-routing layer (see Architecture).
+Phase 2: MCP via **FastMCP sub-app mounted at `/mcp`** on the same FastAPI instance (streamable HTTP, session manager in app lifespan - pattern: expense-tracker `backend/app/mcp_server.py` + `main.py`), exposed publicly on its **own subdomain `mcp.fitness-tracker.blueelephants.org`** (dedicated Cloud Run domain mapping to the same service; Cloudflare DNS record `proxied = true` so Cloudflare Access injects its JWT; the plain API CNAME stays unproxied). Domain mapping created manually once, then terraform-imported. Always authenticated - no anonymous access: auth middleware resolves the user in priority order: Cloudflare Access JWT (`Cf-Access-Jwt-Assertion`, RS256 hard-pinned, key-rotation retry) -> app-issued bearer JWT -> dev-only `X-Mcp-User-Id` (ENVIRONMENT=development only); resolved user stashed in a ContextVar; requests with no valid identity are rejected. Tools wrap existing service functions: `log_workout`, `get_workouts`, `get_exercise_progress`, `get_alternatives`, `get_dashboard_summary`. Phase 2 also adds the model-routing layer (see Architecture).
 
 ## Screens (web PWA and Expo, same nav)
 
@@ -125,7 +126,7 @@ Bottom tabs:
 1. **Home** - Start/Resume workout button; this-week strip (7 dots) + streak; last workout card; progress sections below: per-exercise charts (top-set weight + volume), weekly muscle-group volume split, PR list. Profile avatar top-right -> settings sheet (units, sign out).
 2. **Workout** - active session. Exercise picker (search, muscle chips, recent-first). Each exercise card: weight x reps rows with steppers, prefilled from last session, one tap confirms a repeated set; "last time" line under the name. Select 2+ exercises -> "Group as superset" (bracketed, alternating set order). Alternatives button per exercise -> ranked swap-in list. Finish -> summary (duration, volume, PRs hit).
 3. **History** - infinite-scroll list with real total (surgical cache updates on mutation, not invalidation); tap -> session detail; calendar heat toggle.
-4. **Coach** - conversation list + thread view, streaming responses, grounded in user data.
+4. **Coach** - chat history: conversation/session list (titles, last-updated, per-conversation cost) with resume; thread view with streaming responses, grounded in user data. **Cost/usage bubble**: each assistant turn shows a small token+cost chip (from the turn's usage event); conversation header shows running conversation cost; settings sheet links to a monthly usage summary (from `user_usage_summaries`).
 
 Empty states are honest ("No workouts yet. Start your first session."). No fake data anywhere. PWA: safe-area insets on sticky header and bottom nav; solid-background icons (192/512/180).
 
@@ -160,6 +161,22 @@ Cards sit on the dotted field as solid white surfaces. Muscle-group chips get a 
 - E2E: dedicated test Google account (`GOOGLE_TEST_REFRESH_TOKEN` secret), global-setup exchanges token -> wipes data; http/https `clientFor(url)` helper in all four Playwright infra files from the start; `waitForResponse` for saves; `networkidle` after navigation; `retries: process.env.CI ? 1 : 0`.
 
 **Error handling:** side-effect work isolated in try/except so failures never become CORS-less 500s. CORS allow_origins includes localhost:5173 and the prod UI domain from day one.
+
+## Lessons applied from expense-tracker code analysis
+
+Full analysis: `docs/superpowers/research/2026-06-12-expense-tracker-code-analysis.md`. Binding decisions for this app:
+
+- Chat backend split from day one: `app/chat/tools/definitions.py`, `app/chat/tools/executor.py` (registry, not elif), `app/chat/generation.py`, thin `app/routers/chat.py`.
+- **Shared types workspace package** (`packages/shared-types`) imported by web and mobile - replaces the manual mirror convention (which demonstrably drifted in the sibling repo).
+- Usage recorded once per logical turn (accumulated across agentic sub-turns, written in finally block) - the sibling double-counts.
+- SSE reconnect with backoff on BOTH web and mobile; streamed messages keyed by server-assigned turn id, never array index.
+- All Firestore calls in async paths via `asyncio.to_thread`, including the auth dependency.
+- All CORS origins from Settings, none hardcoded.
+- E2E setup uses `API_URL` consistently (no hardcoded prod host) and Playwright's `request` fixture instead of raw node http/https.
+- Lint failures fail CI (no `|| true`); no timer-coupled `waitForTimeout` assertions.
+- Expo `runtimeVersion.policy: nativeBuildVersion`; PWA service worker `prompt` mode with reload banner.
+- Babel `api.cache.forever()` outside tests; pin NativeWind-related versions.
+- Terraform: exact provider pins; firestore indexes split per feature file; `roles/firebasehosting.admin` granted explicitly; domain mappings manual-create + import.
 
 ## Open questions
 
