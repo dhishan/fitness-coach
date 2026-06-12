@@ -18,7 +18,9 @@ resource "google_cloud_run_v2_service" "backend" {
     containers {
       image = local.image
       resources {
-        cpu_idle = false
+        # CPU throttled when no request is active; SSE streams keep CPU allocated
+        # during chat generation. ~$3-8/mo idle vs ~$47/mo always-allocated.
+        cpu_idle = true
         limits = {
           cpu    = "1"
           memory = "512Mi"
