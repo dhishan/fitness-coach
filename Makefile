@@ -20,3 +20,6 @@ terraform-plan:
 
 terraform-apply:
 	terraform -chdir=$(TF_DIR) apply -auto-approve -var-file=../workspaces/$(TF_ENV)/terraform.tfvars
+
+seed-exercises: ## seed system exercise catalog (uses ADC; set FIRESTORE_DATABASE)
+	cd backend && .venv/bin/python scripts/seed_exercises.py
