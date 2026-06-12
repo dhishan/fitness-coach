@@ -654,9 +654,29 @@ export default function Workout() {
     try {
       const result = await workoutsApi.finish(workout.id)
       setFinishData(result)
-      // Invalidate dashboard and workouts list
+      // Invalidate dashboard summary; surgical cache update for the workouts infinite list
       void qc.invalidateQueries({ queryKey: ['dashboard'] })
-      void qc.invalidateQueries({ queryKey: ['workouts'] })
+      qc.setQueryData(
+        ['workouts'],
+        (old: { pages: { items: Workout[]; total: number }[]; pageParams: number[] } | undefined) => {
+          if (!old || old.pages.length === 0) return old // no cache yet: History fetches fresh
+          const { prs: _prs, ...finished } = result
+          const exists = old.pages.some((p) => p.items.some((w) => w.id === finished.id))
+          return {
+            ...old,
+            pages: old.pages.map((p, i) => {
+              if (exists) {
+                return { ...p, items: p.items.map((w) => (w.id === finished.id ? finished : w)) }
+              }
+              return {
+                ...p,
+                items: i === 0 ? [finished, ...p.items] : p.items,
+                total: p.total + 1,
+              }
+            }),
+          }
+        },
+      )
       void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
     } catch {
       toast.error('Could not finish workout')
