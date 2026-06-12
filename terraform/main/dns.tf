@@ -13,6 +13,14 @@ resource "cloudflare_record" "api" {
 #   terraform -chdir=terraform/main import \
 #     'google_cloud_run_domain_mapping.api' \
 #     'us-central1/api.fitness-tracker.blueelephants.org'
+resource "cloudflare_record" "ui" {
+  zone_id = var.cloudflare_zone_id
+  name    = "ui.fitness-tracker"
+  type    = "CNAME"
+  content = "fitness-tracker-ui.web.app"
+  proxied = false
+}
+
 resource "google_cloud_run_domain_mapping" "api" {
   name     = var.api_domain
   location = var.region
