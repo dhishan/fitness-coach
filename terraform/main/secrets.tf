@@ -22,3 +22,13 @@ resource "google_secret_manager_secret_iam_member" "jwt_secret_accessor" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
+
+data "google_secret_manager_secret" "openai_key" {
+  secret_id = "fitness-tracker-openai-key-prod"
+}
+
+resource "google_secret_manager_secret_iam_member" "openai_key_accessor" {
+  secret_id = data.google_secret_manager_secret.openai_key.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
