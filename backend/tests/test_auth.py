@@ -25,3 +25,15 @@ def test_auth_google_rejects_invalid_token(client, mock_db):
     with patch("app.auth.router.verify_google_id_token", side_effect=ValueError("bad")):
         r = client.post("/api/v1/auth/google", json={"id_token": "fake"})
     assert r.status_code == 401
+
+
+def test_verify_rejects_when_client_id_unconfigured(monkeypatch):
+    import pytest
+    from app.auth import google as g
+
+    class _S:
+        google_oauth_client_id = ""
+
+    monkeypatch.setattr(g, "get_settings", lambda: _S())
+    with pytest.raises(ValueError):
+        g.verify_google_id_token("any")
