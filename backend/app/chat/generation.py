@@ -37,7 +37,12 @@ def generate_turn_sync(user_id: str, conv_id: str, turn_id: str,
 
     try:
         for _ in range(MAX_TOOL_ROUNDS):
-            resp = llm.complete(messages, tools=TOOLS)
+            resp = llm.complete(messages, tools=TOOLS, metadata={
+                "generation_name": "coach-turn",
+                "session_id": conv_id,
+                "trace_user_id": user_id,
+                "tags": ["fitness-chat"],
+            })
             usage = getattr(resp, "usage", None)
             total_in += getattr(usage, "prompt_tokens", 0) or 0
             total_out += getattr(usage, "completion_tokens", 0) or 0

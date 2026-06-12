@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
     openai_api_key: str = ""
     chat_model: str = "openai/gpt-5.5"
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_base_url: str = ""
     chat_max_events: int = 800
     chat_generation_timeout_s: int = 1800
 

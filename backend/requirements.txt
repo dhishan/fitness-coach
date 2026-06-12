@@ -6,3 +6,4 @@ google-auth==2.37.0
 requests==2.32.3
 PyJWT==2.10.1
 litellm==1.55.9
+langfuse==2.59.7
