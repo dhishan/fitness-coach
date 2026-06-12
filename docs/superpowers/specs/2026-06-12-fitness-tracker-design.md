@@ -1,0 +1,147 @@
+# Fitness Tracker - Design Spec
+
+- **Status:** approved (brainstorm 2026-06-12)
+- **Owner:** Dhishan (single-user app, iamdhishan@gmail.com)
+- **Reference architecture:** `/Users/dhishan/Projects/family-expense-tracker`
+
+## Purpose
+
+Personal fitness tracker. Daily drivers: strength workout logging and (later) nutrition. Built in vertical phases, web and mobile shipped together each phase. Includes an AI coach chat from day one and a remote MCP server (Phase 2) so workout data is usable from chat apps.
+
+## Phases
+
+| Phase | Scope |
+|---|---|
+| 1 | Strength logging (freeform, supersets, alternatives, history prefill), Home dashboard (progress charts, weekly frequency, muscle split, streaks, PRs), Coach chat (durable SSE), full infra + CI + E2E. Web PWA + Expo mobile. |
+| 2 | Remote MCP endpoint (`/mcp`, streamable HTTP, bearer token) exposing workout data and logging tools to claude.ai / Claude Desktop / Claude Code. |
+| 3 | Nutrition: AI photo/text food estimation (Haiku), quick-add favorites. Later in phase: food database search. AI-suggested calorie/macro targets, user approves. |
+| 4 | HealthKit sync (native Expo module), cardio tracking, body metrics, barcode scanning. |
+
+Out of scope until needed: multi-user, social features, offline sync, admin layer, RAG.
+
+## Architecture
+
+- **Backend:** FastAPI on Cloud Run, service `fitness-tracker-backend`, project `personal-projects-473219`, region `us-central1`. Domain `api.fitness-tracker.blueelephants.org` (Cloud Run domain mapping, created manually once then terraform-imported).
+- **Web:** React + Vite + TypeScript + Tailwind + React Query + Zustand. PWA (manual setup, no vite-plugin-pwa). Firebase Hosting at `ui.fitness-tracker.blueelephants.org`.
+- **Mobile:** Expo SDK 53, bundle id `org.blueelephants.fitnesstracker`, scheme `fitness://`. Types manually mirrored from `frontend/src/types/index.ts` to `mobile/src/types/index.ts`.
+- **Data:** Firestore named DB `fitness-tracker-dev` (never `(default)`).
+- **Auth:** Google sign-in -> backend JWT. Allowlist: owner's email only.
+- **AI:** Claude API. Sonnet 4.6 for coach chat; Haiku 4.5 for cheap classification/estimation (Phase 3). Opus only for explicitly requested deep analysis. System prompt instructs brief responses unless asked for a deep dive. Langfuse tracing via `langfuse.langchain` (v3 import).
+
+## Data model (Phase 1)
+
+All docs denormalize `user_id`. Dates: `YYYY-MM-DD` local-date string (`toLocalISODate`) for "which day it counts toward" plus UTC timestamps for ordering. Dashboard endpoints accept `reference_date` from clients.
+
+```
+users/{uid}
+  email, display_name, created_at
+  preferred_units: "kg" | "lb"
+
+exercises/{id}
+  user_id                  # "system" for seeded catalog
+  name
+  primary_muscles: [str]   # e.g. ["chest","triceps"]
+  secondary_muscles: [str]
+  movement_pattern: push | pull | squat | hinge | carry | core
+  equipment: barbell | dumbbell | machine | cable | bodyweight | other
+  is_custom: bool
+
+workouts/{id}
+  user_id
+  date                     # local date string
+  started_at, ended_at     # UTC; ended_at null while in progress
+  notes
+  exercise_ids: [str]      # flat array for array_contains queries
+  entries: [               # embedded, ordered
+    { exercise_id, exercise_name,        # name denormalized
+      superset_group: str | null,        # shared id = superset
+      sets: [ { weight, reps, rpe?, is_warmup? } ] }
+  ]
+  total_volume             # computed on finish: sum(weight*reps) working sets
+
+chat_conversations/{conv_id}            # durable chat pattern
+  user_id, title, created_at, updated_at
+  turns/{turn_id}: user_id, role, seq, content, status
+```
+
+Decisions:
+- Sets embedded in the workout doc (atomic saves, read as a unit, well under 1MB). `exercise_ids` flat array exists because Firestore cannot query inside arrays of maps.
+- Exercise history = `workouts where user_id == X and exercise_ids array_contains Y order by date desc limit 3`, sets extracted client-side.
+- Alternatives = catalog query: same `movement_pattern` + overlapping `primary_muscles`, ranked by overlap. No AI; works in the gym.
+- PRs/streaks computed on read by dashboard endpoints. No materialized aggregates yet.
+- In-progress workout = doc with `ended_at: null`; app resumes on reopen.
+
+Composite indexes (declared in Terraform from day one):
+- `workouts (user_id ASC, date DESC)`
+- `workouts (user_id ASC, exercise_ids array_contains, date DESC)`
+- `chat_conversations (user_id ASC, updated_at DESC)`
+
+No silent `except: return []` around Firestore queries - missing-index errors must surface.
+
+## API (Phase 1, /api/v1, JWT bearer)
+
+```
+POST /auth/google                       Google ID token -> backend JWT
+
+GET  /exercises                         ?muscle=&pattern=&q=
+POST /exercises                         create custom
+GET  /exercises/{id}/alternatives
+GET  /exercises/{id}/history            last N workouts' sets
+
+POST   /workouts                        start session or log after the fact
+GET    /workouts                        ?from=&to=  paginated, returns total
+GET    /workouts/active                 resume in-progress (ended_at null)
+GET    /workouts/{id}
+PUT    /workouts/{id}                   autosave entries/sets during session
+POST   /workouts/{id}/finish            sets ended_at, computes total_volume
+DELETE /workouts/{id}
+
+GET  /dashboard/summary                 ?week=&reference_date=
+GET  /dashboard/exercise/{id}           top-set weight + volume series
+GET  /dashboard/muscle-split            ?weeks=N
+
+POST /chat/start                        spawn generation, return ids
+GET  /chat/conversations
+GET  /chat/conversations/{c}
+GET  /chat/conversations/{c}/turns/{t}/stream?from_seq=N   resumable SSE
+```
+
+Chat specifics: 10s SSE keepalive comments; mobile re-opens stream on AppState foreground with last-seen seq; coach has tool access to the user's workout/dashboard service functions for data-grounded answers.
+
+Client autosaves via `PUT /workouts/{id}` after every set entry.
+
+Phase 2: `/mcp` (streamable HTTP) mounted on the same FastAPI app. Tools wrap existing service functions: `log_workout`, `get_workouts`, `get_exercise_progress`, `get_alternatives`, `get_dashboard_summary`. Auth: long-lived bearer token (per-device, revocable) checked by the MCP layer.
+
+## Screens (web PWA and Expo, same nav)
+
+Bottom tabs:
+1. **Home** - Start/Resume workout button; this-week strip (7 dots) + streak; last workout card; progress sections below: per-exercise charts (top-set weight + volume), weekly muscle-group volume split, PR list. Profile avatar top-right -> settings sheet (units, sign out).
+2. **Workout** - active session. Exercise picker (search, muscle chips, recent-first). Each exercise card: weight x reps rows with steppers, prefilled from last session, one tap confirms a repeated set; "last time" line under the name. Select 2+ exercises -> "Group as superset" (bracketed, alternating set order). Alternatives button per exercise -> ranked swap-in list. Finish -> summary (duration, volume, PRs hit).
+3. **History** - infinite-scroll list with real total (surgical cache updates on mutation, not invalidation); tap -> session detail; calendar heat toggle.
+4. **Coach** - conversation list + thread view, streaming responses, grounded in user data.
+
+Empty states are honest ("No workouts yet. Start your first session."). No fake data anywhere. PWA: safe-area insets on sticky header and bottom nav; solid-background icons (192/512/180).
+
+## Infra / CI / Testing (Phase 1)
+
+**Terraform** (state `fitness-tracker/prod/state` in `dhishan-terraform-assets`):
+- Cloud Run with `run.googleapis.com/cpu-throttling = "false"` and `min_instance_count = 1` (chat background generation requires it)
+- Artifact Registry `fitness-tracker-backend`, Firestore DB + composite indexes, Firebase Hosting, google-beta provider for Firebase resources
+- Day-one: add repo to WIF pool binding
+
+**GitHub Actions:**
+- `ci-cd.yml`: pytest + frontend typecheck/build -> terraform -> docker deploy -> frontend deploy -> CDN cache invalidation. `id-token: write` on every GCP-authed job.
+- `e2e.yml`: triggers after ci-cd; local uvicorn backend with ephemeral `JWT_SECRET_KEY=ci-e2e-ephemeral-${{ github.run_id }}`; frontend built with `VITE_API_URL=http://localhost:8000`, served on :4173; Playwright `BASE_URL=http://localhost:4173`. Dump backend/frontend logs on failure. Artifact path `playwright/test-results/`.
+- `infra-deploy.yml`: manual terraform.
+
+**Testing:**
+- Backend: pytest for services (volume calc, alternatives ranking, streak/PR logic), API tests against Firestore emulator, resumable-SSE test (`from_seq`).
+- E2E: dedicated test Google account (`GOOGLE_TEST_REFRESH_TOKEN` secret), global-setup exchanges token -> wipes data; http/https `clientFor(url)` helper in all four Playwright infra files from the start; `waitForResponse` for saves; `networkidle` after navigation; `retries: process.env.CI ? 1 : 0`.
+
+**Error handling:** side-effect work isolated in try/except so failures never become CORS-less 500s. CORS allow_origins includes localhost:5173 and the prod UI domain from day one.
+
+## Open questions
+
+- (Phase 2) MCP token issuance UX: settings screen generates/revokes tokens, or a CLI script? Decide at Phase 2 planning.
+- (Phase 3) Food DB source (USDA vs OpenFoodFacts). Decide at Phase 3 planning.
+- (Phase 4) HealthKit sync direction (read-only import vs write-back). Decide at Phase 4 planning.
