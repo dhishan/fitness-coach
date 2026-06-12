@@ -14,3 +14,11 @@ resource "google_secret_manager_secret_version" "jwt_secret" {
   secret      = google_secret_manager_secret.jwt_secret.id
   secret_data = random_password.jwt_secret.result
 }
+
+data "google_project" "project" {}
+
+resource "google_secret_manager_secret_iam_member" "jwt_secret_accessor" {
+  secret_id = google_secret_manager_secret.jwt_secret.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
