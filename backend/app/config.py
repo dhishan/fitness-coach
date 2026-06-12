@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     google_oauth_client_id: str = ""
     allowed_emails: str = "iamdhishan@gmail.com"
     cors_origins: list[str] = ["http://localhost:5173"]
+    openai_api_key: str = ""
+    chat_model: str = "openai/gpt-5.5"
+    chat_max_events: int = 800
+    chat_generation_timeout_s: int = 1800
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 
