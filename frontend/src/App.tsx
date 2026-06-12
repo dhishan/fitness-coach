@@ -102,6 +102,7 @@ function AuthedLayout() {
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<HistoryDetail />} />
           <Route path="/coach" element={<Coach />} />
+          <Route path="/coach/:id" element={<Coach />} />
         </Routes>
       </main>
 
