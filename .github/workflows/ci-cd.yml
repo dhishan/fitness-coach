@@ -1,0 +1,59 @@
+name: CI/CD
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  PROJECT_ID: personal-projects-473219
+  REGION: us-central1
+  TF_ENV: prod
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements-dev.txt
+      - run: cd backend && pytest -q
+
+  deploy-backend:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [test-backend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+      - name: Build and push image
+        run: |
+          IMG=${REGION}-docker.pkg.dev/${PROJECT_ID}/fitness-tracker-backend/backend:latest
+          docker build -t "$IMG" backend
+          docker push "$IMG"
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform apply
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          make terraform-init
+          make terraform-apply
+      - name: Smoke check deployed health
+        run: |
+          URL=$(terraform -chdir=terraform/main output -raw cloud_run_url)
+          for i in $(seq 1 30); do
+            curl -fsS "$URL/health" && exit 0
+            sleep 2
+          done
+          echo "health check failed" && exit 1
