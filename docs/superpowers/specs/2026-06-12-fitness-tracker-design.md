@@ -13,7 +13,7 @@ Personal fitness tracker. Daily drivers: strength workout logging and (later) nu
 | Phase | Scope |
 |---|---|
 | 1 | Strength logging (freeform, supersets, alternatives, history prefill), Home dashboard (progress charts, weekly frequency, muscle split, streaks, PRs), Coach chat (durable SSE), full infra + CI + E2E. Web PWA + Expo mobile. |
-| 2 | Remote MCP endpoint (`/mcp`, streamable HTTP, bearer token) exposing workout data and logging tools to claude.ai / Claude Desktop / Claude Code. |
+| 2 | Remote MCP (FastMCP sub-app at `/mcp`, streamable HTTP) exposing workout data and logging tools to claude.ai / Claude Desktop / Claude Code. Cost-saving model router (cheap classifier routes simple queries to a cheaper model). |
 | 3 | Nutrition: AI photo/text food estimation (Haiku), quick-add favorites. Later in phase: food database search. AI-suggested calorie/macro targets, user approves. |
 | 4 | HealthKit sync (native Expo module), cardio tracking, body metrics, barcode scanning. |
 
@@ -26,7 +26,9 @@ Out of scope until needed: multi-user, social features, offline sync, admin laye
 - **Mobile:** Expo SDK 53, bundle id `org.blueelephants.fitnesstracker`, scheme `fitness://`. Types manually mirrored from `frontend/src/types/index.ts` to `mobile/src/types/index.ts`.
 - **Data:** Firestore named DB `fitness-tracker-dev` (never `(default)`).
 - **Auth:** Google sign-in -> backend JWT. Allowlist: owner's email only.
-- **AI:** Claude API. Sonnet 4.6 for coach chat; Haiku 4.5 for cheap classification/estimation (Phase 3). Opus only for explicitly requested deep analysis. System prompt instructs brief responses unless asked for a deep dive. Langfuse tracing via `langfuse.langchain` (v3 import).
+- **AI:** OpenAI GPT-5.5+ as the coach model, called through **LiteLLM** so the provider/model can be swapped via config without code changes. System prompt instructs brief responses unless asked for a deep dive. Langfuse tracing via `langfuse.langchain` (v3 import).
+- **Usage metering (Phase 1, observational):** mirror expense-tracker's `usage_service.py`: every LLM call writes a `usage_events` doc (user_id, source, model, input/output/cache tokens, cost_usd via `litellm.cost_per_token()`, duration_ms); monthly atomic counters in `user_usage_summaries/{uid}/months/{YYYY-MM}`; per-conversation token/cost totals on the conversation doc. No hard limits.
+- **Model routing (Phase 2):** cheap-classifier router (small model classifies the request; simple lookups answered by a cheaper model, only complex coaching goes to GPT-5.5). Reference: expense-tracker's Haiku topic-classifier pattern in `chat.py`.
 
 ## Data model (Phase 1)
 
@@ -106,11 +108,16 @@ GET  /chat/conversations/{c}
 GET  /chat/conversations/{c}/turns/{t}/stream?from_seq=N   resumable SSE
 ```
 
-Chat specifics: 10s SSE keepalive comments; mobile re-opens stream on AppState foreground with last-seen seq; coach has tool access to the user's workout/dashboard service functions for data-grounded answers.
+Chat transport (proven pattern from expense-tracker `chat.py` lines ~2290-2403, `chat_store.py`, `mobile/src/services/api.ts`):
+- Every delta/tool event persisted to the turn doc with a `seq` counter; MAX_EVENTS=800 per turn (1MB doc limit)
+- Stream endpoint polls Firestore every 200ms and emits SSE events; 10s keepalive comments; 30-min generation ceiling
+- Mobile uses `react-native-sse` polyfill (RN has no native EventSource); re-opens with `from_seq` on AppState foreground; up to 3 auto-reconnects with exponential backoff (500ms * 2^attempt)
+- Generation runs as a background task on Cloud Run (`min_instances=1`, cpu-throttling off)
+- Coach has tool access to workout/dashboard service functions for data-grounded answers; every model call goes through LiteLLM and logs a usage event
 
 Client autosaves via `PUT /workouts/{id}` after every set entry.
 
-Phase 2: `/mcp` (streamable HTTP) mounted on the same FastAPI app. Tools wrap existing service functions: `log_workout`, `get_workouts`, `get_exercise_progress`, `get_alternatives`, `get_dashboard_summary`. Auth: long-lived bearer token (per-device, revocable) checked by the MCP layer.
+Phase 2: MCP via **FastMCP sub-app mounted at `/mcp`** on the same FastAPI instance, streamable HTTP transport, session manager wired into the app lifespan (pattern: expense-tracker `backend/app/mcp_server.py` + `main.py`). Auth middleware resolves the user in priority order: Cloudflare Access JWT header -> app-issued bearer JWT -> dev-only `X-Mcp-User-Id` header (ENVIRONMENT=development only); resolved user stashed in a ContextVar. Tools wrap existing service functions: `log_workout`, `get_workouts`, `get_exercise_progress`, `get_alternatives`, `get_dashboard_summary`. Phase 2 also adds the model-routing layer (see Architecture).
 
 ## Screens (web PWA and Expo, same nav)
 
@@ -121,6 +128,20 @@ Bottom tabs:
 4. **Coach** - conversation list + thread view, streaming responses, grounded in user data.
 
 Empty states are honest ("No workouts yet. Start your first session."). No fake data anywhere. PWA: safe-area insets on sticky header and bottom nav; solid-background icons (192/512/180).
+
+### Visual theme
+
+Modern, light. Base conventions reused from expense-tracker (`frontend/tailwind.config.js`, `src/index.css`): Inter font, white cards `rounded-xl shadow-sm`, primary blue scale (#3b82f6 family), gray-200 borders, Chart.js for charts, react-hot-toast (dark toast). New for this app: **white page background with a subtle dotted pattern**:
+
+```css
+body {
+  background-color: #ffffff;
+  background-image: radial-gradient(circle, #d4d4d8 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+```
+
+Cards sit on the dotted field as solid white surfaces. Muscle-group chips get a per-group accent palette (analogous to expense-tracker's category colors).
 
 ## Infra / CI / Testing (Phase 1)
 
