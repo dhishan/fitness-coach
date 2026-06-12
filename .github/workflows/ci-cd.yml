@@ -91,7 +91,7 @@ jobs:
       - run: npm ci
       - name: Build frontend
         env:
-          VITE_API_URL: https://api.fitness-tracker.blueelephants.org
+          VITE_API_URL: https://fitness-tracker-backend-ix5fldbdya-uc.a.run.app
           VITE_BUILD_ID: ${{ github.sha }}
         run: npm run -w frontend build
       - name: Deploy to Firebase Hosting
