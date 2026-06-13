@@ -130,3 +130,51 @@ class BodyMetricUpdate(BaseModel):
     thigh_cm: float | None = None
     photo_urls: list[str] | None = None
     notes: str | None = None
+
+
+# ---- Cardio ----
+
+CardioType = Literal["run", "ride", "walk", "swim", "other"]
+
+
+class CardioLogCreate(BaseModel):
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    type: CardioType
+    duration_s: int = Field(ge=0)
+    distance_m: float = Field(default=0, ge=0)
+    avg_hr: int | None = Field(default=None, ge=20, le=240)
+    calories: int | None = Field(default=None, ge=0)
+    notes: str = ""
+    source: Literal["manual", "healthkit"] = "manual"
+    external_id: str | None = None
+
+
+class CardioLogUpdate(BaseModel):
+    date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    type: CardioType | None = None
+    duration_s: int | None = Field(default=None, ge=0)
+    distance_m: float | None = Field(default=None, ge=0)
+    avg_hr: int | None = Field(default=None, ge=20, le=240)
+    calories: int | None = Field(default=None, ge=0)
+    notes: str | None = None
+
+
+# ---- HealthKit ----
+
+class HealthKitSample(BaseModel):
+    """Single normalized sample posted by the mobile app."""
+    kind: Literal["weight", "steps", "workout", "hrv", "sleep"]
+    external_id: str
+    date: str
+    started_at: str | None = None
+    ended_at: str | None = None
+    value: float | None = None
+    workout_type: str | None = None
+    duration_s: int | None = None
+    distance_m: float | None = None
+    avg_hr: int | None = Field(default=None, ge=20, le=240)
+    calories: int | None = None
+
+
+class HealthKitBatch(BaseModel):
+    samples: list[HealthKitSample]
