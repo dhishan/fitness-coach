@@ -140,9 +140,102 @@ def test_estimate_from_image_default_hint():
     from app.services import nutrition_ai
     resp = _make_resp(_GOOD_CONTENT)
     with patch("app.services.nutrition_ai.llm.complete", return_value=resp) as mock_complete, \
-         patch("app.services.nutrition_ai.usage_service.record_usage"):
+         patch("app.services.nutrition_ai.usage_service.record_usage"), \
+         patch("app.services.nutrition_ai.usda.enrich_estimation", return_value=None):
         nutrition_ai.estimate_from_image("user2", "https://example.com/food.jpg")
     messages = mock_complete.call_args.args[0]
     user_msg = next(m for m in messages if m["role"] == "user")
     text_part = next(p for p in user_msg["content"] if p["type"] == "text")
     assert len(text_part["text"]) > 0
+
+
+# ---- USDA enrichment integration ----
+
+_USDA_ENRICHMENT = {
+    "name": "Scrambled eggs",
+    "serving": "100 g",
+    "macros": {"calories": 149, "protein_g": 9.9, "carbs_g": 1.6, "fat_g": 11.0},
+    "micros": {
+        "fiber_g": 0.0, "sugar_g": 0.4, "sodium_mg": 142.0, "potassium_mg": 138.0,
+        "calcium_mg": 57.0, "iron_mg": 1.4, "vitamin_c_mg": 0.0,
+        "vitamin_d_mcg": 1.1, "saturated_fat_g": 3.2, "cholesterol_mg": 352.0,
+    },
+    "usda_fdc_id": 999,
+}
+
+
+def test_estimate_from_text_usda_hit_replaces_macros():
+    """When USDA returns a hit, macros come from USDA and micros_source is 'usda'."""
+    from app.services import nutrition_ai
+    resp = _make_resp(_GOOD_CONTENT)
+    with patch("app.services.nutrition_ai.llm.complete", return_value=resp), \
+         patch("app.services.nutrition_ai.usage_service.record_usage"), \
+         patch("app.services.nutrition_ai.usda.enrich_estimation", return_value=_USDA_ENRICHMENT):
+        result = nutrition_ai.estimate_from_text("user1", "scrambled eggs")
+
+    assert result["macros"]["calories"] == 149
+    assert result["macros"]["protein_g"] == 9.9
+    assert result["micros"]["sodium_mg"] == 142.0
+    assert result["micros"]["cholesterol_mg"] == 352.0
+    assert result["micros_source"] == "usda"
+    assert result["usda_fdc_id"] == 999
+    # confidence bumped by 0.1 from 0.85, capped at 0.95
+    assert result["confidence"] == pytest.approx(0.95)
+
+
+def test_estimate_from_text_usda_miss_keeps_ai_macros():
+    """When USDA returns None, AI macros are kept and micros_source is None."""
+    from app.services import nutrition_ai
+    resp = _make_resp(_GOOD_CONTENT)
+    with patch("app.services.nutrition_ai.llm.complete", return_value=resp), \
+         patch("app.services.nutrition_ai.usage_service.record_usage"), \
+         patch("app.services.nutrition_ai.usda.enrich_estimation", return_value=None):
+        result = nutrition_ai.estimate_from_text("user1", "scrambled eggs")
+
+    assert result["macros"]["calories"] == 180
+    assert result["macros"]["protein_g"] == 12.0
+    assert result["micros_source"] is None
+    assert result["usda_fdc_id"] is None
+    # micros defaulted to zero when AI content lacks them
+    assert result["micros"]["fiber_g"] == 0.0
+
+
+def test_estimate_from_image_usda_hit_replaces_macros():
+    """Photo estimation: USDA hit merges macros + micros_source 'usda'."""
+    from app.services import nutrition_ai
+    resp = _make_resp(_GOOD_CONTENT)
+    with patch("app.services.nutrition_ai.llm.complete", return_value=resp), \
+         patch("app.services.nutrition_ai.usage_service.record_usage"), \
+         patch("app.services.nutrition_ai.usda.enrich_estimation", return_value=_USDA_ENRICHMENT):
+        result = nutrition_ai.estimate_from_image("user2", "https://example.com/food.jpg")
+
+    assert result["macros"]["calories"] == 149
+    assert result["micros_source"] == "usda"
+    assert result["usda_fdc_id"] == 999
+
+
+def test_estimate_from_image_usda_miss_keeps_ai_macros():
+    """Photo estimation: USDA miss keeps AI macros."""
+    from app.services import nutrition_ai
+    resp = _make_resp(_GOOD_CONTENT)
+    with patch("app.services.nutrition_ai.llm.complete", return_value=resp), \
+         patch("app.services.nutrition_ai.usage_service.record_usage"), \
+         patch("app.services.nutrition_ai.usda.enrich_estimation", return_value=None):
+        result = nutrition_ai.estimate_from_image("user2", "https://example.com/food.jpg")
+
+    assert result["macros"]["calories"] == 180
+    assert result["micros_source"] is None
+
+
+def test_estimate_usda_failure_does_not_propagate():
+    """If USDA raises unexpectedly, AI result is still returned (USDA never blocks)."""
+    from app.services import nutrition_ai
+    resp = _make_resp(_GOOD_CONTENT)
+    with patch("app.services.nutrition_ai.llm.complete", return_value=resp), \
+         patch("app.services.nutrition_ai.usage_service.record_usage"), \
+         patch("app.services.nutrition_ai.usda.enrich_estimation", side_effect=RuntimeError("usda down")):
+        result = nutrition_ai.estimate_from_text("user1", "scrambled eggs")
+
+    assert "error" not in result
+    assert result["macros"]["calories"] == 180
+    assert result["micros_source"] is None
