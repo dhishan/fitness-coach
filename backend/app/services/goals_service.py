@@ -55,7 +55,7 @@ def suggest_goals(
     start = time.monotonic()
     try:
         today = date.today().isoformat()
-        dash = dashboard_service.summary(user_id)
+        dash = dashboard_service.summary(user_id, today)
         context_parts = [
             f"Training this week: {dash.get('sessions_this_week', 0)} sessions, "
             f"volume {dash.get('week_volume', 0):.0f} kg, "
