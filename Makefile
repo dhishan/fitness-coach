@@ -1,7 +1,7 @@
 TF_DIR=terraform/main
 TF_ENV?=prod
 
-.PHONY: backend-install backend-dev backend-test terraform-init terraform-plan terraform-apply
+.PHONY: backend-install backend-dev backend-test terraform-init terraform-plan terraform-apply mobile-build-ipa
 
 backend-install: ## install backend deps into .venv
 	cd backend && python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
@@ -46,3 +46,19 @@ mobile-update: ## OTA via EAS Update (JS-only changes)
 
 mobile-typecheck: ## tsc --noEmit
 	cd mobile && npx tsc --noEmit
+
+mobile-build-ipa: ## Build an unsigned .ipa locally for AltStore sideload (no Apple Developer Program needed)
+	@cd mobile && npx expo prebuild --platform ios --no-install 2>/dev/null || true
+	@cd mobile/ios && xcodebuild \
+		-workspace FitnessTracker.xcworkspace \
+		-scheme FitnessTracker \
+		-configuration Release \
+		-archivePath /tmp/FitnessTracker.xcarchive \
+		-destination 'generic/platform=iOS' \
+		archive \
+		CODE_SIGNING_ALLOWED=NO
+	@mkdir -p /tmp/FitnessTracker-ipa/Payload
+	@cp -R /tmp/FitnessTracker.xcarchive/Products/Applications/FitnessTracker.app /tmp/FitnessTracker-ipa/Payload/
+	@cd /tmp/FitnessTracker-ipa && zip -qr ~/Downloads/FitnessTracker.ipa Payload && rm -rf /tmp/FitnessTracker-ipa /tmp/FitnessTracker.xcarchive
+	@echo "Built: ~/Downloads/FitnessTracker.ipa"
+	@echo "Drag this onto AltServer's menubar icon to install via AltStore."
