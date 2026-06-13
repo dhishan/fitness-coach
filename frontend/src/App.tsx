@@ -11,6 +11,7 @@ import HistoryDetail from './pages/HistoryDetail'
 import Library from './pages/Library'
 import LibraryDetail from './pages/LibraryDetail'
 import Coach from './pages/Coach'
+import Nutrition from './pages/Nutrition'
 import PlanEditor from './pages/PlanEditor'
 import SettingsSheet from './components/SettingsSheet'
 import UpdateBanner from './components/UpdateBanner'
@@ -56,11 +57,14 @@ function HistoryIcon() {
   )
 }
 
-function LibraryIcon() {
+function NutritionIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+      <line x1="6" y1="1" x2="6" y2="4" />
+      <line x1="10" y1="1" x2="10" y2="4" />
+      <line x1="14" y1="1" x2="14" y2="4" />
     </svg>
   )
 }
@@ -76,7 +80,7 @@ function CoachIcon() {
 const tabs = [
   { path: '/', label: 'Home', Icon: HomeIcon },
   { path: '/workout', label: 'Workout', Icon: WorkoutIcon },
-  { path: '/library', label: 'Library', Icon: LibraryIcon },
+  { path: '/nutrition', label: 'Nutrition', Icon: NutritionIcon },
   { path: '/history', label: 'History', Icon: HistoryIcon },
   { path: '/coach', label: 'Coach', Icon: CoachIcon },
 ]
@@ -117,6 +121,7 @@ function AuthedLayout() {
           <Route path="/library/:id" element={<LibraryDetail />} />
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<HistoryDetail />} />
+          <Route path="/nutrition" element={<Nutrition />} />
           <Route path="/coach" element={<Coach />} />
           <Route path="/coach/:id" element={<Coach />} />
           <Route path="/plans/new" element={<PlanEditor />} />

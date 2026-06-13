@@ -4,6 +4,8 @@ import type {
   ExerciseCreate, ExerciseHistoryItem, FinishResponse, ProgressPoint,
   StartChatResponse, TemplateCreate, TemplateEntry, UsageSummary, Workout,
   WorkoutEntry, WorkoutListResponse, WorkoutTemplate,
+  DayLogs, Estimation, Favorite, FavoriteCreate, FoodLog, FoodLogCreate, FoodLogUpdate,
+  Goals, GoalSuggestion, SignedUpload,
 } from '@fitness/shared-types'
 import { useAuth } from '../store/auth'
 
@@ -83,4 +85,44 @@ export const templatesApi = {
 export const usageApi = {
   summary: (month?: string) =>
     api.get<UsageSummary>('/usage/summary', { params: month ? { month } : {} }).then((r) => r.data),
+}
+
+export const uploadsApi = {
+  signFoodPhoto: (contentType: string) =>
+    api.post<SignedUpload>('/uploads/sign-food-photo', { content_type: contentType }).then((r) => r.data),
+}
+
+export const nutritionApi = {
+  estimateText: (text: string) =>
+    api.post<Estimation>('/nutrition/estimate/text', { text }).then((r) => r.data),
+  estimatePhoto: (image_url: string, hint?: string) =>
+    api.post<Estimation>('/nutrition/estimate/photo', { image_url, hint }).then((r) => r.data),
+  logs: {
+    list: (date: string) =>
+      api.get<DayLogs>('/nutrition/logs', { params: { date } }).then((r) => r.data),
+    create: (body: FoodLogCreate) =>
+      api.post<FoodLog>('/nutrition/logs', body).then((r) => r.data),
+    update: (id: string, body: FoodLogUpdate) =>
+      api.put<FoodLog>(`/nutrition/logs/${id}`, body).then((r) => r.data),
+    remove: (id: string) =>
+      api.delete(`/nutrition/logs/${id}`),
+  },
+  favorites: {
+    list: () =>
+      api.get<Favorite[]>('/nutrition/favorites').then((r) => r.data),
+    create: (body: FavoriteCreate) =>
+      api.post<Favorite>('/nutrition/favorites', body).then((r) => r.data),
+    remove: (id: string) =>
+      api.delete(`/nutrition/favorites/${id}`),
+    log: (id: string, date: string) =>
+      api.post<FoodLog>(`/nutrition/favorites/${id}/log`, null, { params: { date } }).then((r) => r.data),
+  },
+  goals: {
+    get: () =>
+      api.get<Goals | null>('/nutrition/goals').then((r) => r.data),
+    set: (g: Goals) =>
+      api.put<Goals>('/nutrition/goals', g).then((r) => r.data),
+    suggest: (params?: { bodyweight_kg?: number; goal_text?: string }) =>
+      api.post<GoalSuggestion>('/nutrition/goals/suggest', params ?? {}).then((r) => r.data),
+  },
 }

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import type { Workout, WorkoutTemplate } from '@fitness/shared-types'
@@ -178,7 +178,14 @@ export default function Home() {
       {loadingTemplates ? (
         <Skeleton className="h-24" />
       ) : (
-        <PlansSection templates={templates} onStart={(t) => void handleStartPlan(t)} />
+        <>
+          <PlansSection templates={templates} onStart={(t) => void handleStartPlan(t)} />
+          <div className="text-center">
+            <Link to="/library" className="text-xs text-primary-600 font-medium hover:text-primary-700">
+              Browse exercises
+            </Link>
+          </div>
+        </>
       )}
 
       {/* 5. Progress chart */}
