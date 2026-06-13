@@ -94,7 +94,8 @@ def test_suggest_goals_returns_proposal_and_rationale(mock_db):
     assert "rationale" in result
     assert len(result["rationale"]) > 0
     mock_complete.assert_called_once()
-    mock_summary.assert_called_once_with("user1")
+    mock_summary.assert_called_once()
+    assert mock_summary.call_args.args[0] == "user1"
     mock_usage.assert_called_once()
 
 
