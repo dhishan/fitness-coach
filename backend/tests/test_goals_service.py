@@ -133,6 +133,53 @@ def test_suggest_goals_error_returns_error_dict(mock_db):
     mock_usage.assert_not_called()
 
 
+def test_suggest_goals_falls_back_to_body_service_weight(mock_db):
+    """When bodyweight_kg is None, suggest_goals should query body_service.latest_weight."""
+    from app.services import goals_service
+    msg = MagicMock()
+    msg.content = _GOOD_PROPOSAL
+    choice = MagicMock()
+    choice.message = msg
+    resp = MagicMock()
+    resp.choices = [choice]
+    resp.usage = MagicMock()
+    resp.usage.prompt_tokens = 50
+    resp.usage.completion_tokens = 20
+
+    with patch("app.services.goals_service.llm.complete", return_value=resp) as mock_complete, \
+         patch("app.services.goals_service.dashboard_service.summary", return_value={}), \
+         patch("app.services.goals_service.body_service.latest_weight", return_value=75.0) as mock_bw, \
+         patch("app.services.goals_service.usage_service.record_usage"):
+        result = goals_service.suggest_goals("user1")  # no bodyweight_kg passed
+
+    mock_bw.assert_called_once_with("user1")
+    messages = mock_complete.call_args.args[0]
+    user_content = next(m["content"] for m in messages if m["role"] == "user")
+    assert "75" in user_content  # weight from body_service was injected
+
+
+def test_suggest_goals_fallback_not_called_when_weight_provided(mock_db):
+    """When bodyweight_kg is provided, body_service.latest_weight should NOT be called."""
+    from app.services import goals_service
+    msg = MagicMock()
+    msg.content = _GOOD_PROPOSAL
+    choice = MagicMock()
+    choice.message = msg
+    resp = MagicMock()
+    resp.choices = [choice]
+    resp.usage = MagicMock()
+    resp.usage.prompt_tokens = 50
+    resp.usage.completion_tokens = 20
+
+    with patch("app.services.goals_service.llm.complete", return_value=resp), \
+         patch("app.services.goals_service.dashboard_service.summary", return_value={}), \
+         patch("app.services.goals_service.body_service.latest_weight") as mock_bw, \
+         patch("app.services.goals_service.usage_service.record_usage"):
+        goals_service.suggest_goals("user1", bodyweight_kg=80.0)
+
+    mock_bw.assert_not_called()
+
+
 def test_suggest_goals_includes_context_in_prompt(mock_db):
     from app.services import goals_service
     msg = MagicMock()

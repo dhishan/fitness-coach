@@ -105,3 +105,28 @@ class GoalsUpdate(BaseModel):
     protein_g: float = Field(ge=0)
     carbs_g: float = Field(ge=0)
     fat_g: float = Field(ge=0)
+
+
+# ---- Body Metrics ----
+
+class BodyMetricCreate(BaseModel):
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    weight_kg: float = Field(gt=0, le=400)
+    body_fat_pct: float | None = Field(default=None, ge=2, le=70)
+    waist_cm: float | None = Field(default=None, ge=20, le=300)
+    chest_cm: float | None = Field(default=None, ge=20, le=300)
+    arm_cm: float | None = Field(default=None, ge=10, le=100)
+    thigh_cm: float | None = Field(default=None, ge=10, le=200)
+    photo_urls: list[str] = []
+    notes: str = ""
+
+
+class BodyMetricUpdate(BaseModel):
+    weight_kg: float | None = Field(default=None, gt=0, le=400)
+    body_fat_pct: float | None = None
+    waist_cm: float | None = None
+    chest_cm: float | None = None
+    arm_cm: float | None = None
+    thigh_cm: float | None = None
+    photo_urls: list[str] | None = None
+    notes: str | None = None

@@ -11,7 +11,7 @@ from datetime import date
 
 from app.config import get_settings
 from app.firestore import get_db
-from app.services import dashboard_service, llm, usage_service
+from app.services import body_service, dashboard_service, llm, usage_service
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,8 @@ def suggest_goals(
             f"volume {dash.get('week_volume', 0):.0f} kg, "
             f"streak {dash.get('streak_weeks', 0)} weeks.",
         ]
+        if bodyweight_kg is None:
+            bodyweight_kg = body_service.latest_weight(user_id)
         if bodyweight_kg is not None:
             context_parts.append(f"Bodyweight: {bodyweight_kg} kg.")
         if goal_text:

@@ -34,6 +34,7 @@ from app.routers.templates import router as templates_router
 from app.routers.usage import router as usage_router
 from app.routers.uploads import router as uploads_router
 from app.routers.nutrition import router as nutrition_router
+from app.routers.body import router as body_router
 
 app.include_router(auth_router)
 app.include_router(exercises_router)
@@ -44,6 +45,7 @@ app.include_router(templates_router)
 app.include_router(usage_router)
 app.include_router(uploads_router)
 app.include_router(nutrition_router)
+app.include_router(body_router)
 
 app.mount("/mcp", build_mcp_app())
 
