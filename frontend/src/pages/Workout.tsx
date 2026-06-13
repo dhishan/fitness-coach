@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import type { Exercise, ExerciseHistoryItem, FinishResponse, SetEntry, Workout, WorkoutEntry } from '@fitness/shared-types'
-import { exercisesApi, workoutsApi } from '../services/api'
+import type { Exercise, ExerciseHistoryItem, FinishResponse, SetEntry, Workout, WorkoutEntry, WorkoutTemplate } from '@fitness/shared-types'
+import { exercisesApi, templatesApi, workoutsApi } from '../services/api'
 import { toLocalISODate } from '../lib/dates'
 import { nextSupersetGroup } from '../lib/workoutHelpers'
 import { buildEntryFromHistory } from '../lib/addExercise'
 import type { EntryWithHistory } from '../lib/addExercise'
 import AddExerciseSheet from '../components/AddExerciseSheet'
+import { startFromPlan } from '../lib/startFromPlan'
 
 // ---------------------------------------------------------------------------
 // Autosave hook
@@ -385,6 +386,86 @@ function FinishModal({
 }
 
 // ---------------------------------------------------------------------------
+// Plan chooser sheet
+// ---------------------------------------------------------------------------
+
+function PlanChooserSheet({
+  onBlank,
+  onClose,
+  onPlanStart,
+}: {
+  onBlank: () => void
+  onClose: () => void
+  onPlanStart: (template: WorkoutTemplate) => void
+}) {
+  const [showPlans, setShowPlans] = useState(false)
+  const { data: templates = [], isLoading } = useQuery<WorkoutTemplate[]>({
+    queryKey: ['templates'],
+    queryFn: () => templatesApi.list(),
+    enabled: showPlans,
+  })
+
+  if (!showPlans) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col">
+        <div className="flex-1 bg-black/40" onClick={onClose} />
+        <div className="bg-white rounded-t-2xl p-5 flex flex-col gap-3">
+          <span className="text-sm font-semibold text-gray-900">Start workout</span>
+          <button
+            onClick={onBlank}
+            className="w-full py-3 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600"
+          >
+            Start blank workout
+          </button>
+          <button
+            onClick={() => setShowPlans(true)}
+            className="w-full py-3 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50"
+          >
+            Start from plan
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-xl text-sm text-gray-400 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col">
+      <div className="flex-1 bg-black/40" onClick={onClose} />
+      <div className="bg-white rounded-t-2xl max-h-[60vh] flex flex-col">
+        <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-900">Choose a plan</span>
+          <button onClick={() => setShowPlans(false)} className="text-xs text-gray-500">Back</button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 pb-5">
+          {isLoading ? (
+            <p className="text-sm text-gray-400 text-center py-8">Loading...</p>
+          ) : templates.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No plans yet. Create one from Home.</p>
+          ) : (
+            templates.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => onPlanStart(t)}
+                className="w-full text-left py-3 border-b border-gray-50 last:border-0"
+              >
+                <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t.entries.length} exercise{t.entries.length !== 1 ? 's' : ''}</p>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main Workout page
 // ---------------------------------------------------------------------------
 
@@ -402,6 +483,7 @@ export default function Workout() {
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [entries, setEntries] = useState<EntryWithHistory[]>([])
   const [starting, setStarting] = useState(false)
+  const [showChooser, setShowChooser] = useState(false)
 
   // Sync server -> local state once on load (not on every re-render)
   useEffect(() => {
@@ -437,6 +519,7 @@ export default function Workout() {
     : ''
 
   const handleStart = async () => {
+    setShowChooser(false)
     setStarting(true)
     try {
       const w = await workoutsApi.create({ date: toLocalISODate() })
@@ -444,6 +527,27 @@ export default function Workout() {
       setEntries([])
     } catch {
       toast.error('Could not start workout')
+    } finally {
+      setStarting(false)
+    }
+  }
+
+  const handleStartFromPlan = async (template: WorkoutTemplate) => {
+    setShowChooser(false)
+    setStarting(true)
+    try {
+      const workoutId = await startFromPlan(template)
+      // Fetch the created workout and set local state
+      const w = await workoutsApi.active()
+      if (w && w.id === workoutId) {
+        setWorkout(w)
+        setEntries(w.entries.map((e) => ({ ...e, lastTime: undefined })))
+      } else {
+        // fallback: reload active
+        void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
+      }
+    } catch {
+      toast.error('Could not start workout from plan')
     } finally {
       setStarting(false)
     }
@@ -568,12 +672,19 @@ export default function Workout() {
       <div className="flex-1 flex flex-col items-center justify-center p-8 gap-4">
         <p className="text-gray-500 text-sm text-center">No active session.</p>
         <button
-          onClick={() => void handleStart()}
+          onClick={() => setShowChooser(true)}
           disabled={starting}
           className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl text-sm"
         >
           {starting ? 'Starting...' : 'START WORKOUT'}
         </button>
+        {showChooser && (
+          <PlanChooserSheet
+            onBlank={() => void handleStart()}
+            onClose={() => setShowChooser(false)}
+            onPlanStart={(t) => void handleStartFromPlan(t)}
+          />
+        )}
       </div>
     )
   }

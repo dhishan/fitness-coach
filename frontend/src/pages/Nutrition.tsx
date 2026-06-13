@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import type { Estimation, FoodLog, FoodSuggestion, Goals, GoalSuggestion, Macros } from '@fitness/shared-types'
+import type { Estimation, FoodLog, FoodSuggestion, Goals, GoalSuggestion, Macros, MealType, Micros } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi } from '../services/api'
 // nutritionApi.barcode is used inline below
 import { toLocalISODate } from '../lib/dates'
@@ -31,9 +31,34 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
+function defaultMealType(): MealType {
+  const h = new Date().getHours()
+  if (h >= 5 && h < 11) return 'breakfast'
+  if (h >= 11 && h < 15) return 'lunch'
+  if (h >= 17 && h < 21) return 'dinner'
+  return 'snack'
+}
+
+function defaultTimeStr(): string {
+  const now = new Date()
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
 function mealGroup(log: FoodLog): 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks' {
-  if (!log.created_at) return 'Snacks'
-  const h = new Date(log.created_at).getHours()
+  if (log.meal_type) {
+    const map: Record<MealType, 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks'> = {
+      breakfast: 'Breakfast',
+      lunch: 'Lunch',
+      dinner: 'Dinner',
+      snack: 'Snacks',
+    }
+    return map[log.meal_type]
+  }
+  const ts = log.logged_at ?? log.created_at
+  if (!ts) return 'Snacks'
+  const h = new Date(ts).getHours()
   if (h >= 5 && h < 11) return 'Breakfast'
   if (h >= 11 && h < 15) return 'Lunch'
   if (h >= 17 && h < 22) return 'Dinner'
@@ -41,6 +66,30 @@ function mealGroup(log: FoodLog): 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks' {
 }
 
 const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as const
+const MEAL_TYPE_OPTIONS: { label: string; value: MealType }[] = [
+  { label: 'Breakfast', value: 'breakfast' },
+  { label: 'Lunch', value: 'lunch' },
+  { label: 'Dinner', value: 'dinner' },
+  { label: 'Snack', value: 'snack' },
+]
+
+const MICROS_FIELDS: { key: keyof Micros; label: string; unit: string }[] = [
+  { key: 'fiber_g', label: 'Fiber', unit: 'g' },
+  { key: 'sugar_g', label: 'Sugar', unit: 'g' },
+  { key: 'sodium_mg', label: 'Sodium', unit: 'mg' },
+  { key: 'potassium_mg', label: 'Potassium', unit: 'mg' },
+  { key: 'calcium_mg', label: 'Calcium', unit: 'mg' },
+  { key: 'iron_mg', label: 'Iron', unit: 'mg' },
+  { key: 'vitamin_c_mg', label: 'Vitamin C', unit: 'mg' },
+  { key: 'vitamin_d_mcg', label: 'Vitamin D', unit: 'mcg' },
+  { key: 'saturated_fat_g', label: 'Sat. Fat', unit: 'g' },
+  { key: 'cholesterol_mg', label: 'Cholesterol', unit: 'mg' },
+]
+
+function hasMicros(m: Micros | null | undefined): boolean {
+  if (!m) return false
+  return MICROS_FIELDS.some(({ key }) => (m[key] ?? 0) > 0)
+}
 
 function MacroBar({ value, goal, label }: { value: number; goal: number; label: string }) {
   const pct = goal > 0 ? Math.min(100, (value / goal) * 100) : 0
@@ -56,6 +105,103 @@ function MacroBar({ value, goal, label }: { value: number; goal: number; label: 
           style={{ width: `${pct}%` }}
         />
       </div>
+    </div>
+  )
+}
+
+function MicroBar({ value, goal, label, unit }: { value: number; goal: number; label: string; unit: string }) {
+  const pct = goal > 0 ? Math.min(100, (value / goal) * 100) : 0
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex justify-between text-xs text-gray-500 mb-1">
+        <span>{label}</span>
+        <span>{Math.round(value)}{unit}{goal > 0 ? `/${Math.round(goal)}${unit}` : ''}</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-teal-400 transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible Micros panel
+// ---------------------------------------------------------------------------
+
+function MicrosPanel({ micros, source, targets }: {
+  micros: Micros | null | undefined
+  source?: 'ai' | 'usda' | null
+  targets?: Micros | null
+}) {
+  const [open, setOpen] = useState(false)
+  if (!hasMicros(micros)) return null
+  return (
+    <div className="mt-2 border-t border-gray-100 pt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700"
+      >
+        <span>{open ? 'v' : '>'} Micros</span>
+        {source === 'usda' && (
+          <span className="ml-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 text-xs font-semibold">USDA</span>
+        )}
+      </button>
+      {open && micros && (
+        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+          {MICROS_FIELDS.map(({ key, label, unit }) => (
+            <MicroBar
+              key={key}
+              label={label}
+              unit={unit}
+              value={micros[key] ?? 0}
+              goal={targets?.[key] ?? 0}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Micros targets section (for goals modal)
+// ---------------------------------------------------------------------------
+
+function MicrosTargetsSection({ values, onChange }: {
+  values: Partial<Record<keyof Micros, string>>
+  onChange: (k: keyof Micros, v: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700"
+      >
+        {open ? 'v' : '>'} Micros targets (optional)
+      </button>
+      {open && (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {MICROS_FIELDS.map(({ key, label, unit }) => (
+            <div key={key}>
+              <label className="block text-xs text-gray-400 mb-0.5">{label} ({unit})</label>
+              <input
+                type="number"
+                min="0"
+                className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                placeholder="0"
+                value={values[key] ?? ''}
+                onChange={(e) => onChange(key, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -88,6 +234,9 @@ function PreviewCard({
   const [carbs, setCarbs] = useState(String(Math.round(state.estimation.macros.carbs_g)))
   const [fat, setFat] = useState(String(Math.round(state.estimation.macros.fat_g)))
   const [saving, setSaving] = useState(false)
+  const [mealType, setMealType] = useState<MealType>(defaultMealType())
+  const initTime = defaultTimeStr()
+  const [timeStr, setTimeStr] = useState(initTime)
   const qc = useQueryClient()
 
   const confidence = Math.round(state.estimation.confidence * 100)
@@ -100,13 +249,32 @@ function PreviewCard({
       carbs_g: Number(carbs),
       fat_g: Number(fat),
     }
+    // Build logged_at only if user changed the time
+    let logged_at: string | undefined
+    if (timeStr !== initTime) {
+      const [hh, mm] = timeStr.split(':')
+      const dt = new Date()
+      dt.setHours(Number(hh), Number(mm), 0, 0)
+      logged_at = dt.toISOString()
+    }
     try {
       if (state.editId) {
         await nutritionApi.logs.update(state.editId, { name, serving, macros })
         toast.success('Log updated')
       } else {
-        const logSource = state.source === 'favorite' || state.source === 'manual' ? state.source : state.source
-        await nutritionApi.logs.create({ date, name, serving, macros, source: logSource })
+        const logSource = state.source
+        await nutritionApi.logs.create({
+          date,
+          name,
+          serving,
+          macros,
+          source: logSource,
+          meal_type: mealType,
+          ...(logged_at ? { logged_at } : {}),
+          ...(state.estimation.micros ? { micros: state.estimation.micros } : {}),
+          ...(state.estimation.usda_fdc_id != null ? { usda_fdc_id: state.estimation.usda_fdc_id } : {}),
+          ...(state.estimation.micros_source ? { micros_source: state.estimation.micros_source } : {}),
+        })
         toast.success('Logged')
       }
       void qc.invalidateQueries({ queryKey: ['day-logs', date] })
@@ -128,6 +296,32 @@ function PreviewCard({
           {confidence}% confident
         </span>
       </div>
+
+      {/* Meal type chips + time picker */}
+      {!state.editId && (
+        <div className="flex flex-wrap items-center gap-2">
+          {MEAL_TYPE_OPTIONS.map(({ label, value }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setMealType(value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                mealType === value
+                  ? 'bg-primary-500 text-white border-primary-500'
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <input
+            type="time"
+            value={timeStr}
+            onChange={(e) => setTimeStr(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-600 ml-auto"
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <input
@@ -163,6 +357,12 @@ function PreviewCard({
           </div>
         ))}
       </div>
+
+      {/* Micros panel */}
+      <MicrosPanel
+        micros={state.estimation.micros}
+        source={state.estimation.micros_source}
+      />
 
       <div className="flex gap-2">
         <button
@@ -274,6 +474,19 @@ function GoalsSuggestModal({
                   </div>
                 ))}
               </div>
+              {hasMicros(suggestion.proposal.micros_targets) && (
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 font-semibold mb-2">Suggested micros targets</p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                    {MICROS_FIELDS.filter(({ key }) => (suggestion.proposal.micros_targets?.[key] ?? 0) > 0).map(({ key, label, unit }) => (
+                      <div key={key} className="flex justify-between text-xs text-gray-600">
+                        <span>{label}</span>
+                        <span className="font-medium">{Math.round(suggestion.proposal.micros_targets![key]!)}{unit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <button
@@ -297,6 +510,88 @@ function GoalsSuggestModal({
 }
 
 // ---------------------------------------------------------------------------
+// Goals set modal
+// ---------------------------------------------------------------------------
+
+function GoalsSetModal({
+  current,
+  onClose,
+  onSave,
+}: {
+  current: Goals | null | undefined
+  onClose: () => void
+  onSave: (g: Goals) => void
+}) {
+  const [calories, setCalories] = useState(String(current?.calories ?? ''))
+  const [protein, setProtein] = useState(String(current?.protein_g ?? ''))
+  const [carbs, setCarbs] = useState(String(current?.carbs_g ?? ''))
+  const [fat, setFat] = useState(String(current?.fat_g ?? ''))
+  const [microsVals, setMicrosVals] = useState<Partial<Record<keyof Micros, string>>>(
+    current?.micros_targets
+      ? Object.fromEntries(
+          MICROS_FIELDS.map(({ key }) => [key, String(current.micros_targets![key] ?? '')])
+        ) as Partial<Record<keyof Micros, string>>
+      : {}
+  )
+
+  const handleSave = () => {
+    const anyMicro = MICROS_FIELDS.some(({ key }) => Number(microsVals[key] ?? 0) > 0)
+    const micros_targets: Micros | undefined = anyMicro
+      ? Object.fromEntries(MICROS_FIELDS.map(({ key }) => [key, Number(microsVals[key] ?? 0)])) as unknown as Micros
+      : undefined
+    onSave({
+      calories: Number(calories),
+      protein_g: Number(protein),
+      carbs_g: Number(carbs),
+      fat_g: Number(fat),
+      ...(micros_targets ? { micros_targets } : {}),
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-lg p-5 flex flex-col gap-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <span className="text-sm font-semibold text-gray-900">Set daily goals</span>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: 'kcal', val: calories, set: setCalories },
+            { label: 'protein (g)', val: protein, set: setProtein },
+            { label: 'carbs (g)', val: carbs, set: setCarbs },
+            { label: 'fat (g)', val: fat, set: setFat },
+          ].map(({ label, val, set }) => (
+            <div key={label} className="flex flex-col gap-1">
+              <label className="text-xs text-gray-400">{label}</label>
+              <input
+                type="number"
+                min="0"
+                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                value={val}
+                onChange={(e) => set(e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+        <MicrosTargetsSection
+          values={microsVals}
+          onChange={(k, v) => setMicrosVals((prev) => ({ ...prev, [k]: v }))}
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            className="flex-1 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold"
+          >
+            Save goals
+          </button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
 
@@ -310,6 +605,7 @@ export default function Nutrition() {
   const [textInput, setTextInput] = useState('')
   const [estimating, setEstimating] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
+  const [goalsModalOpen, setGoalsModalOpen] = useState(false)
   const [menuLog, setMenuLog] = useState<FoodLog | null>(null)
   const [barcodeInput, setBarcodeInput] = useState('')
   const [barcodeError, setBarcodeError] = useState<string | null>(null)
@@ -345,9 +641,10 @@ export default function Nutrition() {
   })
 
   const totals = dayLogs?.totals ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
+  const microsTotals = dayLogs?.micros_totals
   const logs = dayLogs?.items ?? []
 
-  // Group logs by meal time
+  // Group logs by meal type first, then time heuristic
   const grouped: Record<string, FoodLog[]> = {}
   for (const log of logs) {
     const g = mealGroup(log)
@@ -481,6 +778,8 @@ export default function Nutrition() {
         serving: log.serving,
         macros: log.macros,
         confidence: 1,
+        micros: log.micros ?? undefined,
+        micros_source: log.micros_source,
       },
       source: 'ai_text',
       editId: log.id,
@@ -498,6 +797,18 @@ export default function Nutrition() {
       toast.error('Could not save goals')
     }
     setSuggestOpen(false)
+  }
+
+  // Save goals directly
+  const handleSaveGoals = async (g: Goals) => {
+    try {
+      await nutritionApi.goals.set(g)
+      toast.success('Goals updated')
+      void qc.invalidateQueries({ queryKey: ['goals'] })
+    } catch {
+      toast.error('Could not save goals')
+    }
+    setGoalsModalOpen(false)
   }
 
   const isToday = date === today
@@ -546,6 +857,14 @@ export default function Nutrition() {
               <MacroBar value={totals.carbs_g} goal={goals.carbs_g} label="carbs" />
               <MacroBar value={totals.fat_g} goal={goals.fat_g} label="fat" />
             </div>
+            {/* Micros today */}
+            {hasMicros(microsTotals) && (
+              <MicrosPanel
+                micros={microsTotals}
+                source={null}
+                targets={goals.micros_targets ?? undefined}
+              />
+            )}
           </>
         ) : (
           <div className="flex flex-col gap-2">
@@ -867,12 +1186,20 @@ export default function Nutrition() {
       <div className="card p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-900">Daily goals</span>
-          <button
-            onClick={() => setSuggestOpen(true)}
-            className="text-xs text-primary-600 font-medium hover:text-primary-700"
-          >
-            Suggest with AI
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSuggestOpen(true)}
+              className="text-xs text-primary-600 font-medium hover:text-primary-700"
+            >
+              Suggest with AI
+            </button>
+            <button
+              onClick={() => setGoalsModalOpen(true)}
+              className="text-xs text-gray-500 font-medium hover:text-gray-700"
+            >
+              Edit
+            </button>
+          </div>
         </div>
 
         {goals ? (
@@ -901,6 +1228,15 @@ export default function Nutrition() {
         <GoalsSuggestModal
           onClose={() => setSuggestOpen(false)}
           onAccept={(g) => void handleAcceptGoals(g)}
+        />
+      )}
+
+      {/* Goals set modal */}
+      {goalsModalOpen && (
+        <GoalsSetModal
+          current={goals}
+          onClose={() => setGoalsModalOpen(false)}
+          onSave={(g) => void handleSaveGoals(g)}
         />
       )}
     </div>
