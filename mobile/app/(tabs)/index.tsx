@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   ScrollView,
   View,
@@ -14,8 +14,9 @@ import {
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { LineChart } from 'react-native-chart-kit'
-import type { BodyMetric, DashboardSummary, Exercise, ProgressPoint, Workout, WorkoutTemplate } from '@fitness/shared-types'
-import { bodyApi, dashboardApi, exercisesApi, templatesApi, workoutsApi } from '../../src/services/api'
+import type { BodyMetric, CardioLog, DashboardSummary, Exercise, ProgressPoint, Workout, WorkoutTemplate } from '@fitness/shared-types'
+import { bodyApi, cardioApi, dashboardApi, exercisesApi, templatesApi, workoutsApi } from '../../src/services/api'
+import * as HealthKit from '../../src/services/healthkit'
 import { colors, spacing, radius, card, shadow } from '../../src/theme'
 import { toLocalISODate } from '../../src/lib/dates'
 import { startFromPlan } from '../../src/lib/startFromPlan'
@@ -308,6 +309,201 @@ function PlansSection({
 }
 
 // ---------------------------------------------------------------------------
+// AppleHealthCard
+// ---------------------------------------------------------------------------
+
+type HealthSyncState = 'idle' | 'syncing' | 'error'
+
+function AppleHealthCard() {
+  const [lastSynced, setLastSynced] = useState<string | null>(null)
+  const [syncState, setSyncState] = useState<HealthSyncState>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    HealthKit.getLastSyncedAt().then((v) => { if (!cancelled) setLastSynced(v) })
+    return () => { cancelled = true }
+  }, [])
+
+  const formatSynced = (iso: string | null): string => {
+    if (!iso) return 'Never synced'
+    const d = new Date(iso)
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  }
+
+  const handleConnect = async () => {
+    setSyncState('syncing')
+    setErrorMsg('')
+    const ok = await HealthKit.init()
+    if (!ok) {
+      setSyncState('error')
+      setErrorMsg('Health access denied. Grant it in iOS Settings > Health > Data Access.')
+      return
+    }
+    // 30-day backfill
+    const since = new Date()
+    since.setDate(since.getDate() - 30)
+    try {
+      await HealthKit.syncToBackend(since)
+      const ts = await HealthKit.getLastSyncedAt()
+      setLastSynced(ts)
+      setSyncState('idle')
+    } catch {
+      setSyncState('error')
+      setErrorMsg('Sync failed. Check your connection and try again.')
+    }
+  }
+
+  const handleSyncNow = async () => {
+    setSyncState('syncing')
+    setErrorMsg('')
+    const lastIso = await HealthKit.getLastSyncedAt()
+    const since = lastIso ? new Date(lastIso) : (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d })()
+    try {
+      await HealthKit.syncToBackend(since)
+      const ts = await HealthKit.getLastSyncedAt()
+      setLastSynced(ts)
+      setSyncState('idle')
+    } catch {
+      setSyncState('error')
+      setErrorMsg('Sync failed. Check your connection and try again.')
+    }
+  }
+
+  const handleDisconnect = async () => {
+    Alert.alert(
+      'Disconnect Apple Health',
+      'This clears the sync record. Health permissions remain in iOS Settings > Health.',
+      [
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: async () => {
+            await HealthKit.clearLastSyncedAt()
+            setLastSynced(null)
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    )
+  }
+
+  const available = HealthKit.isAvailable()
+
+  return (
+    <View style={[card, s.cardPad]}>
+      <Text style={s.sectionTitle}>Apple Health</Text>
+
+      {!available ? (
+        <Text style={[s.empty, { marginTop: spacing.sm }]}>
+          Apple Health connects on iPhone with the dev build. Steps, weight, workouts, HRV, and sleep flow in here.
+        </Text>
+      ) : (
+        <>
+          <Text style={[s.meta, { marginTop: spacing.sm }]}>
+            Last synced: {formatSynced(lastSynced)}
+          </Text>
+
+          {syncState === 'error' && (
+            <Text style={[s.meta, { color: colors.error, marginTop: spacing.xs }]}>{errorMsg}</Text>
+          )}
+
+          <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
+            {!lastSynced ? (
+              <Pressable
+                style={[s.healthBtn, syncState === 'syncing' && s.btnDisabled]}
+                onPress={() => { void handleConnect() }}
+                disabled={syncState === 'syncing'}
+              >
+                <Text style={s.healthBtnText}>{syncState === 'syncing' ? 'Connecting...' : 'Connect'}</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Pressable
+                  style={[s.healthBtn, syncState === 'syncing' && s.btnDisabled, { flex: 1 }]}
+                  onPress={() => { void handleSyncNow() }}
+                  disabled={syncState === 'syncing'}
+                >
+                  <Text style={s.healthBtnText}>{syncState === 'syncing' ? 'Syncing...' : 'Sync now'}</Text>
+                </Pressable>
+                <Pressable style={s.healthBtnSecondary} onPress={() => { void handleDisconnect() }}>
+                  <Text style={s.healthBtnSecondaryText}>Disconnect</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        </>
+      )}
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// CardioCard
+// ---------------------------------------------------------------------------
+
+function formatDuration(s: number): string {
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
+function CardioCard() {
+  const router = useRouter()
+
+  const sevenDaysAgo = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 7)
+    return toLocalISODate(d)
+  })()
+
+  const { data: logs = [], isLoading } = useQuery<CardioLog[]>({
+    queryKey: ['cardio', { from: sevenDaysAgo }],
+    queryFn: () => cardioApi.list({ from: sevenDaysAgo, limit: 100 }),
+  })
+
+  const totalMin = Math.round(logs.reduce((sum, l) => sum + l.duration_s, 0) / 60)
+  const totalKm = (logs.reduce((sum, l) => sum + (l.distance_m ?? 0), 0) / 1000)
+
+  return (
+    <View style={[card, s.cardPad]}>
+      <View style={s.row}>
+        <Text style={s.sectionTitle}>Cardio</Text>
+        <Pressable onPress={() => router.push('/cardio')}>
+          <Text style={s.bodyHistoryLink}>View all</Text>
+        </Pressable>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
+      ) : logs.length === 0 ? (
+        <Text style={s.empty}>No cardio logged yet. Log a session to start tracking.</Text>
+      ) : (
+        <View style={[s.row, { marginTop: spacing.sm, gap: spacing.md }]}>
+          <View style={s.cardioStat}>
+            <Text style={s.cardioStatVal}>{logs.length}</Text>
+            <Text style={s.cardioStatLabel}>sessions</Text>
+          </View>
+          <View style={s.cardioStat}>
+            <Text style={s.cardioStatVal}>{totalMin}m</Text>
+            <Text style={s.cardioStatLabel}>total time</Text>
+          </View>
+          {totalKm > 0 && (
+            <View style={s.cardioStat}>
+              <Text style={s.cardioStatVal}>{totalKm.toFixed(1)} km</Text>
+              <Text style={s.cardioStatLabel}>distance</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      <Text style={[s.meta, { marginTop: spacing.xs }]}>Last 7 days</Text>
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // BodyCard
 // ---------------------------------------------------------------------------
 
@@ -524,13 +720,19 @@ export default function HomeScreen() {
         <PlansSection templates={templates} onStart={(t) => void handleStartPlan(t)} />
       )}
 
-      {/* 5. Body */}
+      {/* 5. Apple Health */}
+      <AppleHealthCard />
+
+      {/* 6. Body */}
       <BodyCard />
 
-      {/* 6. Progress */}
+      {/* 7. Cardio */}
+      <CardioCard />
+
+      {/* 8. Progress */}
       <ProgressChart />
 
-      {/* 7. Muscle split */}
+      {/* 9. Muscle split */}
       {loadingMuscle ? (
         <Skeleton height={160} />
       ) : (
@@ -679,6 +881,32 @@ const s = StyleSheet.create({
   },
   bodyLogBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   btnDisabled: { opacity: 0.5 },
+
+  // Apple Health
+  healthBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  healthBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' as const },
+  healthBtnSecondary: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  healthBtnSecondaryText: { color: colors.gray600, fontSize: 13, fontWeight: '500' as const },
+
+  // Cardio card
+  cardioStat: { alignItems: 'center' as const },
+  cardioStatVal: { fontSize: 16, fontWeight: '700' as const, color: colors.text },
+  cardioStatLabel: { fontSize: 11, color: colors.gray400, marginTop: 2 },
 
   // Muscle split
   muscleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

@@ -214,6 +214,29 @@ export interface BodyMetricCreate {
   notes?: string
 }
 
+// HealthKit types
+export type HealthKitSampleKind = 'weight' | 'steps' | 'workout' | 'hrv' | 'sleep'
+export interface HealthKitSample {
+  kind: HealthKitSampleKind
+  external_id: string
+  date: string
+  started_at?: string | null
+  ended_at?: string | null
+  value?: number | null
+  workout_type?: string | null
+  duration_s?: number | null
+  distance_m?: number | null
+  avg_hr?: number | null
+  calories?: number | null
+}
+export interface HealthKitBatch {
+  samples: HealthKitSample[]
+}
+export interface HealthKitSyncResult {
+  imported: { weight: number; steps: number; workouts: number; hrv: number; sleep: number }
+  skipped: number
+}
+
 export interface BodyMetricUpdate {
   weight_kg?: number | null
   body_fat_pct?: number | null
