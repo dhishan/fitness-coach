@@ -63,6 +63,14 @@
           "healthSharePermission": "Read steps, weight, workouts, HRV, and sleep from Apple Health to track your training.",
           "healthUpdatePermission": "We do not write to Apple Health."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
       ]
     ],
     "experiments": {
