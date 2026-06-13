@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import type { Workout, WorkoutTemplate, BodyMetric } from '@fitness/shared-types'
-import { dashboardApi, templatesApi, workoutsApi, bodyApi } from '../services/api'
+import type { Workout, WorkoutTemplate, BodyMetric, CardioLog } from '@fitness/shared-types'
+import { dashboardApi, templatesApi, workoutsApi, bodyApi, cardioApi } from '../services/api'
 import { toLocalISODate } from '../lib/dates'
 import { startFromPlan } from '../lib/startFromPlan'
 import WeekStrip from '../components/home/WeekStrip'
@@ -113,6 +113,59 @@ function BodyCard() {
           Log
         </button>
       </div>
+    </div>
+  )
+}
+
+function CardioCard() {
+  const today = toLocalISODate()
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const fromDate = toLocalISODate(sevenDaysAgo)
+
+  const { data: logs = [], isLoading } = useQuery<CardioLog[]>({
+    queryKey: ['cardio', { from: fromDate, to: today }],
+    queryFn: () => cardioApi.list({ from: fromDate, to: today }),
+  })
+
+  const totalMins = Math.round(logs.reduce((sum, l) => sum + l.duration_s, 0) / 60)
+  const totalDistM = logs.reduce((sum, l) => sum + (l.distance_m ?? 0), 0)
+  const totalDistKm = totalDistM / 1000
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-gray-900">Cardio</span>
+        <Link to="/cardio" className="text-xs text-primary-600 font-medium hover:text-primary-700">
+          View all
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+      ) : logs.length === 0 ? (
+        <p className="text-sm text-gray-400">No cardio logged yet. Log a session to start tracking.</p>
+      ) : (
+        <div className="flex gap-4">
+          <div className="flex flex-col">
+            <span className="text-lg font-semibold text-gray-900">{logs.length}</span>
+            <span className="text-xs text-gray-400">sessions</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-lg font-semibold text-gray-900">{totalMins}</span>
+            <span className="text-xs text-gray-400">min</span>
+          </div>
+          {totalDistKm > 0 && (
+            <div className="flex flex-col">
+              <span className="text-lg font-semibold text-gray-900">{totalDistKm.toFixed(1)}</span>
+              <span className="text-xs text-gray-400">km</span>
+            </div>
+          )}
+          <div className="flex flex-col justify-end ml-auto">
+            <span className="text-xs text-gray-400">last 7 days</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -281,10 +334,13 @@ export default function Home() {
       {/* 5. Body card */}
       <BodyCard />
 
-      {/* 6. Progress chart */}
+      {/* 6. Cardio card */}
+      <CardioCard />
+
+      {/* 7. Progress chart */}
       <ProgressChart />
 
-      {/* 5. Muscle split */}
+      {/* 8. Muscle split */}
       {loadingMuscle ? (
         <Skeleton className="h-40" />
       ) : (

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import type { Estimation, FoodLog, Goals, GoalSuggestion, Macros } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi } from '../services/api'
+// nutritionApi.barcode is used inline below
 import { toLocalISODate } from '../lib/dates'
 
 // ---------------------------------------------------------------------------
@@ -298,7 +299,7 @@ function GoalsSuggestModal({
 // Main page
 // ---------------------------------------------------------------------------
 
-type Composer = 'idle' | 'text' | 'photo' | 'favorites'
+type Composer = 'idle' | 'text' | 'photo' | 'favorites' | 'barcode'
 
 export default function Nutrition() {
   const today = toLocalISODate()
@@ -309,6 +310,9 @@ export default function Nutrition() {
   const [estimating, setEstimating] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [menuLog, setMenuLog] = useState<FoodLog | null>(null)
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [barcodeError, setBarcodeError] = useState<string | null>(null)
+  const [barcodeLoading, setBarcodeLoading] = useState(false)
 
   const photoInputRef = useRef<HTMLInputElement>(null)
   const qc = useQueryClient()
@@ -392,6 +396,29 @@ export default function Nutrition() {
       setComposer('idle')
     } catch {
       toast.error('Could not log favorite')
+    }
+  }
+
+  // Barcode lookup
+  const handleBarcodeLookup = async () => {
+    const code = barcodeInput.trim()
+    if (!code) return
+    setBarcodeError(null)
+    setBarcodeLoading(true)
+    try {
+      const est = await nutritionApi.barcode(code)
+      setPreview({ estimation: est, source: 'ai_text' })
+      setComposer('idle')
+      setBarcodeInput('')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 404) {
+        setBarcodeError('Product not found.')
+      } else {
+        setBarcodeError('Lookup failed. Check the code and try again.')
+      }
+    } finally {
+      setBarcodeLoading(false)
     }
   }
 
@@ -529,7 +556,7 @@ export default function Nutrition() {
           <span className="text-sm font-semibold text-gray-900">Log food</span>
 
           {composer === 'idle' && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setComposer('text')}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50"
@@ -547,6 +574,12 @@ export default function Nutrition() {
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50"
               >
                 [*] Favorites
+              </button>
+              <button
+                onClick={() => { setComposer('barcode'); setBarcodeInput(''); setBarcodeError(null) }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50"
+              >
+                [B] Barcode
               </button>
             </div>
           )}
@@ -572,6 +605,40 @@ export default function Nutrition() {
                 </button>
                 <button
                   onClick={() => { setComposer('idle'); setTextInput('') }}
+                  className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm text-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {composer === 'barcode' && (
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-gray-500">Enter the numeric barcode from the package</label>
+              <input
+                autoFocus
+                type="text"
+                inputMode="numeric"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                placeholder="e.g. 5449000000996"
+                value={barcodeInput}
+                onChange={(e) => { setBarcodeInput(e.target.value); setBarcodeError(null) }}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleBarcodeLookup() }}
+              />
+              {barcodeError && (
+                <p className="text-xs text-red-500">{barcodeError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void handleBarcodeLookup()}
+                  disabled={!barcodeInput.trim() || barcodeLoading}
+                  className="flex-1 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {barcodeLoading ? 'Looking up...' : 'Look up'}
+                </button>
+                <button
+                  onClick={() => { setComposer('idle'); setBarcodeInput(''); setBarcodeError(null) }}
                   className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm text-gray-600"
                 >
                   Cancel

@@ -167,6 +167,25 @@ export interface Estimation { name: string; serving: string; macros: Macros; con
 export interface GoalSuggestion { proposal: Goals; rationale: string }
 export interface SignedUpload { upload_url: string; gs_url: string; public_url: string; content_type: string }
 
+// Cardio types
+export type CardioType = 'run' | 'ride' | 'walk' | 'swim' | 'other'
+export interface CardioLog {
+  id: string; user_id: string; date: string;
+  type: CardioType; duration_s: number; distance_m: number;
+  avg_hr?: number | null; calories?: number | null; notes: string;
+  source: 'manual' | 'healthkit'; external_id?: string | null;
+  created_at: string;
+}
+export interface CardioLogCreate {
+  date: string; type: CardioType; duration_s: number;
+  distance_m?: number; avg_hr?: number | null; calories?: number | null;
+  notes?: string; source?: 'manual' | 'healthkit'; external_id?: string | null;
+}
+export interface CardioLogUpdate {
+  type?: CardioType; duration_s?: number; distance_m?: number;
+  avg_hr?: number | null; calories?: number | null; notes?: string;
+}
+
 // Body Metrics types
 export interface BodyMetric {
   id: string

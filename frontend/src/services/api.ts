@@ -7,6 +7,7 @@ import type {
   DayLogs, Estimation, Favorite, FavoriteCreate, FoodLog, FoodLogCreate, FoodLogUpdate,
   Goals, GoalSuggestion, SignedUpload,
   BodyMetric, BodyMetricCreate, BodyMetricUpdate,
+  CardioLog, CardioLogCreate, CardioLogUpdate,
 } from '@fitness/shared-types'
 import { useAuth } from '../store/auth'
 
@@ -106,11 +107,24 @@ export const bodyApi = {
     api.delete(`/body/${id}`),
 }
 
+export const cardioApi = {
+  list: (params?: { from?: string; to?: string; limit?: number; offset?: number }) =>
+    api.get<CardioLog[]>('/cardio', { params }).then((r) => r.data),
+  create: (body: CardioLogCreate) =>
+    api.post<CardioLog>('/cardio', body).then((r) => r.data),
+  update: (id: string, body: CardioLogUpdate) =>
+    api.put<CardioLog>(`/cardio/${id}`, body).then((r) => r.data),
+  remove: (id: string) =>
+    api.delete(`/cardio/${id}`),
+}
+
 export const nutritionApi = {
   estimateText: (text: string) =>
     api.post<Estimation>('/nutrition/estimate/text', { text }).then((r) => r.data),
   estimatePhoto: (image_url: string, hint?: string) =>
     api.post<Estimation>('/nutrition/estimate/photo', { image_url, hint }).then((r) => r.data),
+  barcode: (code: string) =>
+    api.get<Estimation & { source?: string; code?: string }>(`/nutrition/barcode/${code}`).then((r) => r.data),
   logs: {
     list: (date: string) =>
       api.get<DayLogs>('/nutrition/logs', { params: { date } }).then((r) => r.data),

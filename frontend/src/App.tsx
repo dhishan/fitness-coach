@@ -14,6 +14,7 @@ import Coach from './pages/Coach'
 import Nutrition from './pages/Nutrition'
 import PlanEditor from './pages/PlanEditor'
 import Body from './pages/Body'
+import Cardio from './pages/Cardio'
 import SettingsSheet from './components/SettingsSheet'
 import UpdateBanner from './components/UpdateBanner'
 
@@ -128,6 +129,7 @@ function AuthedLayout() {
           <Route path="/plans/new" element={<PlanEditor />} />
           <Route path="/plans/:id" element={<PlanEditor />} />
           <Route path="/body" element={<Body />} />
+          <Route path="/cardio" element={<Cardio />} />
         </Routes>
       </main>
 
