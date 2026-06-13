@@ -1,9 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import ReactMarkdown from 'react-markdown'
 import { chatApi } from '../services/api'
 import { openTurnStream } from '../services/chatStream'
 import type { ChatEvent } from '@fitness/shared-types'
+
+// ---- Markdown components map (no @tailwind/typography) ----
+const mdComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
+  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc pl-5 my-2">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 my-2">{children}</ol>,
+  li: ({ children }) => <li className="my-0.5">{children}</li>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  code: ({ children, className }) =>
+    className ? (
+      <code className={className}>{children}</code>
+    ) : (
+      <code className="bg-gray-200 rounded px-1 text-sm">{children}</code>
+    ),
+  pre: ({ children }) => (
+    <pre className="bg-gray-200 rounded p-2 text-sm overflow-x-auto my-2">{children}</pre>
+  ),
+  h1: ({ children }) => <h1 className="font-semibold mt-3 mb-1 text-base">{children}</h1>,
+  h2: ({ children }) => <h2 className="font-semibold mt-3 mb-1 text-base">{children}</h2>,
+  h3: ({ children }) => <h3 className="font-semibold mt-3 mb-1 text-sm">{children}</h3>,
+}
 
 // ---- helpers ----
 
@@ -329,9 +351,9 @@ function ConversationThread({ convId }: { convId: string }) {
         {turns.map((turn) => (
           <div key={turn.id} className={`flex flex-col ${turn.role === 'user' ? 'items-end' : 'items-start'}`}>
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
+              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
                 turn.role === 'user'
-                  ? 'bg-primary-500 text-white'
+                  ? 'bg-primary-500 text-white whitespace-pre-wrap'
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
@@ -351,12 +373,16 @@ function ConversationThread({ convId }: { convId: string }) {
                 >
                   Generation failed. Tap to retry.
                 </button>
-              ) : (
+              ) : turn.role === 'assistant' ? (
                 <>
-                  {turn.content}
+                  <ReactMarkdown components={mdComponents}>{turn.content}</ReactMarkdown>
                   {turn.status === 'pending' && !turn.content && (
                     <span className="inline-block w-2 h-4 bg-gray-400 animate-pulse rounded-sm align-middle" />
                   )}
+                </>
+              ) : (
+                <>
+                  {turn.content}
                 </>
               )}
             </div>
