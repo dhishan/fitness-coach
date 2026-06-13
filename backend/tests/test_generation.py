@@ -27,7 +27,8 @@ def _tc(name, args, id="tc1"):
 @patch("app.chat.generation.chat_store")
 @patch("app.chat.generation.usage_service.record_usage", return_value=0.001)
 @patch("app.chat.generation.llm.complete")
-def test_simple_turn_no_tools(mock_llm, mock_usage, mock_store, mock_db):
+@patch("app.chat.generation.select_model", return_value="openai/gpt-5.5")
+def test_simple_turn_no_tools(mock_select, mock_llm, mock_usage, mock_store, mock_db):
     from app.chat.generation import generate_turn_sync
     mock_llm.return_value = _resp(content="Hello! Nice squat streak.")
     mock_store.get_turn.return_value = {"id": "t1", "events": []}
@@ -48,7 +49,8 @@ def test_simple_turn_no_tools(mock_llm, mock_usage, mock_store, mock_db):
 @patch("app.chat.generation.usage_service.record_usage", return_value=0.0)
 @patch("app.chat.generation.execute_tool", return_value={"sessions_this_week": 3})
 @patch("app.chat.generation.llm.complete")
-def test_tool_loop_accumulates_usage(mock_llm, mock_exec, mock_usage, mock_store, mock_db):
+@patch("app.chat.generation.select_model", return_value="openai/gpt-5.5")
+def test_tool_loop_accumulates_usage(mock_select, mock_llm, mock_exec, mock_usage, mock_store, mock_db):
     from app.chat.generation import generate_turn_sync
     mock_llm.side_effect = [
         _resp(tool_calls=[_tc("get_dashboard_summary", {})], prompt_tokens=20, completion_tokens=8),
@@ -64,9 +66,29 @@ def test_tool_loop_accumulates_usage(mock_llm, mock_exec, mock_usage, mock_store
 
 
 @patch("app.chat.generation.chat_store")
+@patch("app.chat.generation.usage_service.record_usage", return_value=0.001)
+@patch("app.chat.generation.llm.complete")
+@patch("app.chat.generation.select_model", return_value="openai/gpt-test-cheap")
+def test_generation_uses_select_model_result(mock_select, mock_llm, mock_usage, mock_store, mock_db):
+    from app.chat.generation import generate_turn_sync
+    mock_llm.return_value = _resp(content="Done.")
+    mock_store.get_turn.return_value = {"id": "t1", "events": []}
+    mock_store.append_events.side_effect = lambda c, t, turn, ev: turn
+    history = [{"role": "user", "content": "how many sessions this week"}]
+    generate_turn_sync("u1", "c1", "t1", history)
+    # llm.complete called with the cheap model
+    call_kwargs = mock_llm.call_args.kwargs
+    assert call_kwargs.get("model") == "openai/gpt-test-cheap"
+    # record_usage also reflects the cheap model
+    usage_kwargs = mock_usage.call_args.kwargs
+    assert usage_kwargs["model"] == "openai/gpt-test-cheap"
+
+
+@patch("app.chat.generation.chat_store")
 @patch("app.chat.generation.usage_service.record_usage", return_value=0.0)
 @patch("app.chat.generation.llm.complete", side_effect=RuntimeError("api down"))
-def test_llm_failure_emits_error_event(mock_llm, mock_usage, mock_store, mock_db):
+@patch("app.chat.generation.select_model", return_value="openai/gpt-5.5")
+def test_llm_failure_emits_error_event(mock_select, mock_llm, mock_usage, mock_store, mock_db):
     from app.chat.generation import generate_turn_sync
     mock_store.get_turn.return_value = {"id": "t1", "events": []}
     mock_store.append_events.side_effect = lambda c, t, turn, ev: turn

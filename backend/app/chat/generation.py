@@ -2,6 +2,7 @@ import json
 import logging
 import time
 
+from app.chat.router import select_model
 from app.chat.tools.definitions import TOOLS
 from app.chat.tools.executor import execute_tool
 from app.config import get_settings
@@ -41,12 +42,14 @@ def generate_turn_sync(user_id: str, conv_id: str, turn_id: str,
     total_in = total_out = 0
     final_text = ""
     status = "failed"
+    chosen_model = s.chat_model  # default; overridden in try block
     turn = chat_store.get_turn(conv_id, turn_id, user_id) or {"id": turn_id, "events": []}
     messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history]
 
     try:
+        chosen_model = select_model(history)
         for _ in range(MAX_TOOL_ROUNDS):
-            resp = llm.complete(messages, tools=TOOLS, metadata={
+            resp = llm.complete(messages, tools=TOOLS, model=chosen_model, metadata={
                 "generation_name": "coach-turn",
                 "session_id": conv_id,
                 "trace_user_id": user_id,
@@ -97,7 +100,7 @@ def generate_turn_sync(user_id: str, conv_id: str, turn_id: str,
     finally:
         duration_ms = int((time.monotonic() - start) * 1000)
         cost = usage_service.record_usage(
-            user_id=user_id, source="chat", model=s.chat_model,
+            user_id=user_id, source="chat", model=chosen_model,
             input_tokens=total_in, output_tokens=total_out,
             duration_ms=duration_ms, conversation_id=conv_id)
         try:
