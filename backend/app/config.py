@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     langfuse_base_url: str = ""
     chat_max_events: int = 800
     chat_generation_timeout_s: int = 1800
+    cf_access_team_domain: str = ""
+    cf_access_aud: str = ""
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 
