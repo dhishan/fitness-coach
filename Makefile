@@ -23,3 +23,6 @@ terraform-apply:
 
 seed-exercises: ## seed system exercise catalog (uses ADC; set FIRESTORE_DATABASE)
 	cd backend && .venv/bin/python scripts/seed_exercises.py
+
+import-exercise-db: ## import Free Exercise DB into Firestore exercises collection (uses ADC; set FIRESTORE_DATABASE)
+	cd backend && .venv/bin/python scripts/import_free_exercise_db.py
