@@ -4,9 +4,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.schemas import FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate
-from app.services import food_service, goals_service, nutrition_ai
+from app.services import food_service, goals_service, nutrition_ai, openfoodfacts
 
 router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
+
+
+# ---- Barcode lookup ----
+
+@router.get("/barcode/{code}")
+async def barcode_lookup(code: str, user: CurrentUser = Depends(get_current_user)):
+    result = await asyncio.to_thread(openfoodfacts.lookup_barcode, code)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return result
 
 
 # ---- AI estimation ----
