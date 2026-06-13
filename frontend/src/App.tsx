@@ -11,6 +11,7 @@ import HistoryDetail from './pages/HistoryDetail'
 import Library from './pages/Library'
 import LibraryDetail from './pages/LibraryDetail'
 import Coach from './pages/Coach'
+import PlanEditor from './pages/PlanEditor'
 import SettingsSheet from './components/SettingsSheet'
 import UpdateBanner from './components/UpdateBanner'
 
@@ -118,6 +119,8 @@ function AuthedLayout() {
           <Route path="/history/:id" element={<HistoryDetail />} />
           <Route path="/coach" element={<Coach />} />
           <Route path="/coach/:id" element={<Coach />} />
+          <Route path="/plans/new" element={<PlanEditor />} />
+          <Route path="/plans/:id" element={<PlanEditor />} />
         </Routes>
       </main>
 
