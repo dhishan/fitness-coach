@@ -94,6 +94,22 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "LANGFUSE_BASE_URL"
         value = "https://us.cloud.langfuse.com"
       }
+      env {
+        name  = "CF_ACCESS_TEAM_DOMAIN"
+        value = var.cf_access_team_domain
+      }
+      env {
+        name  = "CF_ACCESS_AUD"
+        value = var.cf_access_aud
+      }
+      env {
+        name  = "CHAT_MODEL_CHEAP"
+        value = "openai/gpt-4o-mini"
+      }
+      env {
+        name  = "CHAT_ROUTER_ENABLED"
+        value = "true"
+      }
     }
   }
   lifecycle {

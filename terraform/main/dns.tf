@@ -21,6 +21,14 @@ resource "cloudflare_record" "ui" {
   proxied = false
 }
 
+resource "cloudflare_record" "mcp" {
+  zone_id = var.cloudflare_zone_id
+  name    = "mcp.fitness-tracker"
+  type    = "CNAME"
+  content = "ghs.googlehosted.com"
+  proxied = true   # proxied so Cloudflare Access can inject Cf-Access-Jwt-Assertion
+}
+
 resource "google_cloud_run_domain_mapping" "api" {
   name     = var.api_domain
   location = var.region

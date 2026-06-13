@@ -42,3 +42,18 @@ variable "google_oauth_client_ids" {
   type    = string
   default = ""
 }
+
+variable "cf_access_team_domain" {
+  type    = string
+  default = ""
+}
+
+variable "cf_access_aud" {
+  type    = string
+  default = ""
+}
+
+variable "mcp_domain" {
+  type    = string
+  default = "mcp.fitness-tracker.blueelephants.org"
+}
