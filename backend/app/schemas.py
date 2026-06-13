@@ -67,3 +67,41 @@ class TemplateCreate(BaseModel):
 class TemplateUpdate(BaseModel):
     name: str | None = None
     entries: list[TemplateEntry] | None = None
+
+
+# ---- Nutrition ----
+
+class Macros(BaseModel):
+    calories: float = Field(ge=0)
+    protein_g: float = Field(ge=0)
+    carbs_g: float = Field(ge=0)
+    fat_g: float = Field(ge=0)
+
+
+class FoodLogCreate(BaseModel):
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    name: str = Field(min_length=1, max_length=120)
+    serving: str = ""
+    macros: Macros
+    source: Literal["ai_text", "ai_photo", "favorite", "manual"] = "manual"
+    notes: str = ""
+
+
+class FoodLogUpdate(BaseModel):
+    name: str | None = None
+    serving: str | None = None
+    macros: Macros | None = None
+    notes: str | None = None
+
+
+class FavoriteCreate(BaseModel):
+    name: str
+    serving: str = ""
+    macros: Macros
+
+
+class GoalsUpdate(BaseModel):
+    calories: float = Field(ge=0)
+    protein_g: float = Field(ge=0)
+    carbs_g: float = Field(ge=0)
+    fat_g: float = Field(ge=0)
