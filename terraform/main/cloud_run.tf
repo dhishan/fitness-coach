@@ -110,6 +110,10 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "CHAT_ROUTER_ENABLED"
         value = "true"
       }
+      env {
+        name  = "UPLOADS_BUCKET"
+        value = google_storage_bucket.uploads.name
+      }
     }
   }
   lifecycle {
