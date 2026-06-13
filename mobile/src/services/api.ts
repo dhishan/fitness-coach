@@ -1,0 +1,123 @@
+import axios from 'axios'
+import type {
+  AuthResponse,
+  Conversation,
+  ConversationDetail,
+  DashboardSummary,
+  Exercise,
+  ExerciseCreate,
+  ExerciseHistoryItem,
+  FinishResponse,
+  ProgressPoint,
+  StartChatResponse,
+  TemplateCreate,
+  TemplateEntry,
+  UsageSummary,
+  Workout,
+  WorkoutEntry,
+  WorkoutListResponse,
+  WorkoutTemplate,
+} from '@fitness/shared-types'
+import { useAuth } from '../store/auth'
+import { API_URL } from '../config'
+
+export const api = axios.create({
+  baseURL: `${API_URL}/api/v1`,
+  timeout: 45_000, // Cloud Run cold starts
+})
+
+api.interceptors.request.use((config) => {
+  const token = useAuth.getState().token
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+api.interceptors.response.use(undefined, (error) => {
+  if (
+    error.response?.status === 401 &&
+    !error.config?.url?.includes('/auth/google')
+  ) {
+    useAuth.getState().logout()
+  }
+  return Promise.reject(error)
+})
+
+export const authApi = {
+  google: (idToken: string) =>
+    api.post<AuthResponse>('/auth/google', { id_token: idToken }).then((r) => r.data),
+}
+
+export const exercisesApi = {
+  list: (params?: { muscle?: string; pattern?: string; q?: string }) =>
+    api.get<Exercise[]>('/exercises', { params }).then((r) => r.data),
+  create: (body: ExerciseCreate) =>
+    api.post<Exercise>('/exercises', body).then((r) => r.data),
+  alternatives: (id: string) =>
+    api.get<Exercise[]>(`/exercises/${id}/alternatives`).then((r) => r.data),
+  history: (id: string, limit = 3) =>
+    api
+      .get<ExerciseHistoryItem[]>(`/exercises/${id}/history`, { params: { limit } })
+      .then((r) => r.data),
+}
+
+export const workoutsApi = {
+  create: (body: { date: string; notes?: string; entries?: WorkoutEntry[] }) =>
+    api.post<Workout>('/workouts', body).then((r) => r.data),
+  list: (params?: { from?: string; to?: string; limit?: number; offset?: number }) =>
+    api.get<WorkoutListResponse>('/workouts', { params }).then((r) => r.data),
+  active: () => api.get<Workout | null>('/workouts/active').then((r) => r.data),
+  get: (id: string) => api.get<Workout>(`/workouts/${id}`).then((r) => r.data),
+  update: (id: string, body: { notes?: string; entries?: WorkoutEntry[] }) =>
+    api.put<Workout>(`/workouts/${id}`, body).then((r) => r.data),
+  finish: (id: string) =>
+    api.post<FinishResponse>(`/workouts/${id}/finish`).then((r) => r.data),
+  remove: (id: string) => api.delete(`/workouts/${id}`),
+}
+
+export const dashboardApi = {
+  summary: (referenceDate: string) =>
+    api
+      .get<DashboardSummary>('/dashboard/summary', {
+        params: { reference_date: referenceDate },
+      })
+      .then((r) => r.data),
+  exerciseProgress: (id: string) =>
+    api.get<ProgressPoint[]>(`/dashboard/exercise/${id}`).then((r) => r.data),
+  muscleSplit: (referenceDate: string, weeks = 4) =>
+    api
+      .get<Record<string, number>>('/dashboard/muscle-split', {
+        params: { reference_date: referenceDate, weeks },
+      })
+      .then((r) => r.data),
+}
+
+export const chatApi = {
+  start: (message: string, conversationId?: string) =>
+    api
+      .post<StartChatResponse>('/chat/start', {
+        message,
+        conversation_id: conversationId,
+      })
+      .then((r) => r.data),
+  conversations: () =>
+    api.get<Conversation[]>('/chat/conversations').then((r) => r.data),
+  conversation: (id: string) =>
+    api.get<ConversationDetail>(`/chat/conversations/${id}`).then((r) => r.data),
+}
+
+export const templatesApi = {
+  list: () => api.get<WorkoutTemplate[]>('/templates').then((r) => r.data),
+  create: (body: TemplateCreate) =>
+    api.post<WorkoutTemplate>('/templates', body).then((r) => r.data),
+  get: (id: string) => api.get<WorkoutTemplate>(`/templates/${id}`).then((r) => r.data),
+  update: (id: string, body: { name?: string; entries?: TemplateEntry[] }) =>
+    api.put<WorkoutTemplate>(`/templates/${id}`, body).then((r) => r.data),
+  remove: (id: string) => api.delete(`/templates/${id}`),
+}
+
+export const usageApi = {
+  summary: (month?: string) =>
+    api
+      .get<UsageSummary>('/usage/summary', { params: month ? { month } : {} })
+      .then((r) => r.data),
+}
