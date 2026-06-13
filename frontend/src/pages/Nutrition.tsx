@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import type { Estimation, FoodLog, Goals, GoalSuggestion, Macros } from '@fitness/shared-types'
+import type { Estimation, FoodLog, FoodSuggestion, Goals, GoalSuggestion, Macros } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi } from '../services/api'
 // nutritionApi.barcode is used inline below
 import { toLocalISODate } from '../lib/dates'
@@ -66,7 +66,7 @@ function MacroBar({ value, goal, label }: { value: number; goal: number; label: 
 
 interface PreviewState {
   estimation: Estimation
-  source: 'ai_text' | 'ai_photo'
+  source: 'ai_text' | 'ai_photo' | 'favorite' | 'manual'
   editId?: string // set when editing existing log
 }
 
@@ -105,7 +105,8 @@ function PreviewCard({
         await nutritionApi.logs.update(state.editId, { name, serving, macros })
         toast.success('Log updated')
       } else {
-        await nutritionApi.logs.create({ date, name, serving, macros, source: state.source })
+        const logSource = state.source === 'favorite' || state.source === 'manual' ? state.source : state.source
+        await nutritionApi.logs.create({ date, name, serving, macros, source: logSource })
         toast.success('Logged')
       }
       void qc.invalidateQueries({ queryKey: ['day-logs', date] })
@@ -315,6 +316,9 @@ export default function Nutrition() {
   const [barcodeLoading, setBarcodeLoading] = useState(false)
 
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const [suggestQ, setSuggestQ] = useState('')
+  const [highlightIdx, setHighlightIdx] = useState(-1)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const qc = useQueryClient()
 
   const { data: dayLogs, isLoading: loadingLogs } = useQuery({
@@ -333,6 +337,13 @@ export default function Nutrition() {
     enabled: composer === 'favorites',
   })
 
+  const { data: foodSuggestions = [] } = useQuery<FoodSuggestion[]>({
+    queryKey: ['food-suggestions', suggestQ],
+    queryFn: () => nutritionApi.suggestFoods(suggestQ, 10),
+    enabled: composer === 'text',
+    staleTime: 30_000,
+  })
+
   const totals = dayLogs?.totals ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   const logs = dayLogs?.items ?? []
 
@@ -344,6 +355,23 @@ export default function Nutrition() {
     grouped[g].push(log)
   }
 
+  // Reset autocomplete state when composer closes
+  const closeComposer = () => {
+    setComposer('idle')
+    setTextInput('')
+    setSuggestQ('')
+    setHighlightIdx(-1)
+  }
+
+  // Select a food suggestion — fills preview directly, no AI call
+  const handleSelectSuggestion = (s: FoodSuggestion) => {
+    setPreview({
+      estimation: { name: s.name, serving: s.serving, macros: s.macros, confidence: 1 },
+      source: s.source === 'favorite' ? 'favorite' : 'manual',
+    })
+    closeComposer()
+  }
+
   // Text estimation
   const handleEstimateText = async () => {
     if (!textInput.trim()) return
@@ -351,8 +379,7 @@ export default function Nutrition() {
     try {
       const est = await nutritionApi.estimateText(textInput.trim())
       setPreview({ estimation: est, source: 'ai_text' })
-      setComposer('idle')
-      setTextInput('')
+      closeComposer()
     } catch {
       toast.error('Could not estimate. Try rephrasing.')
     } finally {
@@ -393,7 +420,7 @@ export default function Nutrition() {
       toast.success('Logged from favorites')
       void qc.invalidateQueries({ queryKey: ['day-logs', date] })
       void qc.invalidateQueries({ queryKey: ['favorites'] })
-      setComposer('idle')
+      closeComposer()
     } catch {
       toast.error('Could not log favorite')
     }
@@ -586,15 +613,84 @@ export default function Nutrition() {
 
           {composer === 'text' && (
             <div className="flex flex-col gap-2">
-              <textarea
-                autoFocus
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
-                placeholder="e.g. two scrambled eggs and toast with butter"
-                rows={2}
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleEstimateText() } }}
-              />
+              <div className="relative">
+                <textarea
+                  autoFocus
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+                  placeholder="e.g. two scrambled eggs and toast with butter"
+                  rows={2}
+                  value={textInput}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setTextInput(val)
+                    setHighlightIdx(-1)
+                    if (debounceRef.current) clearTimeout(debounceRef.current)
+                    debounceRef.current = setTimeout(() => {
+                      setSuggestQ(val.trim())
+                    }, 200)
+                  }}
+                  onKeyDown={(e) => {
+                    if (foodSuggestions.length > 0) {
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        setHighlightIdx((i) => Math.min(i + 1, foodSuggestions.length - 1))
+                        return
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        setHighlightIdx((i) => Math.max(i - 1, 0))
+                        return
+                      }
+                      if (e.key === 'Escape') {
+                        setSuggestQ('')
+                        setHighlightIdx(-1)
+                        return
+                      }
+                      if (e.key === 'Enter' && !e.shiftKey && highlightIdx >= 0) {
+                        e.preventDefault()
+                        handleSelectSuggestion(foodSuggestions[highlightIdx])
+                        return
+                      }
+                    }
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      void handleEstimateText()
+                    }
+                  }}
+                />
+
+                {/* Autocomplete dropdown */}
+                {foodSuggestions.length > 0 ? (
+                  <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    {foodSuggestions.map((s, idx) => (
+                      <button
+                        key={`${s.source}:${s.name}`}
+                        onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s) }}
+                        onMouseEnter={() => setHighlightIdx(idx)}
+                        className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 hover:bg-gray-50 ${idx === highlightIdx ? 'bg-gray-50' : ''}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-gray-800 truncate block">{s.name}</span>
+                          {s.serving && (
+                            <span className="text-xs text-gray-400">{s.serving}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-xs font-medium text-primary-600">{Math.round(s.macros.calories)} kcal</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${s.source === 'favorite' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {s.source === 'favorite' ? 'Saved' : 'Recent'}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : textInput.trim().length > 0 ? (
+                  <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2">
+                    <span className="text-xs text-gray-400">No matches. Press Enter to estimate with AI.</span>
+                  </div>
+                ) : null}
+              </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={() => void handleEstimateText()}
@@ -604,7 +700,7 @@ export default function Nutrition() {
                   Estimate
                 </button>
                 <button
-                  onClick={() => { setComposer('idle'); setTextInput('') }}
+                  onClick={closeComposer}
                   className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm text-gray-600"
                 >
                   Cancel
@@ -638,7 +734,7 @@ export default function Nutrition() {
                   {barcodeLoading ? 'Looking up...' : 'Look up'}
                 </button>
                 <button
-                  onClick={() => { setComposer('idle'); setBarcodeInput(''); setBarcodeError(null) }}
+                  onClick={() => { closeComposer(); setBarcodeInput(''); setBarcodeError(null) }}
                   className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm text-gray-600"
                 >
                   Cancel
@@ -677,7 +773,7 @@ export default function Nutrition() {
                 </div>
               )}
               <button
-                onClick={() => setComposer('idle')}
+                onClick={closeComposer}
                 className="py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600"
               >
                 Cancel

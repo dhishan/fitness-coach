@@ -164,6 +164,13 @@ export interface FavoriteCreate { name: string; serving?: string; macros: Macros
 export interface Goals { calories: number; protein_g: number; carbs_g: number; fat_g: number }
 export interface DayLogs { items: FoodLog[]; totals: Macros }
 export interface Estimation { name: string; serving: string; macros: Macros; confidence: number }
+export interface FoodSuggestion {
+  name: string
+  serving: string
+  macros: Macros
+  source: 'favorite' | 'recent'
+  last_used_at: string | null
+}
 export interface GoalSuggestion { proposal: Goals; rationale: string }
 export interface SignedUpload { upload_url: string; gs_url: string; public_url: string; content_type: string }
 

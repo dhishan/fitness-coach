@@ -5,7 +5,7 @@ import type {
   StartChatResponse, TemplateCreate, TemplateEntry, UsageSummary, Workout,
   WorkoutEntry, WorkoutListResponse, WorkoutTemplate,
   DayLogs, Estimation, Favorite, FavoriteCreate, FoodLog, FoodLogCreate, FoodLogUpdate,
-  Goals, GoalSuggestion, SignedUpload,
+  FoodSuggestion, Goals, GoalSuggestion, SignedUpload,
   BodyMetric, BodyMetricCreate, BodyMetricUpdate,
   CardioLog, CardioLogCreate, CardioLogUpdate,
 } from '@fitness/shared-types'
@@ -119,6 +119,8 @@ export const cardioApi = {
 }
 
 export const nutritionApi = {
+  suggestFoods: (q: string, limit = 10) =>
+    api.get<FoodSuggestion[]>('/nutrition/foods/suggest', { params: { q, limit } }).then((r) => r.data),
   estimateText: (text: string) =>
     api.post<Estimation>('/nutrition/estimate/text', { text }).then((r) => r.data),
   estimatePhoto: (image_url: string, hint?: string) =>
