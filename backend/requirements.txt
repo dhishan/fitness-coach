@@ -8,3 +8,4 @@ PyJWT==2.10.1
 cryptography>=44
 litellm==1.55.9
 langfuse==2.59.7
+mcp[cli]==1.9.4

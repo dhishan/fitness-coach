@@ -1,9 +1,19 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.mcp_server import build_mcp_app, mcp
 
-app = FastAPI(title="fitness-tracker-backend")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with mcp.session_manager.run():
+        yield
+
+
+app = FastAPI(title="fitness-tracker-backend", lifespan=lifespan)
 
 settings = get_settings()
 app.add_middleware(
@@ -30,6 +40,8 @@ app.include_router(dashboard_router)
 app.include_router(chat_router)
 app.include_router(templates_router)
 app.include_router(usage_router)
+
+app.mount("/mcp", build_mcp_app())
 
 
 @app.get("/health")
