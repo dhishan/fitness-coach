@@ -152,18 +152,56 @@ export interface UsageSummary {
 
 // Nutrition types
 export interface Macros { calories: number; protein_g: number; carbs_g: number; fat_g: number }
+export interface Micros {
+  fiber_g: number
+  sugar_g: number
+  sodium_mg: number
+  potassium_mg: number
+  calcium_mg: number
+  iron_mg: number
+  vitamin_c_mg: number
+  vitamin_d_mcg: number
+  saturated_fat_g: number
+  cholesterol_mg: number
+}
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export type FoodLogSource = 'ai_text' | 'ai_photo' | 'favorite' | 'manual'
 export interface FoodLog {
   id: string; user_id: string; date: string; name: string; serving: string;
-  macros: Macros; source: FoodLogSource; notes: string; created_at: string
+  macros: Macros; source: FoodLogSource; notes: string; created_at: string;
+  meal_type?: MealType | null;
+  logged_at?: string | null;
+  micros?: Micros | null;
+  usda_fdc_id?: number | null;
+  micros_source?: 'ai' | 'usda' | null;
 }
-export interface FoodLogCreate { date: string; name: string; serving?: string; macros: Macros; source?: FoodLogSource; notes?: string }
-export interface FoodLogUpdate { name?: string; serving?: string; macros?: Macros; notes?: string }
+export interface FoodLogCreate {
+  date: string; name: string; serving?: string; macros: Macros; source?: FoodLogSource; notes?: string;
+  meal_type?: MealType | null;
+  logged_at?: string | null;
+  micros?: Micros | null;
+  usda_fdc_id?: number | null;
+  micros_source?: 'ai' | 'usda' | null;
+}
+export interface FoodLogUpdate {
+  name?: string; serving?: string; macros?: Macros; notes?: string;
+  meal_type?: MealType | null;
+  logged_at?: string | null;
+  micros?: Micros | null;
+}
 export interface Favorite { id: string; user_id: string; name: string; serving: string; macros: Macros; last_used_at: string | null }
 export interface FavoriteCreate { name: string; serving?: string; macros: Macros }
-export interface Goals { calories: number; protein_g: number; carbs_g: number; fat_g: number }
-export interface DayLogs { items: FoodLog[]; totals: Macros }
-export interface Estimation { name: string; serving: string; macros: Macros; confidence: number }
+export interface Goals {
+  calories: number; protein_g: number; carbs_g: number; fat_g: number;
+  micros_targets?: Micros | null;
+}
+export interface DayLogs { items: FoodLog[]; totals: Macros; micros_totals?: Micros }
+export interface Estimation {
+  name: string; serving: string; macros: Macros; confidence: number;
+  micros?: Micros;
+  usda_fdc_id?: number | null;
+  micros_source?: 'ai' | 'usda' | null;
+}
 export interface FoodSuggestion {
   name: string
   serving: string
@@ -171,7 +209,10 @@ export interface FoodSuggestion {
   source: 'favorite' | 'recent'
   last_used_at: string | null
 }
-export interface GoalSuggestion { proposal: Goals; rationale: string }
+export interface GoalSuggestion {
+  proposal: Goals & { micros_targets?: Micros | null }
+  rationale: string
+}
 export interface SignedUpload { upload_url: string; gs_url: string; public_url: string; content_type: string }
 
 // Cardio types
