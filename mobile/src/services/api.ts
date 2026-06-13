@@ -1,6 +1,9 @@
 import axios from 'axios'
 import type {
   AuthResponse,
+  BodyMetric,
+  BodyMetricCreate,
+  BodyMetricUpdate,
   Conversation,
   ConversationDetail,
   DashboardSummary,
@@ -137,6 +140,18 @@ export const uploadsApi = {
     api
       .post<SignedUpload>('/uploads/sign-food-photo', { content_type: contentType })
       .then((r) => r.data),
+}
+
+export const bodyApi = {
+  list: (params?: { limit?: number }) =>
+    api.get<BodyMetric[]>('/body', { params }).then((r) => r.data),
+  latest: () =>
+    api.get<BodyMetric | null>('/body/latest').then((r) => r.data),
+  create: (body: BodyMetricCreate) =>
+    api.post<BodyMetric>('/body', body).then((r) => r.data),
+  update: (id: string, body: BodyMetricUpdate) =>
+    api.put<BodyMetric>(`/body/${id}`, body).then((r) => r.data),
+  remove: (id: string) => api.delete(`/body/${id}`),
 }
 
 export const nutritionApi = {

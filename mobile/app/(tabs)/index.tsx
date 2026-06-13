@@ -9,12 +9,13 @@ import {
   Alert,
   Modal,
   Dimensions,
+  TextInput,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { LineChart } from 'react-native-chart-kit'
-import type { DashboardSummary, Exercise, ProgressPoint, Workout, WorkoutTemplate } from '@fitness/shared-types'
-import { dashboardApi, exercisesApi, templatesApi, workoutsApi } from '../../src/services/api'
+import type { BodyMetric, DashboardSummary, Exercise, ProgressPoint, Workout, WorkoutTemplate } from '@fitness/shared-types'
+import { bodyApi, dashboardApi, exercisesApi, templatesApi, workoutsApi } from '../../src/services/api'
 import { colors, spacing, radius, card, shadow } from '../../src/theme'
 import { toLocalISODate } from '../../src/lib/dates'
 import { startFromPlan } from '../../src/lib/startFromPlan'
@@ -307,6 +308,105 @@ function PlansSection({
 }
 
 // ---------------------------------------------------------------------------
+// BodyCard
+// ---------------------------------------------------------------------------
+
+function BodyCard() {
+  const router = useRouter()
+  const qc = useQueryClient()
+  const today = toLocalISODate()
+  const [weightInput, setWeightInput] = useState('')
+  const [logging, setLogging] = useState(false)
+
+  const { data: latest, isLoading } = useQuery<BodyMetric | null>({
+    queryKey: ['body-latest'],
+    queryFn: () => bodyApi.latest(),
+  })
+
+  const { data: history } = useQuery<BodyMetric[]>({
+    queryKey: ['body', { limit: 90 }],
+    queryFn: () => bodyApi.list({ limit: 90 }),
+  })
+
+  // 7d delta
+  let delta: number | null = null
+  if (latest && history && history.length >= 2) {
+    const cutoff = new Date(latest.date + 'T00:00:00')
+    cutoff.setDate(cutoff.getDate() - 7)
+    const cutoffStr = toLocalISODate(cutoff)
+    const ref = history.find((m) => m.date <= cutoffStr)
+    if (ref) delta = latest.weight_kg - ref.weight_kg
+  }
+
+  const handleLog = async () => {
+    const val = parseFloat(weightInput)
+    if (!weightInput.trim() || isNaN(val) || val <= 0) {
+      Alert.alert('Invalid weight', 'Enter a positive number (e.g. 75.5)')
+      return
+    }
+    setLogging(true)
+    try {
+      await bodyApi.create({ date: today, weight_kg: val })
+      setWeightInput('')
+      void qc.invalidateQueries({ queryKey: ['body-latest'] })
+      void qc.invalidateQueries({ queryKey: ['body'] })
+    } catch {
+      Alert.alert('Error', 'Could not save weight')
+    } finally {
+      setLogging(false)
+    }
+  }
+
+  return (
+    <View style={[card, s.cardPad]}>
+      <View style={s.row}>
+        <Text style={s.sectionTitle}>Body</Text>
+        <Pressable onPress={() => router.push('/body')}>
+          <Text style={s.bodyHistoryLink}>View history</Text>
+        </Pressable>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
+      ) : latest ? (
+        <View style={[s.row, { marginTop: spacing.sm }]}>
+          <View>
+            <Text style={s.bodyWeight}>{latest.weight_kg} kg</Text>
+            <Text style={s.bodyDate}>{latest.date}</Text>
+          </View>
+          {delta !== null && (
+            <Text style={[s.bodyDelta, delta > 0 ? s.bodyDeltaUp : s.bodyDeltaDown]}>
+              {delta > 0 ? '+' : ''}{delta.toFixed(1)} kg (7d)
+            </Text>
+          )}
+        </View>
+      ) : (
+        <Text style={s.empty}>No weigh-ins yet. Log your weight to track changes.</Text>
+      )}
+
+      <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
+        <TextInput
+          style={[s.bodyInput, { flex: 1 }]}
+          value={weightInput}
+          onChangeText={setWeightInput}
+          placeholder="kg (e.g. 75.5)"
+          placeholderTextColor={colors.gray400}
+          keyboardType="decimal-pad"
+          returnKeyType="done"
+        />
+        <Pressable
+          style={[s.bodyLogBtn, logging && s.btnDisabled]}
+          onPress={() => { void handleLog() }}
+          disabled={logging}
+        >
+          <Text style={s.bodyLogBtnText}>{logging ? '...' : 'Log'}</Text>
+        </Pressable>
+      </View>
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Skeleton
 // ---------------------------------------------------------------------------
 
@@ -424,10 +524,13 @@ export default function HomeScreen() {
         <PlansSection templates={templates} onStart={(t) => void handleStartPlan(t)} />
       )}
 
-      {/* 5. Progress */}
+      {/* 5. Body */}
+      <BodyCard />
+
+      {/* 6. Progress */}
       <ProgressChart />
 
-      {/* 6. Muscle split */}
+      {/* 7. Muscle split */}
       {loadingMuscle ? (
         <Skeleton height={160} />
       ) : (
@@ -548,6 +651,34 @@ const s = StyleSheet.create({
   pickerOptionActive: { backgroundColor: colors.gray50 },
   pickerOptionText: { fontSize: 14, color: colors.text },
   pickerOptionTextActive: { color: colors.primary, fontWeight: '600' },
+
+  // Body card
+  bodyWeight: { fontSize: 20, fontWeight: '700', color: colors.text },
+  bodyDate: { fontSize: 12, color: colors.gray400, marginTop: 2 },
+  bodyDelta: { fontSize: 13, fontWeight: '600' },
+  bodyDeltaUp: { color: colors.error },
+  bodyDeltaDown: { color: colors.success },
+  bodyHistoryLink: { fontSize: 12, color: colors.primary, fontWeight: '500' },
+  bodyInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.surface,
+  },
+  bodyLogBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bodyLogBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  btnDisabled: { opacity: 0.5 },
 
   // Muscle split
   muscleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

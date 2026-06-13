@@ -75,6 +75,7 @@ export default function RootLayout() {
         <Stack.Screen name="library/[id]" options={{ title: 'Exercise' }} />
         <Stack.Screen name="history/[id]" options={{ title: 'Workout' }} />
         <Stack.Screen name="coach/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="body" options={{ title: 'Body metrics' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
     </QueryClientProvider>
