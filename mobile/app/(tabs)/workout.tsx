@@ -18,14 +18,15 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Exercise, FinishResponse, SetEntry, Workout, WorkoutEntry } from '@fitness/shared-types'
-import { exercisesApi, workoutsApi } from '../../src/services/api'
+import type { Exercise, FinishResponse, SetEntry, Workout, WorkoutEntry, WorkoutTemplate } from '@fitness/shared-types'
+import { exercisesApi, templatesApi, workoutsApi } from '../../src/services/api'
 import { toLocalISODate } from '../../src/lib/dates'
 import { nextSupersetGroup } from '../../src/lib/workoutHelpers'
 import { buildEntryFromHistory } from '../../src/lib/addExercise'
 import type { EntryWithHistory } from '../../src/lib/addExercise'
 import AddExerciseSheet from '../../src/components/AddExerciseSheet'
 import { card, colors, radius, spacing } from '../../src/theme'
+import { startFromPlan } from '../../src/lib/startFromPlan'
 
 // ---------------------------------------------------------------------------
 // Autosave hook
@@ -421,6 +422,57 @@ function groupEntries(entries: EntryWithHistory[]): GroupedEntry[] {
   return result
 }
 
+// ---------------------------------------------------------------------------
+// Plan chooser modal
+// ---------------------------------------------------------------------------
+
+function PlanChooserModal({
+  visible,
+  onClose,
+  onSelect,
+}: {
+  visible: boolean
+  onClose: () => void
+  onSelect: (template: WorkoutTemplate) => void
+}) {
+  const { data: templates = [], isLoading } = useQuery<WorkoutTemplate[]>({
+    queryKey: ['templates'],
+    queryFn: () => templatesApi.list(),
+    enabled: visible,
+  })
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
+      <Pressable style={s.overlay} onPress={onClose} />
+      <View style={s.planSheet}>
+        <View style={s.planHeader}>
+          <Text style={s.planTitle}>Choose a plan</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={s.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+        {isLoading ? (
+          <ActivityIndicator color={colors.primary} style={{ margin: spacing.lg }} />
+        ) : templates.length === 0 ? (
+          <Text style={s.emptyText}>No plans yet. Create one from Home.</Text>
+        ) : (
+          <FlatList
+            data={templates}
+            keyExtractor={(item) => item.id}
+            style={s.altList}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={s.altRow} onPress={() => onSelect(item)}>
+                <Text style={s.altName}>{item.name}</Text>
+                <Text style={s.planSubText}>{item.entries.length} exercise{item.entries.length !== 1 ? 's' : ''}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </View>
+    </Modal>
+  )
+}
+
 export default function WorkoutScreen() {
   const router = useRouter()
   const qc = useQueryClient()
@@ -453,6 +505,7 @@ export default function WorkoutScreen() {
 
   const [finishing, setFinishing] = useState(false)
   const [finishData, setFinishData] = useState<FinishResponse | null>(null)
+  const [planModalVisible, setPlanModalVisible] = useState(false)
 
   const { saveState, fadeAnim } = useAutosave(workout?.id ?? null, entries, workout !== null)
 
@@ -462,7 +515,25 @@ export default function WorkoutScreen() {
     : saveState === 'error' ? 'Save failed'
     : ''
 
-  const handleStart = async () => {
+  const showStartChooser = () => {
+    Alert.alert(
+      'Start workout',
+      '',
+      [
+        {
+          text: 'Start blank workout',
+          onPress: () => void handleStartBlank(),
+        },
+        {
+          text: 'Start from plan',
+          onPress: () => setPlanModalVisible(true),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    )
+  }
+
+  const handleStartBlank = async () => {
     setStarting(true)
     try {
       const w = await workoutsApi.create({ date: toLocalISODate() })
@@ -470,6 +541,28 @@ export default function WorkoutScreen() {
       setEntries([])
     } catch {
       Alert.alert('Error', 'Could not start workout')
+    } finally {
+      setStarting(false)
+    }
+  }
+
+  // Keep handleStart as alias for blank start (used nowhere else now)
+  const handleStart = handleStartBlank
+
+  const handleStartFromPlan = async (template: WorkoutTemplate) => {
+    setPlanModalVisible(false)
+    setStarting(true)
+    try {
+      const workoutId = await startFromPlan(template)
+      const w = await workoutsApi.active()
+      if (w && w.id === workoutId) {
+        setWorkout(w)
+        setEntries(w.entries.map((e) => ({ ...e, lastTime: undefined })))
+      } else {
+        void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
+      }
+    } catch {
+      Alert.alert('Error', 'Could not start workout from plan')
     } finally {
       setStarting(false)
     }
@@ -638,11 +731,17 @@ export default function WorkoutScreen() {
         <Text style={s.emptyStateText}>No active session.</Text>
         <TouchableOpacity
           style={[s.startBtn, starting && s.startBtnDisabled]}
-          onPress={() => void handleStart()}
+          onPress={showStartChooser}
           disabled={starting}
         >
           <Text style={s.startBtnText}>{starting ? 'Starting...' : 'START WORKOUT'}</Text>
         </TouchableOpacity>
+        {/* Plan chooser modal */}
+        <PlanChooserModal
+          visible={planModalVisible}
+          onClose={() => setPlanModalVisible(false)}
+          onSelect={(t) => void handleStartFromPlan(t)}
+        />
       </View>
     )
   }
@@ -947,6 +1046,24 @@ const s = StyleSheet.create({
     marginTop: 8,
   },
   addExerciseBtnText: { fontSize: 14, fontWeight: '500', color: colors.gray400 },
+
+  // Plan chooser sheet
+  planSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+  },
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.sm,
+  },
+  planTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  planSubText: { fontSize: 12, color: colors.gray400, marginTop: 2 },
 
   // Alternatives sheet
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },

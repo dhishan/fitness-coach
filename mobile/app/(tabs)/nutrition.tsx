@@ -23,6 +23,8 @@ import type {
   Goals,
   GoalSuggestion,
   Macros,
+  MealType,
+  Micros,
 } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi } from '../../src/services/api'
 import { colors, spacing, radius, card } from '../../src/theme'
@@ -55,12 +57,41 @@ function formatDate(iso: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Meal type helpers
+// ---------------------------------------------------------------------------
+
+function defaultMealType(): MealType {
+  const h = new Date().getHours()
+  if (h >= 5 && h < 11) return 'breakfast'
+  if (h >= 11 && h < 15) return 'lunch'
+  if (h >= 17 && h < 21) return 'dinner'
+  return 'snack'
+}
+
+const MEAL_TYPE_OPTIONS: { label: string; value: MealType }[] = [
+  { label: 'Breakfast', value: 'breakfast' },
+  { label: 'Lunch', value: 'lunch' },
+  { label: 'Dinner', value: 'dinner' },
+  { label: 'Snack', value: 'snack' },
+]
+
+// ---------------------------------------------------------------------------
 // Meal grouping
 // ---------------------------------------------------------------------------
 
 function mealGroup(log: FoodLog): 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks' {
-  if (!log.created_at) return 'Snacks'
-  const h = new Date(log.created_at).getHours()
+  if (log.meal_type) {
+    const map: Record<MealType, 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks'> = {
+      breakfast: 'Breakfast',
+      lunch: 'Lunch',
+      dinner: 'Dinner',
+      snack: 'Snacks',
+    }
+    return map[log.meal_type]
+  }
+  const ts = log.logged_at ?? log.created_at
+  if (!ts) return 'Snacks'
+  const h = new Date(ts).getHours()
   if (h >= 5 && h < 11) return 'Breakfast'
   if (h >= 11 && h < 15) return 'Lunch'
   if (h >= 17 && h < 22) return 'Dinner'
@@ -68,6 +99,30 @@ function mealGroup(log: FoodLog): 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks' {
 }
 
 const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as const
+
+// ---------------------------------------------------------------------------
+// Micros helpers
+// ---------------------------------------------------------------------------
+
+interface MicroField { key: keyof Micros; label: string; unit: string }
+
+const MICROS_FIELDS: MicroField[] = [
+  { key: 'fiber_g', label: 'Fiber', unit: 'g' },
+  { key: 'sugar_g', label: 'Sugar', unit: 'g' },
+  { key: 'sodium_mg', label: 'Sodium', unit: 'mg' },
+  { key: 'potassium_mg', label: 'Potassium', unit: 'mg' },
+  { key: 'calcium_mg', label: 'Calcium', unit: 'mg' },
+  { key: 'iron_mg', label: 'Iron', unit: 'mg' },
+  { key: 'vitamin_c_mg', label: 'Vitamin C', unit: 'mg' },
+  { key: 'vitamin_d_mcg', label: 'Vitamin D', unit: 'mcg' },
+  { key: 'saturated_fat_g', label: 'Sat. Fat', unit: 'g' },
+  { key: 'cholesterol_mg', label: 'Cholesterol', unit: 'mg' },
+]
+
+function hasMicros(m: Micros | null | undefined): boolean {
+  if (!m) return false
+  return MICROS_FIELDS.some(({ key }) => (m[key] ?? 0) > 0)
+}
 
 // ---------------------------------------------------------------------------
 // MacroBar
@@ -86,6 +141,87 @@ function MacroBar({ value, goal, label }: { value: number; goal: number; label: 
       <View style={s.macroBarBg}>
         <View style={[s.macroBarFill, { width: `${pct}%` as unknown as number }]} />
       </View>
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// MicrosPanel (collapsible)
+// ---------------------------------------------------------------------------
+
+function MicrosPanel({ micros, source, targets }: {
+  micros: Micros | null | undefined
+  source?: 'ai' | 'usda' | null
+  targets?: Micros | null
+}) {
+  const [open, setOpen] = useState(false)
+  if (!hasMicros(micros)) return null
+
+  return (
+    <View style={s.microsPanel}>
+      <Pressable onPress={() => setOpen((v) => !v)} style={s.microsPanelHeader}>
+        <Text style={s.microsPanelTitle}>{open ? 'v ' : '> '}Micros</Text>
+        {source === 'usda' && (
+          <View style={s.usdaBadge}>
+            <Text style={s.usdaBadgeText}>USDA</Text>
+          </View>
+        )}
+      </Pressable>
+      {open && micros && (
+        <View style={s.microsList}>
+          {MICROS_FIELDS.map(({ key, label, unit }) => {
+            const val = micros[key] ?? 0
+            const goal = targets?.[key] ?? 0
+            const pct = goal > 0 ? Math.min(100, (val / goal) * 100) : 0
+            return (
+              <View key={key} style={s.microRow}>
+                <View style={s.microRowHeader}>
+                  <Text style={s.microRowLabel}>{label}</Text>
+                  <Text style={s.microRowVal}>{Math.round(val)}{unit}{goal > 0 ? `/${Math.round(goal)}${unit}` : ''}</Text>
+                </View>
+                <View style={s.microBarBg}>
+                  <View style={[s.microBarFill, { width: `${pct}%` as unknown as number }]} />
+                </View>
+              </View>
+            )
+          })}
+        </View>
+      )}
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// MicrosTargetsSection (collapsible, for goals modal)
+// ---------------------------------------------------------------------------
+
+function MicrosTargetsSection({ values, onChange }: {
+  values: Partial<Record<keyof Micros, string>>
+  onChange: (k: keyof Micros, v: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <View style={s.microsTargetsSection}>
+      <Pressable onPress={() => setOpen((v) => !v)} style={s.microsPanelHeader}>
+        <Text style={s.microsPanelTitle}>{open ? 'v ' : '> '}Micros targets (optional)</Text>
+      </Pressable>
+      {open && (
+        <View style={s.microsTargetsGrid}>
+          {MICROS_FIELDS.map(({ key, label, unit }) => (
+            <View key={key} style={s.microsTargetField}>
+              <Text style={s.microsTargetLabel}>{label} ({unit})</Text>
+              <TextInput
+                style={s.microsTargetInput}
+                value={values[key] ?? ''}
+                onChangeText={(v) => onChange(key, v)}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={colors.gray400}
+              />
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   )
 }
@@ -118,6 +254,15 @@ function PreviewModal({
   const [carbs, setCarbs] = useState(String(Math.round(state.estimation.macros.carbs_g)))
   const [fat, setFat] = useState(String(Math.round(state.estimation.macros.fat_g)))
   const [saving, setSaving] = useState(false)
+  const [mealType, setMealType] = useState<MealType>(defaultMealType())
+
+  // Time as two separate inputs
+  const now = new Date()
+  const initHH = String(now.getHours()).padStart(2, '0')
+  const initMM = String(now.getMinutes()).padStart(2, '0')
+  const [timeHH, setTimeHH] = useState(initHH)
+  const [timeMM, setTimeMM] = useState(initMM)
+
   const qc = useQueryClient()
 
   const confidence = Math.round(state.estimation.confidence * 100)
@@ -130,11 +275,29 @@ function PreviewModal({
       carbs_g: Number(carbs),
       fat_g: Number(fat),
     }
+    // Only send logged_at if user changed time
+    let logged_at: string | undefined
+    if (timeHH !== initHH || timeMM !== initMM) {
+      const dt = new Date()
+      dt.setHours(Number(timeHH), Number(timeMM), 0, 0)
+      logged_at = dt.toISOString()
+    }
     try {
       if (state.editId) {
         await nutritionApi.logs.update(state.editId, { name, serving, macros })
       } else {
-        await nutritionApi.logs.create({ date, name, serving, macros, source: state.source })
+        await nutritionApi.logs.create({
+          date,
+          name,
+          serving,
+          macros,
+          source: state.source,
+          meal_type: mealType,
+          ...(logged_at ? { logged_at } : {}),
+          ...(state.estimation.micros ? { micros: state.estimation.micros } : {}),
+          ...(state.estimation.usda_fdc_id != null ? { usda_fdc_id: state.estimation.usda_fdc_id } : {}),
+          ...(state.estimation.micros_source ? { micros_source: state.estimation.micros_source } : {}),
+        })
       }
       void qc.invalidateQueries({ queryKey: ['day-logs', date] })
       onSaved()
@@ -148,13 +311,50 @@ function PreviewModal({
   return (
     <Modal visible transparent animationType="slide">
       <View style={s.overlay}>
-        <View style={s.sheet}>
+        <ScrollView style={s.sheetScroll} contentContainerStyle={s.sheet} keyboardShouldPersistTaps="handled">
           <View style={s.sheetHeader}>
             <Text style={s.sheetTitle}>{state.editId ? 'Edit log' : 'Confirm entry'}</Text>
             <View style={s.confidenceChip}>
               <Text style={s.confidenceText}>{confidence}% confident</Text>
             </View>
           </View>
+
+          {/* Meal type chips + time (only when creating) */}
+          {!state.editId && (
+            <>
+              <View style={s.mealChipRow}>
+                {MEAL_TYPE_OPTIONS.map(({ label, value }) => (
+                  <Pressable
+                    key={value}
+                    onPress={() => setMealType(value)}
+                    style={[s.mealChip, mealType === value && s.mealChipActive]}
+                  >
+                    <Text style={[s.mealChipText, mealType === value && s.mealChipTextActive]}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={s.timeRow}>
+                <Text style={s.timeLabel}>Time:</Text>
+                <TextInput
+                  style={s.timeInput}
+                  value={timeHH}
+                  onChangeText={setTimeHH}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  placeholderTextColor={colors.gray400}
+                />
+                <Text style={s.timeColon}>:</Text>
+                <TextInput
+                  style={s.timeInput}
+                  value={timeMM}
+                  onChangeText={setTimeMM}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  placeholderTextColor={colors.gray400}
+                />
+              </View>
+            </>
+          )}
 
           <TextInput
             style={s.input}
@@ -186,10 +386,16 @@ function PreviewModal({
                   keyboardType="numeric"
                   placeholderTextColor={colors.gray400}
                 />
-                <Text style={s.macroInputLabel}>{label}</Text>
+                <Text style={s.macroLabel}>{label}</Text>
               </View>
             ))}
           </View>
+
+          {/* Micros panel */}
+          <MicrosPanel
+            micros={state.estimation.micros}
+            source={state.estimation.micros_source}
+          />
 
           <View style={s.btnRow}>
             <Pressable
@@ -203,7 +409,7 @@ function PreviewModal({
               <Text style={s.btnSecondaryText}>Cancel</Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   )
@@ -298,6 +504,17 @@ function GoalsSuggestModal({
                     </View>
                   ))}
                 </View>
+                {hasMicros(suggestion.proposal.micros_targets) && (
+                  <View style={s.suggestedMicros}>
+                    <Text style={s.suggestedMicrosTitle}>Suggested micros targets</Text>
+                    {MICROS_FIELDS.filter(({ key }) => (suggestion.proposal.micros_targets?.[key] ?? 0) > 0).map(({ key, label, unit }) => (
+                      <View key={key} style={s.suggestedMicroRow}>
+                        <Text style={s.suggestedMicroLabel}>{label}</Text>
+                        <Text style={s.suggestedMicroVal}>{Math.round(suggestion.proposal.micros_targets![key]!)}{unit}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
               <View style={s.btnRow}>
                 <Pressable style={s.btnPrimary} onPress={() => onAccept(suggestion.proposal)}>
@@ -313,6 +530,88 @@ function GoalsSuggestModal({
             </>
           )}
         </View>
+      </View>
+    </Modal>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// GoalsSetModal (direct edit with micros targets)
+// ---------------------------------------------------------------------------
+
+function GoalsSetModal({
+  current,
+  onClose,
+  onSave,
+}: {
+  current: Goals | null | undefined
+  onClose: () => void
+  onSave: (g: Goals) => void
+}) {
+  const [calories, setCalories] = useState(String(current?.calories ?? ''))
+  const [protein, setProtein] = useState(String(current?.protein_g ?? ''))
+  const [carbs, setCarbs] = useState(String(current?.carbs_g ?? ''))
+  const [fat, setFat] = useState(String(current?.fat_g ?? ''))
+  const [microsVals, setMicrosVals] = useState<Partial<Record<keyof Micros, string>>>(
+    current?.micros_targets
+      ? Object.fromEntries(
+          MICROS_FIELDS.map(({ key }) => [key, String(current.micros_targets![key] ?? '')])
+        ) as Partial<Record<keyof Micros, string>>
+      : {}
+  )
+
+  const handleSave = () => {
+    const anyMicro = MICROS_FIELDS.some(({ key }) => Number(microsVals[key] ?? 0) > 0)
+    const micros_targets: Micros | undefined = anyMicro
+      ? Object.fromEntries(MICROS_FIELDS.map(({ key }) => [key, Number(microsVals[key] ?? 0)])) as unknown as Micros
+      : undefined
+    onSave({
+      calories: Number(calories),
+      protein_g: Number(protein),
+      carbs_g: Number(carbs),
+      fat_g: Number(fat),
+      ...(micros_targets ? { micros_targets } : {}),
+    })
+  }
+
+  return (
+    <Modal visible transparent animationType="slide">
+      <View style={s.overlay}>
+        <ScrollView style={s.sheetScroll} contentContainerStyle={s.sheet} keyboardShouldPersistTaps="handled">
+          <Text style={s.sheetTitle}>Set daily goals</Text>
+          <View style={s.macroRow}>
+            {([
+              { label: 'kcal', val: calories, set: setCalories },
+              { label: 'protein', val: protein, set: setProtein },
+              { label: 'carbs', val: carbs, set: setCarbs },
+              { label: 'fat', val: fat, set: setFat },
+            ] as { label: string; val: string; set: (v: string) => void }[]).map(({ label, val, set }) => (
+              <View key={label} style={s.macroInput}>
+                <Text style={s.fieldLabel}>{label}</Text>
+                <TextInput
+                  style={s.macroNumInput}
+                  value={val}
+                  onChangeText={set}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor={colors.gray400}
+                />
+              </View>
+            ))}
+          </View>
+          <MicrosTargetsSection
+            values={microsVals}
+            onChange={(k, v) => setMicrosVals((prev) => ({ ...prev, [k]: v }))}
+          />
+          <View style={[s.btnRow, { marginTop: spacing.md }]}>
+            <Pressable style={s.btnPrimary} onPress={handleSave}>
+              <Text style={s.btnPrimaryText}>Save goals</Text>
+            </Pressable>
+            <Pressable style={s.btnSecondary} onPress={onClose}>
+              <Text style={s.btnSecondaryText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
       </View>
     </Modal>
   )
@@ -396,6 +695,7 @@ export default function NutritionScreen() {
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [showFavorites, setShowFavorites] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
+  const [goalsModalOpen, setGoalsModalOpen] = useState(false)
   const [menuLog, setMenuLog] = useState<FoodLog | null>(null)
   const [showBarcode, setShowBarcode] = useState(false)
   const [suggestQ, setSuggestQ] = useState('')
@@ -422,9 +722,10 @@ export default function NutritionScreen() {
   })
 
   const totals = dayLogs?.totals ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
+  const microsTotals = dayLogs?.micros_totals
   const logs = dayLogs?.items ?? []
 
-  // Group by meal heuristic
+  // Group by meal_type first, then time heuristic
   const grouped: Partial<Record<typeof MEAL_ORDER[number], FoodLog[]>> = {}
   for (const log of logs) {
     const g = mealGroup(log)
@@ -446,7 +747,7 @@ export default function NutritionScreen() {
   const handleSelectSuggestion = (s: FoodSuggestion) => {
     setPreview({
       estimation: { name: s.name, serving: s.serving, macros: s.macros, confidence: 1 },
-      source: s.source === 'favorite' ? 'ai_text' : 'ai_text',
+      source: 'ai_text',
     })
     closeTextComposer()
   }
@@ -598,7 +899,14 @@ export default function NutritionScreen() {
         text: 'Edit',
         onPress: () =>
           setPreview({
-            estimation: { name: log.name, serving: log.serving, macros: log.macros, confidence: 1 },
+            estimation: {
+              name: log.name,
+              serving: log.serving,
+              macros: log.macros,
+              confidence: 1,
+              micros: log.micros ?? undefined,
+              micros_source: log.micros_source,
+            },
             source: 'ai_text',
             editId: log.id,
           }),
@@ -641,6 +949,16 @@ export default function NutritionScreen() {
 
   const handleAcceptGoals = async (g: Goals) => {
     setSuggestOpen(false)
+    try {
+      await nutritionApi.goals.set(g)
+      void qc.invalidateQueries({ queryKey: ['goals'] })
+    } catch {
+      Alert.alert('Error', 'Could not save goals')
+    }
+  }
+
+  const handleSaveGoals = async (g: Goals) => {
+    setGoalsModalOpen(false)
     try {
       await nutritionApi.goals.set(g)
       void qc.invalidateQueries({ queryKey: ['goals'] })
@@ -709,6 +1027,12 @@ export default function NutritionScreen() {
               <MacroBar value={totals.carbs_g} goal={goals.carbs_g} label="carbs" />
               <MacroBar value={totals.fat_g} goal={goals.fat_g} label="fat" />
             </View>
+            {/* Micros today */}
+            <MicrosPanel
+              micros={microsTotals}
+              source={null}
+              targets={goals.micros_targets}
+            />
           </>
         ) : (
           <>
@@ -868,9 +1192,14 @@ export default function NutritionScreen() {
       <View style={[card, s.cardPad]}>
         <View style={s.row}>
           <Text style={s.sectionTitle}>Daily goals</Text>
-          <Pressable onPress={() => setSuggestOpen(true)}>
-            <Text style={s.suggestBtn}>Suggest with AI</Text>
-          </Pressable>
+          <View style={s.goalsActions}>
+            <Pressable onPress={() => setSuggestOpen(true)}>
+              <Text style={s.suggestBtn}>Suggest with AI</Text>
+            </Pressable>
+            <Pressable onPress={() => setGoalsModalOpen(true)} style={{ marginLeft: spacing.md }}>
+              <Text style={[s.suggestBtn, { color: colors.gray500 }]}>Edit</Text>
+            </Pressable>
+          </View>
         </View>
 
         {goals ? (
@@ -915,6 +1244,14 @@ export default function NutritionScreen() {
         <GoalsSuggestModal
           onClose={() => setSuggestOpen(false)}
           onAccept={(g) => { void handleAcceptGoals(g) }}
+        />
+      )}
+
+      {goalsModalOpen && (
+        <GoalsSetModal
+          current={goals}
+          onClose={() => setGoalsModalOpen(false)}
+          onSave={(g) => { void handleSaveGoals(g) }}
         />
       )}
 
@@ -966,6 +1303,76 @@ const s = StyleSheet.create({
   macroBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   macroTextRow: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.sm },
   macroText: { fontSize: 13, color: colors.gray500 },
+
+  // Meal type chips
+  mealChipRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: spacing.sm },
+  mealChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  mealChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  mealChipText: { fontSize: 12, color: colors.gray600, fontWeight: '500' },
+  mealChipTextActive: { color: '#fff' },
+
+  // Time inputs
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm },
+  timeLabel: { fontSize: 12, color: colors.gray500, marginRight: 4 },
+  timeInput: {
+    width: 40,
+    height: 32,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    textAlign: 'center',
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.surface,
+  },
+  timeColon: { fontSize: 14, color: colors.gray500 },
+
+  // Micros panel
+  microsPanel: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.gray100, paddingTop: spacing.sm },
+  microsPanelHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  microsPanelTitle: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
+  usdaBadge: { backgroundColor: '#dbeafe', borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 2 },
+  usdaBadgeText: { fontSize: 10, fontWeight: '700', color: '#1d4ed8' },
+  microsList: { marginTop: spacing.sm, gap: spacing.sm },
+  microRow: { flex: 1 },
+  microRowHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+  microRowLabel: { fontSize: 11, color: colors.gray500 },
+  microRowVal: { fontSize: 11, color: colors.gray400 },
+  microBarBg: { height: 4, borderRadius: radius.full, backgroundColor: colors.gray100, overflow: 'hidden' },
+  microBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: '#2dd4bf' },
+
+  // Micros targets section
+  microsTargetsSection: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.gray100, paddingTop: spacing.sm },
+  microsTargetsGrid: { marginTop: spacing.sm, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  microsTargetField: { width: '47%' },
+  microsTargetLabel: { fontSize: 11, color: colors.gray500, marginBottom: 2 },
+  microsTargetInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: colors.text,
+    backgroundColor: colors.surface,
+  },
+
+  // Suggested micros
+  suggestedMicros: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.gray200, paddingTop: spacing.sm },
+  suggestedMicrosTitle: { fontSize: 12, fontWeight: '600', color: colors.gray500, marginBottom: 4 },
+  suggestedMicroRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+  suggestedMicroLabel: { fontSize: 12, color: colors.gray500 },
+  suggestedMicroVal: { fontSize: 12, fontWeight: '500', color: colors.text },
 
   // Composer
   composerBtn: {
@@ -1020,6 +1427,7 @@ const s = StyleSheet.create({
   logMenuDot: { fontSize: 18, color: colors.gray400, lineHeight: 22 },
 
   // Goals card
+  goalsActions: { flexDirection: 'row', alignItems: 'center' },
   suggestBtn: { fontSize: 12, color: colors.primary, fontWeight: '500' },
   macroRow: { flexDirection: 'row', gap: spacing.sm },
   macroInput: { flex: 1, alignItems: 'center', gap: 4 },
@@ -1034,13 +1442,13 @@ const s = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
-  macroInputLabel: { fontSize: 11, color: colors.gray400 },
   macroStatItem: { flex: 1, alignItems: 'center', backgroundColor: colors.gray50, borderRadius: radius.md, paddingVertical: spacing.sm },
   macroStatVal: { fontSize: 14, fontWeight: '600', color: colors.text },
   macroStatLabel: { fontSize: 11, color: colors.gray400 },
 
   // Modal / sheet
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheetScroll: { maxHeight: '90%' },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.base, gap: spacing.sm },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
