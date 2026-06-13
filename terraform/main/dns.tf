@@ -38,4 +38,23 @@ resource "google_cloud_run_domain_mapping" "api" {
   spec {
     route_name = google_cloud_run_v2_service.backend.name
   }
+  # CI service account is not a verified owner of blueelephants.org; create
+  # manually with user creds and never let CI modify it. See runbook.
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+resource "google_cloud_run_domain_mapping" "mcp" {
+  name     = var.mcp_domain
+  location = var.region
+  metadata {
+    namespace = var.project_id
+  }
+  spec {
+    route_name = google_cloud_run_v2_service.backend.name
+  }
+  lifecycle {
+    ignore_changes = all
+  }
 }
