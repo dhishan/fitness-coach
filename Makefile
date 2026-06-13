@@ -26,3 +26,23 @@ seed-exercises: ## seed system exercise catalog (uses ADC; set FIRESTORE_DATABAS
 
 import-exercise-db: ## import Free Exercise DB into Firestore exercises collection (uses ADC; set FIRESTORE_DATABASE)
 	cd backend && .venv/bin/python scripts/import_free_exercise_db.py
+
+mobile-install: ## install mobile deps via root workspace
+	npm install
+
+mobile-start: ## expo dev server
+	cd mobile && npx expo start
+
+mobile-sim: ## build + launch on iOS simulator (Release if needed via --variant)
+	cd mobile && npx expo run:ios
+
+mobile-run-phone: ## build + install Release on connected iPhone (DEVICE_NAME=<substr> or DEVICE=<udid>)
+	@DEVICE_UDID=$${DEVICE:-$$(xcrun xctrace list devices 2>&1 | grep -i "$${DEVICE_NAME:-iPhone}" | grep -v Simulator | head -1 | sed -E 's/.*\(([0-9A-F-]{20,})\).*/\1/')}; \
+	if [ -z "$$DEVICE_UDID" ]; then echo "No matching connected iPhone found"; exit 1; fi; \
+	cd mobile && npx expo run:ios --device "$$DEVICE_UDID" --configuration Release
+
+mobile-update: ## OTA via EAS Update (JS-only changes)
+	cd mobile && npx eas update --branch main --auto
+
+mobile-typecheck: ## tsc --noEmit
+	cd mobile && npx tsc --noEmit
