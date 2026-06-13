@@ -1,0 +1,16 @@
+diff --git a/node_modules/react-native-health/RCTAppleHealthKit/RCTAppleHealthKit.m b/node_modules/react-native-health/RCTAppleHealthKit/RCTAppleHealthKit.m
+index e8ddce1..1fc9e13 100644
+--- a/node_modules/react-native-health/RCTAppleHealthKit/RCTAppleHealthKit.m
++++ b/node_modules/react-native-health/RCTAppleHealthKit/RCTAppleHealthKit.m
+@@ -841,7 +841,10 @@ -(void)startObserving {
+ - (void)emitEventInternal:(NSNotification *)notification {
+   if (self.hasListeners) {
+     self.callableJSModules = [RCTAppleHealthKit sharedJsModule];
+-    [self.callableJSModules setBridge:self.bridge];
++    // setBridge: removed in newer RN; guard against missing selector under New Architecture
++    if ([self.callableJSModules respondsToSelector:@selector(setBridge:)]) {
++      [self.callableJSModules performSelector:@selector(setBridge:) withObject:self.bridge];
++    }
+     [self sendEventWithName:notification.name
+                    body:notification.userInfo];
+   }

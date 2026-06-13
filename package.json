@@ -1,5 +1,11 @@
 {
   "name": "fitness-tracker",
   "private": true,
-  "workspaces": ["packages/*", "frontend", "mobile"]
+  "workspaces": ["packages/*", "frontend", "mobile"],
+  "scripts": {
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.0"
+  }
 }
