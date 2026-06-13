@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - run: npx tsc --noEmit -p packages/shared-types
       - run: npm run -w frontend test -- --run
       - run: npm run -w frontend build
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - name: Build frontend
         env:
           VITE_API_URL: https://fitness-tracker-backend-ix5fldbdya-uc.a.run.app
