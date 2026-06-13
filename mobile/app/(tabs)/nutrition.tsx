@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
   ScrollView,
   View,
@@ -19,6 +19,7 @@ import type {
   Estimation,
   Favorite,
   FoodLog,
+  FoodSuggestion,
   Goals,
   GoalSuggestion,
   Macros,
@@ -397,6 +398,8 @@ export default function NutritionScreen() {
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [menuLog, setMenuLog] = useState<FoodLog | null>(null)
   const [showBarcode, setShowBarcode] = useState(false)
+  const [suggestQ, setSuggestQ] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const qc = useQueryClient()
   const isToday = date === today
@@ -411,6 +414,13 @@ export default function NutritionScreen() {
     queryFn: () => nutritionApi.goals.get(),
   })
 
+  const { data: foodSuggestions = [] } = useQuery<FoodSuggestion[]>({
+    queryKey: ['food-suggestions', suggestQ],
+    queryFn: () => nutritionApi.suggestFoods(suggestQ, 10),
+    enabled: composerMode === 'text',
+    staleTime: 30_000,
+  })
+
   const totals = dayLogs?.totals ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   const logs = dayLogs?.items ?? []
 
@@ -423,17 +433,35 @@ export default function NutritionScreen() {
   }
 
   // ---------------------------------------------------------------------------
+  // Close text composer + reset autocomplete state
+  // ---------------------------------------------------------------------------
+
+  const closeTextComposer = () => {
+    setComposerMode('idle')
+    setTextInput('')
+    setSuggestQ('')
+  }
+
+  // Select a food suggestion — fills preview directly, no AI call
+  const handleSelectSuggestion = (s: FoodSuggestion) => {
+    setPreview({
+      estimation: { name: s.name, serving: s.serving, macros: s.macros, confidence: 1 },
+      source: s.source === 'favorite' ? 'ai_text' : 'ai_text',
+    })
+    closeTextComposer()
+  }
+
+  // ---------------------------------------------------------------------------
   // Text estimation
   // ---------------------------------------------------------------------------
 
   const handleEstimateText = async () => {
     if (!textInput.trim()) return
     setEstimating(true)
-    setComposerMode('idle')
+    closeTextComposer()
     try {
       const est = await nutritionApi.estimateText(textInput.trim())
       setPreview({ estimation: est, source: 'ai_text' })
-      setTextInput('')
     } catch {
       Alert.alert('Error', 'Could not estimate. Try rephrasing.')
     } finally {
@@ -733,12 +761,53 @@ export default function NutritionScreen() {
               <TextInput
                 style={[s.input, { height: 64 }]}
                 value={textInput}
-                onChangeText={setTextInput}
+                onChangeText={(val) => {
+                  setTextInput(val)
+                  if (debounceRef.current) clearTimeout(debounceRef.current)
+                  debounceRef.current = setTimeout(() => setSuggestQ(val.trim()), 200)
+                }}
                 placeholder="e.g. two scrambled eggs and toast with butter"
                 placeholderTextColor={colors.gray400}
                 multiline
                 autoFocus
               />
+
+              {/* Suggestions panel */}
+              {foodSuggestions.length > 0 ? (
+                <FlatList
+                  data={foodSuggestions}
+                  keyExtractor={(item) => `${item.source}:${item.name}`}
+                  scrollEnabled={false}
+                  style={s.suggestionList}
+                  renderItem={({ item }) => (
+                    <Pressable
+                      style={s.suggestionRow}
+                      onPress={() => handleSelectSuggestion(item)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.suggestionName} numberOfLines={1}>{item.name}</Text>
+                        {item.serving ? (
+                          <Text style={s.suggestionServing}>{item.serving}</Text>
+                        ) : null}
+                      </View>
+                      <View style={s.suggestionRight}>
+                        <Text style={s.suggestionKcal}>{Math.round(item.macros.calories)} kcal</Text>
+                        <View style={[s.sourceChip, item.source === 'favorite' ? s.sourceChipFav : s.sourceChipRecent]}>
+                          <Text style={[s.sourceChipText, item.source === 'favorite' ? s.sourceChipTextFav : s.sourceChipTextRecent]}>
+                            {item.source === 'favorite' ? 'Saved' : 'Recent'}
+                          </Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  )}
+                  ItemSeparatorComponent={() => <View style={s.separator} />}
+                />
+              ) : textInput.trim().length > 0 ? (
+                <View style={s.noMatchBox}>
+                  <Text style={s.noMatchText}>No matches. Tap Estimate to use AI.</Text>
+                </View>
+              ) : null}
+
               <View style={s.row}>
                 <Pressable
                   style={[s.btnPrimary, { flex: 1 }, !textInput.trim() && s.btnDisabled]}
@@ -750,7 +819,7 @@ export default function NutritionScreen() {
                 <View style={{ width: spacing.sm }} />
                 <Pressable
                   style={s.btnSecondary}
-                  onPress={() => { setComposerMode('idle'); setTextInput('') }}
+                  onPress={closeTextComposer}
                 >
                   <Text style={s.btnSecondaryText}>Cancel</Text>
                 </Pressable>
@@ -989,4 +1058,20 @@ const s = StyleSheet.create({
   fieldLabel: { fontSize: 12, color: colors.gray500 },
   suggestionBox: { backgroundColor: colors.gray50, borderRadius: radius.md, padding: spacing.md, gap: spacing.sm },
   suggestionRationale: { fontSize: 12, color: colors.gray500, fontStyle: 'italic' },
+
+  // Food autocomplete suggestions panel
+  suggestionList: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface, maxHeight: 260 },
+  suggestionRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.sm },
+  suggestionName: { fontSize: 14, fontWeight: '500', color: colors.text },
+  suggestionServing: { fontSize: 12, color: colors.gray400, marginTop: 2 },
+  suggestionRight: { alignItems: 'flex-end', gap: 4 },
+  suggestionKcal: { fontSize: 12, fontWeight: '500', color: colors.primary },
+  sourceChip: { borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2 },
+  sourceChipFav: { backgroundColor: '#fef3c7' },
+  sourceChipRecent: { backgroundColor: colors.gray100 },
+  sourceChipText: { fontSize: 10 },
+  sourceChipTextFav: { color: '#92400e' },
+  sourceChipTextRecent: { color: colors.gray500 },
+  noMatchBox: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  noMatchText: { fontSize: 12, color: colors.gray400 },
 })
