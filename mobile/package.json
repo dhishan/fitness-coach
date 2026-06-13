@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@fitness/shared-types": "*",
     "@tanstack/react-query": "^5.56.0",
     "axios": "^1.7.9",
