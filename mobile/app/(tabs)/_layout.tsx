@@ -7,7 +7,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
     Home: '⊙',
     Workout: '◈',
-    Library: '⊞',
+    Nutrition: '▦',
     History: '◷',
     Coach: '◉',
   }
@@ -73,10 +73,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="library"
+        name="nutrition"
         options={{
-          title: 'Library',
-          tabBarIcon: ({ focused }) => <TabIcon label="Library" focused={focused} />,
+          title: 'Nutrition',
+          tabBarIcon: ({ focused }) => <TabIcon label="Nutrition" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -91,6 +91,14 @@ export default function TabLayout() {
         options={{
           title: 'Coach',
           tabBarIcon: ({ focused }) => <TabIcon label="Coach" focused={focused} />,
+        }}
+      />
+      {/* Library is hidden from the tab bar but reachable via router.push('/library') */}
+      <Tabs.Screen
+        name="library"
+        options={{
+          href: null,
+          title: 'Library',
         }}
       />
     </Tabs>

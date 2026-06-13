@@ -274,9 +274,14 @@ function PlansSection({
     <View style={[card, s.cardPad]}>
       <View style={s.row}>
         <Text style={s.sectionTitle}>Your plans</Text>
-        <Pressable onPress={() => router.push('/plans/new')}>
-          <Text style={s.newPlanBtn}>+ New plan</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <Pressable onPress={() => router.push('/(tabs)/library')}>
+            <Text style={s.newPlanBtn}>Browse exercises</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/plans/new')}>
+            <Text style={s.newPlanBtn}>+ New plan</Text>
+          </Pressable>
+        </View>
       </View>
       {templates.length === 0 ? (
         <Text style={s.empty}>No plans yet. Create one to start sessions faster.</Text>

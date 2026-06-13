@@ -34,7 +34,14 @@
         }
       ],
       "expo-image",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Fitness Tracker to access your photos to log meals.",
+          "cameraPermission": "Allow Fitness Tracker to access your camera to log meals."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
