@@ -8,6 +8,8 @@ import Home from './pages/Home'
 import Workout from './pages/Workout'
 import History from './pages/History'
 import HistoryDetail from './pages/HistoryDetail'
+import Library from './pages/Library'
+import LibraryDetail from './pages/LibraryDetail'
 import Coach from './pages/Coach'
 import SettingsSheet from './components/SettingsSheet'
 import UpdateBanner from './components/UpdateBanner'
@@ -53,6 +55,15 @@ function HistoryIcon() {
   )
 }
 
+function LibraryIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  )
+}
+
 function CoachIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -64,6 +75,7 @@ function CoachIcon() {
 const tabs = [
   { path: '/', label: 'Home', Icon: HomeIcon },
   { path: '/workout', label: 'Workout', Icon: WorkoutIcon },
+  { path: '/library', label: 'Library', Icon: LibraryIcon },
   { path: '/history', label: 'History', Icon: HistoryIcon },
   { path: '/coach', label: 'Coach', Icon: CoachIcon },
 ]
@@ -100,6 +112,8 @@ function AuthedLayout() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/workout" element={<Workout />} />
+          <Route path="/library" element={<Library />} />
+          <Route path="/library/:id" element={<LibraryDetail />} />
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<HistoryDetail />} />
           <Route path="/coach" element={<Coach />} />

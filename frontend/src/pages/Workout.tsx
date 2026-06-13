@@ -5,15 +5,9 @@ import toast from 'react-hot-toast'
 import type { Equipment, Exercise, ExerciseCreate, ExerciseHistoryItem, FinishResponse, Muscle, MovementPattern, SetEntry, Workout, WorkoutEntry } from '@fitness/shared-types'
 import { exercisesApi, workoutsApi } from '../services/api'
 import { toLocalISODate } from '../lib/dates'
-import { formatLastTime, nextSupersetGroup } from '../lib/workoutHelpers'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface EntryWithHistory extends WorkoutEntry {
-  lastTime?: string
-}
+import { nextSupersetGroup } from '../lib/workoutHelpers'
+import { buildEntryFromHistory } from '../lib/addExercise'
+import type { EntryWithHistory } from '../lib/addExercise'
 
 // ---------------------------------------------------------------------------
 // Autosave hook
@@ -814,30 +808,7 @@ export default function Workout() {
   const handleAddExercise = async (exercise: Exercise, hist: ExerciseHistoryItem[]) => {
     setShowAdd(false)
     if (!workout) return
-
-    const lastSession = hist[0]
-    let prefilled: SetEntry[]
-    let lastTime: string | undefined
-
-    if (lastSession && lastSession.sets.length > 0) {
-      prefilled = lastSession.sets
-        .filter((s) => !s.is_warmup)
-        .map((s) => ({ weight: s.weight, reps: s.reps, is_warmup: false }))
-      if (prefilled.length === 0) prefilled = [{ weight: 0, reps: 0 }]
-      lastTime = formatLastTime(lastSession.sets, lastSession.date)
-    } else {
-      prefilled = [{ weight: 0, reps: 0 }]
-      lastTime = undefined
-    }
-
-    const newEntry: EntryWithHistory = {
-      exercise_id: exercise.id,
-      exercise_name: exercise.name,
-      superset_group: null,
-      sets: prefilled,
-      lastTime,
-    }
-
+    const newEntry = buildEntryFromHistory(exercise, hist)
     setEntries((prev) => [...prev, newEntry])
   }
 
