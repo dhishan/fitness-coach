@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -78,13 +78,34 @@ class Macros(BaseModel):
     fat_g: float = Field(ge=0)
 
 
+class Micros(BaseModel):
+    fiber_g: float = Field(default=0, ge=0)
+    sugar_g: float = Field(default=0, ge=0)
+    sodium_mg: float = Field(default=0, ge=0)
+    potassium_mg: float = Field(default=0, ge=0)
+    calcium_mg: float = Field(default=0, ge=0)
+    iron_mg: float = Field(default=0, ge=0)
+    vitamin_c_mg: float = Field(default=0, ge=0)
+    vitamin_d_mcg: float = Field(default=0, ge=0)
+    saturated_fat_g: float = Field(default=0, ge=0)
+    cholesterol_mg: float = Field(default=0, ge=0)
+
+
+MealType = Literal["breakfast", "lunch", "dinner", "snack"]
+
+
 class FoodLogCreate(BaseModel):
     date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     name: str = Field(min_length=1, max_length=120)
     serving: str = ""
     macros: Macros
-    source: Literal["ai_text", "ai_photo", "favorite", "manual"] = "manual"
+    source: Literal["ai_text", "ai_photo", "favorite", "manual", "barcode"] = "manual"
     notes: str = ""
+    meal_type: Optional[MealType] = None
+    logged_at: str | None = None
+    micros: Micros | None = None
+    usda_fdc_id: int | None = None
+    micros_source: Optional[Literal["ai", "usda"]] = None
 
 
 class FoodLogUpdate(BaseModel):
@@ -92,6 +113,11 @@ class FoodLogUpdate(BaseModel):
     serving: str | None = None
     macros: Macros | None = None
     notes: str | None = None
+    meal_type: Optional[MealType] = None
+    logged_at: str | None = None
+    micros: Micros | None = None
+    usda_fdc_id: int | None = None
+    micros_source: Optional[Literal["ai", "usda"]] = None
 
 
 class FavoriteCreate(BaseModel):
@@ -105,6 +131,7 @@ class GoalsUpdate(BaseModel):
     protein_g: float = Field(ge=0)
     carbs_g: float = Field(ge=0)
     fat_g: float = Field(ge=0)
+    micros_targets: Micros | None = None
 
 
 # ---- Body Metrics ----
