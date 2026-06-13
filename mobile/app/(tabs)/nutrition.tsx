@@ -26,6 +26,7 @@ import type {
 import { nutritionApi, uploadsApi } from '../../src/services/api'
 import { colors, spacing, radius, card } from '../../src/theme'
 import { toLocalISODate } from '../../src/lib/dates'
+import BarcodeScanner from '../../components/BarcodeScanner'
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -395,6 +396,7 @@ export default function NutritionScreen() {
   const [showFavorites, setShowFavorites] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [menuLog, setMenuLog] = useState<FoodLog | null>(null)
+  const [showBarcode, setShowBarcode] = useState(false)
 
   const qc = useQueryClient()
   const isToday = date === today
@@ -533,6 +535,28 @@ export default function NutritionScreen() {
       void qc.invalidateQueries({ queryKey: ['favorites'] })
     } catch {
       Alert.alert('Error', 'Could not log favorite')
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Barcode scan
+  // ---------------------------------------------------------------------------
+
+  const handleBarcode = async (code: string) => {
+    setShowBarcode(false)
+    setEstimating(true)
+    try {
+      const est = await nutritionApi.barcode(code)
+      setPreview({ estimation: est, source: 'ai_text' })
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 404) {
+        Alert.alert('Product not found', 'No nutrition data found for that barcode.')
+      } else {
+        Alert.alert('Error', 'Could not look up barcode. Try again.')
+      }
+    } finally {
+      setEstimating(false)
     }
   }
 
@@ -684,17 +708,24 @@ export default function NutritionScreen() {
           <Text style={s.sectionTitle}>Log food</Text>
 
           {composerMode === 'idle' && (
-            <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
-              <Pressable style={s.composerBtn} onPress={() => setComposerMode('text')}>
-                <Text style={s.composerBtnText}>[T] Type a meal</Text>
-              </Pressable>
-              <Pressable style={s.composerBtn} onPress={handleCamera}>
-                <Text style={s.composerBtnText}>[C] Camera</Text>
-              </Pressable>
-              <Pressable style={s.composerBtn} onPress={() => setShowFavorites(true)}>
-                <Text style={s.composerBtnText}>[*] Favorites</Text>
-              </Pressable>
-            </View>
+            <>
+              <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
+                <Pressable style={s.composerBtn} onPress={() => setComposerMode('text')}>
+                  <Text style={s.composerBtnText}>[T] Type a meal</Text>
+                </Pressable>
+                <Pressable style={s.composerBtn} onPress={handleCamera}>
+                  <Text style={s.composerBtnText}>[C] Camera</Text>
+                </Pressable>
+              </View>
+              <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
+                <Pressable style={s.composerBtn} onPress={() => setShowFavorites(true)}>
+                  <Text style={s.composerBtnText}>[*] Favorites</Text>
+                </Pressable>
+                <Pressable style={s.composerBtn} onPress={() => setShowBarcode(true)}>
+                  <Text style={s.composerBtnText}>[B] Barcode</Text>
+                </Pressable>
+              </View>
+            </>
           )}
 
           {composerMode === 'text' && (
@@ -820,6 +851,13 @@ export default function NutritionScreen() {
 
       {/* Invisible sentinel for menuLog (unused var) */}
       {menuLog !== null && null}
+
+      {/* Barcode scanner modal */}
+      <BarcodeScanner
+        visible={showBarcode}
+        onCode={(code) => { void handleBarcode(code) }}
+        onCancel={() => setShowBarcode(false)}
+      />
 
     </ScrollView>
   )
