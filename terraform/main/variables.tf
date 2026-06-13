@@ -37,3 +37,8 @@ variable "google_oauth_client_id" {
   type    = string
   default = ""
 }
+
+variable "google_oauth_client_ids" {
+  type    = string
+  default = ""
+}

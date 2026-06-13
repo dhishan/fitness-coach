@@ -47,6 +47,10 @@ resource "google_cloud_run_v2_service" "backend" {
         value = var.google_oauth_client_id
       }
       env {
+        name  = "GOOGLE_OAUTH_CLIENT_IDS"
+        value = var.google_oauth_client_ids
+      }
+      env {
         name  = "CORS_ORIGINS"
         value = jsonencode(["http://localhost:5173", "https://${var.ui_domain}", "https://fitness-tracker-ble.web.app"])
       }

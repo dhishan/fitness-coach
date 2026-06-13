@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "dev-only-secret"
     jwt_expiry_hours: int = 24 * 30
     google_oauth_client_id: str = ""
+    google_oauth_client_ids: str = ""
     allowed_emails: str = "iamdhishan@gmail.com"
     cors_origins: list[str] = ["http://localhost:5173"]
     openai_api_key: str = ""
@@ -25,6 +26,14 @@ class Settings(BaseSettings):
     @property
     def allowed_emails_list(self) -> list[str]:
         return [e.strip().lower() for e in self.allowed_emails.split(",") if e.strip()]
+
+    @property
+    def audiences_list(self) -> list[str]:
+        if self.google_oauth_client_ids.strip():
+            return [c.strip() for c in self.google_oauth_client_ids.split(",") if c.strip()]
+        if self.google_oauth_client_id.strip():
+            return [self.google_oauth_client_id.strip()]
+        return []
 
 
 @lru_cache

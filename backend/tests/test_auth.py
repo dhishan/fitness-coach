@@ -33,7 +33,66 @@ def test_verify_rejects_when_client_id_unconfigured(monkeypatch):
 
     class _S:
         google_oauth_client_id = ""
+        audiences_list = []
 
     monkeypatch.setattr(g, "get_settings", lambda: _S())
     with pytest.raises(ValueError):
         g.verify_google_id_token("any")
+
+
+def test_verify_allowed_audience_passes(monkeypatch):
+    import pytest
+    from unittest.mock import patch as _patch
+    from app.auth import google as g
+
+    class _S:
+        google_oauth_client_id = ""
+        audiences_list = ["allowed-client-id.apps.googleusercontent.com"]
+
+    monkeypatch.setattr(g, "get_settings", lambda: _S())
+    fake_idinfo = {
+        "sub": "uid1",
+        "email": "iamdhishan@gmail.com",
+        "aud": "allowed-client-id.apps.googleusercontent.com",
+        "email_verified": True,
+    }
+    with _patch("app.auth.google.google_id_token.verify_oauth2_token", return_value=fake_idinfo):
+        result = g.verify_google_id_token("sometoken")
+    assert result["sub"] == "uid1"
+
+
+def test_verify_audience_mismatch_raises(monkeypatch):
+    import pytest
+    from unittest.mock import patch as _patch
+    from app.auth import google as g
+
+    class _S:
+        google_oauth_client_id = ""
+        audiences_list = ["allowed-client-id.apps.googleusercontent.com"]
+
+    monkeypatch.setattr(g, "get_settings", lambda: _S())
+    fake_idinfo = {
+        "sub": "uid1",
+        "email": "iamdhishan@gmail.com",
+        "aud": "other-client-id.apps.googleusercontent.com",
+        "email_verified": True,
+    }
+    with _patch("app.auth.google.google_id_token.verify_oauth2_token", return_value=fake_idinfo):
+        with pytest.raises(ValueError, match="audience not allowed"):
+            g.verify_google_id_token("sometoken")
+
+
+def test_verify_empty_audiences_list_raises(monkeypatch):
+    import pytest
+    from unittest.mock import patch as _patch
+    from app.auth import google as g
+
+    class _S:
+        google_oauth_client_id = ""
+        audiences_list = []
+
+    monkeypatch.setattr(g, "get_settings", lambda: _S())
+    with _patch("app.auth.google.google_id_token.verify_oauth2_token") as mock_verify:
+        with pytest.raises(ValueError):
+            g.verify_google_id_token("sometoken")
+    mock_verify.assert_not_called()
