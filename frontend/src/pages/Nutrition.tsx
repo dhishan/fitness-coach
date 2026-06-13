@@ -91,6 +91,11 @@ function hasMicros(m: Micros | null | undefined): boolean {
   return MICROS_FIELDS.some(({ key }) => (m[key] ?? 0) > 0)
 }
 
+const EMPTY_MICROS: Micros = {
+  fiber_g: 0, sugar_g: 0, sodium_mg: 0, potassium_mg: 0, calcium_mg: 0,
+  iron_mg: 0, vitamin_c_mg: 0, vitamin_d_mcg: 0, saturated_fat_g: 0, cholesterol_mg: 0,
+}
+
 function MacroBar({ value, goal, label }: { value: number; goal: number; label: string }) {
   const pct = goal > 0 ? Math.min(100, (value / goal) * 100) : 0
   return (
@@ -137,7 +142,7 @@ function MicrosPanel({ micros, source, targets }: {
   targets?: Micros | null
 }) {
   const [open, setOpen] = useState(false)
-  if (!hasMicros(micros)) return null
+  if (!micros) return null
   return (
     <div className="mt-2 border-t border-gray-100 pt-2">
       <button
@@ -858,12 +863,13 @@ export default function Nutrition() {
               <MacroBar value={totals.fat_g} goal={goals.fat_g} label="fat" />
             </div>
             {/* Micros today */}
-            {hasMicros(microsTotals) && (
-              <MicrosPanel
-                micros={microsTotals}
-                source={null}
-                targets={goals.micros_targets ?? undefined}
-              />
+            <MicrosPanel
+              micros={microsTotals ?? EMPTY_MICROS}
+              source={null}
+              targets={goals.micros_targets ?? undefined}
+            />
+            {!hasMicros(microsTotals) && (
+              <p className="text-xs text-gray-400 mt-1">No micros logged yet today.</p>
             )}
           </>
         ) : (
@@ -1207,19 +1213,40 @@ export default function Nutrition() {
         </div>
 
         {goals ? (
-          <div className="grid grid-cols-4 gap-2">
-            {([
-              ['kcal', goals.calories],
-              ['protein', goals.protein_g],
-              ['carbs', goals.carbs_g],
-              ['fat', goals.fat_g],
-            ] as [string, number][]).map(([label, val]) => (
-              <div key={label} className="flex flex-col items-center bg-gray-50 rounded-xl p-2">
-                <span className="text-sm font-semibold text-gray-800">{Math.round(val)}</span>
-                <span className="text-xs text-gray-400">{label}</span>
+          <>
+            <div className="grid grid-cols-4 gap-2">
+              {([
+                ['kcal', goals.calories],
+                ['protein', goals.protein_g],
+                ['carbs', goals.carbs_g],
+                ['fat', goals.fat_g],
+              ] as [string, number][]).map(([label, val]) => (
+                <div key={label} className="flex flex-col items-center bg-gray-50 rounded-xl p-2">
+                  <span className="text-sm font-semibold text-gray-800">{Math.round(val)}</span>
+                  <span className="text-xs text-gray-400">{label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-gray-100 pt-2 mt-1">
+              <span className="text-xs font-semibold text-gray-500 mb-1 block">Micros</span>
+              <div className="grid grid-cols-5 gap-1">
+                {MICROS_FIELDS.map(({ key, label, unit }) => {
+                  const v = goals.micros_targets?.[key] ?? 0
+                  return (
+                    <div key={key} className="flex flex-col items-center bg-gray-50 rounded-lg p-1.5">
+                      <span className={`text-xs font-semibold ${v > 0 ? 'text-gray-800' : 'text-gray-300'}`}>
+                        {v > 0 ? `${Math.round(v)}${unit}` : '—'}
+                      </span>
+                      <span className="text-[10px] text-gray-400 leading-tight text-center">{label}</span>
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-          </div>
+              {!hasMicros(goals.micros_targets) && (
+                <p className="text-xs text-gray-400 mt-1">Tap Edit or Suggest with AI to set micro targets.</p>
+              )}
+            </div>
+          </>
         ) : (
           <p className="text-sm text-gray-400">
             No goals set. Set them to track progress.

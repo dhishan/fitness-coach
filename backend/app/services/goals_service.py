@@ -16,12 +16,19 @@ from app.services import body_service, dashboard_service, llm, usage_service
 logger = logging.getLogger(__name__)
 
 SUGGEST_SYSTEM = (
-    "You are a nutrition coach. Propose daily calorie and macro targets for a person "
+    "You are a nutrition coach. Propose daily calorie, macro, and micro targets for a person "
     "based on their training volume, bodyweight, and stated goal. "
     "Return JSON only matching this schema: "
-    '{"proposal": {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}, '
+    '{"proposal": {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, '
+    '"micros_targets": {"fiber_g": number, "sugar_g": number, "sodium_mg": number, '
+    '"potassium_mg": number, "calcium_mg": number, "iron_mg": number, "vitamin_c_mg": number, '
+    '"vitamin_d_mcg": number, "saturated_fat_g": number, "cholesterol_mg": number}}, '
     '"rationale": string (one concise sentence)}. '
-    "Be conservative and practical. Round calories to nearest 50, macros to nearest 5g."
+    "Macros: round calories to nearest 50, macro grams to nearest 5g. "
+    "Micros: use general adult RDA defaults adjusted for the training context: "
+    "fiber ~30g, sugar limit ~50g, sodium limit ~2300mg, potassium ~3500mg, calcium ~1000mg, "
+    "iron ~10mg, vitamin C ~90mg, vitamin D ~15mcg, saturated fat limit ~20g, cholesterol limit ~300mg. "
+    "Adjust upward for high training volume. Be conservative and practical."
 )
 
 
