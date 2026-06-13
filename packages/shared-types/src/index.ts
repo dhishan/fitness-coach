@@ -121,6 +121,27 @@ export interface StartChatResponse {
   assistant_turn_id: string
 }
 
+export interface TemplateEntry {
+  exercise_id: string
+  exercise_name: string
+  target_sets: number
+  superset_group?: string | null
+}
+
+export interface WorkoutTemplate {
+  id: string
+  user_id: string
+  name: string
+  entries: TemplateEntry[]
+  created_at: string
+  updated_at: string
+}
+
+export interface TemplateCreate {
+  name: string
+  entries?: TemplateEntry[]
+}
+
 export interface UsageSummary {
   month: string
   input_tokens: number

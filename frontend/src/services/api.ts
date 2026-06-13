@@ -2,7 +2,8 @@ import axios from 'axios'
 import type {
   AuthResponse, Conversation, ConversationDetail, DashboardSummary, Exercise,
   ExerciseCreate, ExerciseHistoryItem, FinishResponse, ProgressPoint,
-  StartChatResponse, UsageSummary, Workout, WorkoutEntry, WorkoutListResponse,
+  StartChatResponse, TemplateCreate, TemplateEntry, UsageSummary, Workout,
+  WorkoutEntry, WorkoutListResponse, WorkoutTemplate,
 } from '@fitness/shared-types'
 import { useAuth } from '../store/auth'
 
@@ -67,6 +68,16 @@ export const chatApi = {
     api.post<StartChatResponse>('/chat/start', { message, conversation_id: conversationId }).then((r) => r.data),
   conversations: () => api.get<Conversation[]>('/chat/conversations').then((r) => r.data),
   conversation: (id: string) => api.get<ConversationDetail>(`/chat/conversations/${id}`).then((r) => r.data),
+}
+
+export const templatesApi = {
+  list: () => api.get<WorkoutTemplate[]>('/templates').then((r) => r.data),
+  create: (body: TemplateCreate) =>
+    api.post<WorkoutTemplate>('/templates', body).then((r) => r.data),
+  get: (id: string) => api.get<WorkoutTemplate>(`/templates/${id}`).then((r) => r.data),
+  update: (id: string, body: { name?: string; entries?: TemplateEntry[] }) =>
+    api.put<WorkoutTemplate>(`/templates/${id}`, body).then((r) => r.data),
+  remove: (id: string) => api.delete(`/templates/${id}`),
 }
 
 export const usageApi = {
