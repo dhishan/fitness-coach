@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, timezone
 
 from app.firestore import get_db
-from app.services import body_service, cardio_service
+from app.services import cardio_service
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +34,24 @@ def ingest_batch(uid: str, samples: list[dict]) -> dict:
         by_kind.setdefault(s["kind"], []).append(s)
 
     # ---- weight ----
+    # Idempotent: doc id = external_id (HealthKit UUID), set(merge=True) so
+    # re-syncing the same sample updates in place rather than creating a new doc.
     try:
+        db = get_db()
         for s in by_kind.get("weight", []):
-            body_service.create_metric(uid, {
-                "date": s["date"],
-                "weight_kg": s["value"],
-                "source": "healthkit",
-                "external_id": s["external_id"],
-                "notes": "",
-            })
+            (
+                db.collection("body_metrics")
+                .document(s["external_id"])
+                .set({
+                    "user_id": uid,
+                    "date": s["date"],
+                    "weight_kg": s["value"],
+                    "source": "healthkit",
+                    "external_id": s["external_id"],
+                    "notes": "",
+                    "created_at": datetime.now(timezone.utc),
+                }, merge=True)
+            )
             counts["weight"] += 1
     except Exception:
         logger.exception("healthkit weight ingestion failed for uid=%s", uid)

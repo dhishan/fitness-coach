@@ -1,7 +1,6 @@
 """TDD tests for healthkit_service.ingest_batch."""
 from unittest.mock import MagicMock, patch, call
 
-BODY_SVC = "app.services.healthkit_service.body_service"
 CARDIO_SVC = "app.services.healthkit_service.cardio_service"
 DB_PATH = "app.services.healthkit_service.get_db"
 
@@ -66,18 +65,37 @@ SLEEP_SAMPLE = {
 
 # ---- weight ----
 
-def test_ingest_weight_calls_body_service(mock_db):
+def test_ingest_weight_writes_body_metrics_with_external_id(mock_db):
     from app.services.healthkit_service import ingest_batch
-    with patch(BODY_SVC) as mock_bs:
-        mock_bs.create_metric.return_value = {"id": "m1"}
-        result = ingest_batch("u1", [WEIGHT_SAMPLE])
-    mock_bs.create_metric.assert_called_once()
-    args = mock_bs.create_metric.call_args.args
-    assert args[0] == "u1"
-    payload = args[1]
+    result = ingest_batch("u1", [WEIGHT_SAMPLE])
+    # doc id = external_id (deterministic) so re-syncs collide and merge
+    mock_db.collection.assert_any_call("body_metrics")
+    doc_ref = mock_db.collection.return_value.document
+    doc_ref.assert_any_call("hk-w-1")
+    set_call = mock_db.collection.return_value.document.return_value.set.call_args
+    payload = set_call.args[0]
+    assert payload["user_id"] == "u1"
     assert payload["weight_kg"] == 80.5
     assert payload["source"] == "healthkit"
+    assert set_call.kwargs.get("merge") is True
     assert result["imported"]["weight"] == 1
+
+
+def test_ingest_weight_idempotent_same_external_id(mock_db):
+    """Ingesting the same weight sample twice targets the same deterministic
+    doc id with merge=True — no duplicate documents created."""
+    from app.services.healthkit_service import ingest_batch
+    ingest_batch("u1", [WEIGHT_SAMPLE])
+    ingest_batch("u1", [WEIGHT_SAMPLE])
+    doc_ref = mock_db.collection.return_value.document
+    ext_id_calls = [c for c in doc_ref.call_args_list if c.args == ("hk-w-1",)]
+    assert len(ext_id_calls) == 2
+    set_calls = mock_db.collection.return_value.document.return_value.set.call_args_list
+    # Only set() calls on the body_metrics doc (filter by merge=True payload shape)
+    weight_sets = [c for c in set_calls if c.args and c.args[0].get("weight_kg") == 80.5]
+    assert len(weight_sets) == 2
+    for c in weight_sets:
+        assert c.kwargs.get("merge") is True
 
 
 # ---- steps ----
@@ -163,8 +181,7 @@ def test_ingest_mixed_batch_returns_correct_counts(mock_db):
         HRV_SAMPLE,
         SLEEP_SAMPLE,
     ]
-    with patch(BODY_SVC) as mock_bs, patch(CARDIO_SVC) as mock_cs:
-        mock_bs.create_metric.return_value = {"id": "m"}
+    with patch(CARDIO_SVC) as mock_cs:
         mock_cs.create_log.return_value = {"id": "c"}
         result = ingest_batch("u1", samples)
     assert result["imported"]["weight"] == 1
@@ -180,10 +197,18 @@ def test_weight_failure_does_not_block_steps(mock_db):
     """If weight subset raises, steps are still imported."""
     from app.services.healthkit_service import ingest_batch
     samples = [WEIGHT_SAMPLE, STEPS_SAMPLE]
-    with patch(BODY_SVC) as mock_bs:
-        mock_bs.create_metric.side_effect = Exception("firestore error")
-        result = ingest_batch("u1", samples)
-    # weight failed, steps imported
+    # Make ONLY the body_metrics doc set() raise; steps use a different collection path
+    original_collection = mock_db.collection.side_effect
+
+    def collection_router(name):
+        col = MagicMock()
+        if name == "body_metrics":
+            col.document.return_value.set.side_effect = Exception("firestore error")
+        return col
+
+    mock_db.collection.side_effect = collection_router
+    result = ingest_batch("u1", samples)
+    mock_db.collection.side_effect = original_collection
     assert result["imported"]["weight"] == 0
     assert result["imported"]["steps"] == 1
 
@@ -203,8 +228,7 @@ def test_no_exception_bubbles_from_any_kind_failure(mock_db):
     """Total failure in all subsets — ingest_batch returns zeros, no raise."""
     from app.services.healthkit_service import ingest_batch
     samples = [WEIGHT_SAMPLE, STEPS_SAMPLE, WORKOUT_RUN, HRV_SAMPLE, SLEEP_SAMPLE]
-    with patch(BODY_SVC) as mock_bs, patch(CARDIO_SVC) as mock_cs:
-        mock_bs.create_metric.side_effect = Exception("fail")
+    with patch(CARDIO_SVC) as mock_cs:
         mock_cs.create_log.side_effect = Exception("fail")
         mock_db.collection.side_effect = Exception("firestore down")
         # Must not raise
