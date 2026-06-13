@@ -2,8 +2,19 @@ import { useEffect } from 'react'
 import { ActivityIndicator, View } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuth } from '../src/store/auth'
 import { colors } from '../src/theme'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 min — mirrors web config
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+})
 
 SplashScreen.preventAutoHideAsync()
 
@@ -51,14 +62,18 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="settings"
-        options={{ presentation: 'modal', title: 'Settings' }}
-      />
-      <Stack.Screen name="+not-found" />
-    </Stack>
+    <QueryClientProvider client={queryClient}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="settings"
+          options={{ presentation: 'modal', title: 'Settings' }}
+        />
+        <Stack.Screen name="plans/new" options={{ title: 'New plan' }} />
+        <Stack.Screen name="plans/[id]" options={{ title: 'Edit plan' }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+    </QueryClientProvider>
   )
 }
