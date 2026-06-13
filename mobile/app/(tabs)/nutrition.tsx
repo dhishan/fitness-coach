@@ -686,7 +686,42 @@ function FavoritesModal({
 
 type ComposerMode = 'idle' | 'text'
 
-export default function NutritionScreen() {
+class NutritionErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null }
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.warn('Nutrition crash:', error, info.componentStack)
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Nutrition screen error</Text>
+          <Text selectable style={{ fontFamily: 'Courier', fontSize: 12, color: '#b91c1c' }}>
+            {String(this.state.error.message || this.state.error)}
+          </Text>
+          <Text selectable style={{ fontFamily: 'Courier', fontSize: 11, color: '#6b7280', marginTop: 8 }}>
+            {(this.state.error.stack || '').split('\n').slice(0, 8).join('\n')}
+          </Text>
+          <Pressable
+            onPress={() => this.setState({ error: null })}
+            style={{ marginTop: 16, padding: 12, backgroundColor: '#3b82f6', borderRadius: 8 }}
+          >
+            <Text style={{ color: 'white', textAlign: 'center', fontWeight: '500' }}>Try again</Text>
+          </Pressable>
+        </View>
+      )
+    }
+    return this.props.children as React.ReactElement
+  }
+}
+
+function NutritionScreenInner() {
   const today = toLocalISODate()
   const [date, setDate] = useState(today)
   const [composerMode, setComposerMode] = useState<ComposerMode>('idle')
@@ -1483,3 +1518,11 @@ const s = StyleSheet.create({
   noMatchBox: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   noMatchText: { fontSize: 12, color: colors.gray400 },
 })
+
+export default function NutritionScreen() {
+  return (
+    <NutritionErrorBoundary>
+      <NutritionScreenInner />
+    </NutritionErrorBoundary>
+  )
+}
