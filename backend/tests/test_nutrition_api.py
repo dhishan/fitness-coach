@@ -258,3 +258,61 @@ def test_suggest_goals_error(client):
         r = client.post("/api/v1/nutrition/goals/suggest", json={}, headers=_auth(client))
     assert r.status_code == 422
     assert "LLM timeout" in r.json()["detail"]
+
+
+# ---- micros_totals in list_logs ----
+
+SAMPLE_MICROS = {
+    "fiber_g": 4.0, "sugar_g": 1.0, "sodium_mg": 79.0,
+    "potassium_mg": 219.0, "calcium_mg": 58.0, "iron_mg": 2.9,
+    "vitamin_c_mg": 0.0, "vitamin_d_mcg": 1.1,
+    "saturated_fat_g": 2.6, "cholesterol_mg": 186.0,
+}
+
+
+def test_list_logs_returns_micros_totals(client):
+    """GET /logs?date= must include micros_totals alongside totals."""
+    log_with_micros = {
+        **SAMPLE_LOG,
+        "meal_type": "breakfast",
+        "micros": SAMPLE_MICROS,
+        "micros_source": "usda",
+        "usda_fdc_id": 999,
+    }
+    day_result = {
+        "items": [log_with_micros],
+        "totals": MACROS,
+        "micros_totals": SAMPLE_MICROS,
+    }
+    with patch(f"{FOOD_SVC}.list_by_date", return_value=day_result):
+        r = client.get("/api/v1/nutrition/logs?date=2026-06-13", headers=_auth(client))
+    assert r.status_code == 200
+    body = r.json()
+    assert "micros_totals" in body
+    assert body["micros_totals"]["sodium_mg"] == 79.0
+    assert body["micros_totals"]["fiber_g"] == 4.0
+
+
+def test_create_log_with_micros_and_meal_type(client):
+    """POST /logs accepts meal_type, logged_at, micros, usda_fdc_id, micros_source."""
+    payload = {
+        "date": "2026-06-13",
+        "name": "Oatmeal",
+        "serving": "1 cup",
+        "macros": MACROS,
+        "source": "ai_text",
+        "meal_type": "breakfast",
+        "logged_at": "2026-06-13T07:30:00Z",
+        "micros": SAMPLE_MICROS,
+        "usda_fdc_id": 123456,
+        "micros_source": "usda",
+    }
+    expected = {"id": "log2", **payload}
+    with patch(f"{FOOD_SVC}.create_log", return_value=expected):
+        r = client.post("/api/v1/nutrition/logs", json=payload, headers=_auth(client))
+    assert r.status_code == 201
+    body = r.json()
+    assert body["meal_type"] == "breakfast"
+    assert body["micros"]["sodium_mg"] == 79.0
+    assert body["micros_source"] == "usda"
+    assert body["usda_fdc_id"] == 123456

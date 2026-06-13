@@ -18,6 +18,12 @@ def _doc(snap) -> dict:
     return {**snap.to_dict(), "id": snap.id}
 
 
+_MICRO_KEYS = (
+    "fiber_g", "sugar_g", "sodium_mg", "potassium_mg", "calcium_mg",
+    "iron_mg", "vitamin_c_mg", "vitamin_d_mcg", "saturated_fat_g", "cholesterol_mg",
+)
+
+
 def _sum_macros(items: list[dict]) -> dict:
     totals = {"calories": 0.0, "protein_g": 0.0, "carbs_g": 0.0, "fat_g": 0.0}
     for item in items:
@@ -27,11 +33,20 @@ def _sum_macros(items: list[dict]) -> dict:
     return totals
 
 
+def _sum_micros(items: list[dict]) -> dict:
+    totals = {k: 0.0 for k in _MICRO_KEYS}
+    for item in items:
+        m = item.get("micros") or {}
+        for key in _MICRO_KEYS:
+            totals[key] += m.get(key, 0) or 0
+    return totals
+
+
 # ---- Food Logs ----
 
 def create_log(user_id: str, payload: dict) -> dict:
     db = get_db()
-    doc = {
+    doc: dict = {
         "user_id": user_id,
         "date": payload["date"],
         "name": payload["name"],
@@ -41,6 +56,11 @@ def create_log(user_id: str, payload: dict) -> dict:
         "notes": payload.get("notes", ""),
         "created_at": datetime.now(timezone.utc),
     }
+    # Optional new fields — only persist when present
+    for field in ("meal_type", "logged_at", "micros", "usda_fdc_id", "micros_source"):
+        value = payload.get(field)
+        if value is not None:
+            doc[field] = value
     ref = db.collection("food_logs").document()
     ref.set(doc)
     return {**doc, "id": ref.id}
@@ -55,7 +75,7 @@ def list_by_date(user_id: str, date: str) -> dict:
         .stream()
     )
     items = [_doc(s) for s in snaps]
-    return {"items": items, "totals": _sum_macros(items)}
+    return {"items": items, "totals": _sum_macros(items), "micros_totals": _sum_micros(items)}
 
 
 def get_log(user_id: str, log_id: str) -> dict | None:

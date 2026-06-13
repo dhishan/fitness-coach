@@ -257,3 +257,118 @@ def test_log_from_favorite_missing_fav_returns_none(mock_db):
     mock_db.collection.return_value.document.return_value.get.return_value = snap
     result = log_from_favorite("user1", "missing", "2026-06-13")
     assert result is None
+
+
+# ---- create_log with new optional fields ----
+
+def test_create_log_persists_meal_type_and_micros(mock_db):
+    from app.services.food_service import create_log
+    ref = MagicMock()
+    ref.id = "log2"
+    mock_db.collection.return_value.document.return_value = ref
+    payload = {
+        "date": "2026-06-13",
+        "name": "Oatmeal",
+        "serving": "1 cup",
+        "macros": {"calories": 300, "protein_g": 10, "carbs_g": 54, "fat_g": 5},
+        "source": "ai_text",
+        "notes": "",
+        "meal_type": "breakfast",
+        "logged_at": "2026-06-13T07:30:00Z",
+        "micros": {"fiber_g": 4.0, "sugar_g": 1.0, "sodium_mg": 5.0,
+                   "potassium_mg": 150.0, "calcium_mg": 30.0, "iron_mg": 2.0,
+                   "vitamin_c_mg": 0.0, "vitamin_d_mcg": 0.0,
+                   "saturated_fat_g": 1.0, "cholesterol_mg": 0.0},
+        "usda_fdc_id": 123456,
+        "micros_source": "usda",
+    }
+    result = create_log("user1", payload)
+    assert result["id"] == "log2"
+    assert result["meal_type"] == "breakfast"
+    assert result["logged_at"] == "2026-06-13T07:30:00Z"
+    assert result["micros"]["fiber_g"] == 4.0
+    assert result["usda_fdc_id"] == 123456
+    assert result["micros_source"] == "usda"
+    doc_written = ref.set.call_args[0][0]
+    assert doc_written["meal_type"] == "breakfast"
+    assert doc_written["micros"]["fiber_g"] == 4.0
+
+
+def test_create_log_omits_none_optional_fields(mock_db):
+    """When new optional fields are absent, they must NOT appear in Firestore doc."""
+    from app.services.food_service import create_log
+    ref = MagicMock()
+    ref.id = "log3"
+    mock_db.collection.return_value.document.return_value = ref
+    payload = {
+        "date": "2026-06-13",
+        "name": "Apple",
+        "macros": {"calories": 95, "protein_g": 0.5, "carbs_g": 25.0, "fat_g": 0.3},
+    }
+    create_log("user1", payload)
+    doc_written = ref.set.call_args[0][0]
+    assert "meal_type" not in doc_written
+    assert "micros" not in doc_written
+    assert "usda_fdc_id" not in doc_written
+    assert "micros_source" not in doc_written
+
+
+# ---- list_by_date micros_totals ----
+
+def test_list_by_date_includes_micros_totals(mock_db):
+    from app.services.food_service import list_by_date
+    snaps = [
+        _make_snap({
+            "user_id": "user1", "date": "2026-06-13", "name": "Oatmeal",
+            "serving": "", "macros": {"calories": 300, "protein_g": 10, "carbs_g": 54, "fat_g": 5},
+            "source": "ai_text", "notes": "", "created_at": None,
+            "micros": {"fiber_g": 4.0, "sugar_g": 1.0, "sodium_mg": 5.0,
+                       "potassium_mg": 150.0, "calcium_mg": 30.0, "iron_mg": 2.0,
+                       "vitamin_c_mg": 0.0, "vitamin_d_mcg": 0.0,
+                       "saturated_fat_g": 1.0, "cholesterol_mg": 0.0},
+        }, "log1"),
+        _make_snap({
+            "user_id": "user1", "date": "2026-06-13", "name": "Egg",
+            "serving": "", "macros": {"calories": 70, "protein_g": 6.0, "carbs_g": 0.0, "fat_g": 5.0},
+            "source": "manual", "notes": "", "created_at": None,
+            "micros": {"fiber_g": 0.0, "sugar_g": 0.0, "sodium_mg": 74.0,
+                       "potassium_mg": 69.0, "calcium_mg": 28.0, "iron_mg": 0.9,
+                       "vitamin_c_mg": 0.0, "vitamin_d_mcg": 1.1,
+                       "saturated_fat_g": 1.6, "cholesterol_mg": 186.0},
+        }, "log2"),
+    ]
+    mock_db.collection.return_value.where.return_value.where.return_value.stream.return_value = iter(snaps)
+    result = list_by_date("user1", "2026-06-13")
+    mt = result["micros_totals"]
+    assert mt["fiber_g"] == pytest.approx(4.0)
+    assert mt["sodium_mg"] == pytest.approx(79.0)
+    assert mt["potassium_mg"] == pytest.approx(219.0)
+    assert mt["cholesterol_mg"] == pytest.approx(186.0)
+    assert mt["vitamin_d_mcg"] == pytest.approx(1.1)
+
+
+def test_list_by_date_micros_totals_empty(mock_db):
+    from app.services.food_service import list_by_date
+    mock_db.collection.return_value.where.return_value.where.return_value.stream.return_value = iter([])
+    result = list_by_date("user1", "2026-06-13")
+    mt = result["micros_totals"]
+    assert mt["fiber_g"] == 0.0
+    assert mt["sodium_mg"] == 0.0
+
+
+def test_list_by_date_micros_totals_logs_without_micros(mock_db):
+    """Logs lacking a micros field contribute 0 to all micro totals."""
+    from app.services.food_service import list_by_date
+    snaps = [
+        _make_snap({
+            "user_id": "user1", "date": "2026-06-13", "name": "Apple",
+            "serving": "", "macros": {"calories": 95, "protein_g": 0.5, "carbs_g": 25.0, "fat_g": 0.3},
+            "source": "manual", "notes": "", "created_at": None,
+            # no micros field
+        }, "log1"),
+    ]
+    mock_db.collection.return_value.where.return_value.where.return_value.stream.return_value = iter(snaps)
+    result = list_by_date("user1", "2026-06-13")
+    mt = result["micros_totals"]
+    assert mt["fiber_g"] == 0.0
+    assert mt["sodium_mg"] == 0.0
