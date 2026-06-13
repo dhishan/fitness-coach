@@ -13,6 +13,7 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
+import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   DayLogs,
@@ -1097,19 +1098,23 @@ function NutritionScreenInner() {
           {composerMode === 'idle' && (
             <>
               <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
-                <Pressable style={s.composerBtn} onPress={() => setComposerMode('text')}>
-                  <Text style={s.composerBtnText}>[T] Type a meal</Text>
+                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setComposerMode('text')}>
+                  <Ionicons name="create-outline" size={22} color={colors.gray700} />
+                  <Text style={s.composerBtnText}>Type a meal</Text>
                 </Pressable>
-                <Pressable style={s.composerBtn} onPress={handleCamera}>
-                  <Text style={s.composerBtnText}>[C] Camera</Text>
+                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={handleCamera}>
+                  <Ionicons name="camera-outline" size={22} color={colors.gray700} />
+                  <Text style={s.composerBtnText}>Camera</Text>
                 </Pressable>
               </View>
               <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
-                <Pressable style={s.composerBtn} onPress={() => setShowFavorites(true)}>
-                  <Text style={s.composerBtnText}>[*] Favorites</Text>
+                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setShowFavorites(true)}>
+                  <Ionicons name="star-outline" size={22} color={colors.gray700} />
+                  <Text style={s.composerBtnText}>Favorites</Text>
                 </Pressable>
-                <Pressable style={s.composerBtn} onPress={() => setShowBarcode(true)}>
-                  <Text style={s.composerBtnText}>[B] Barcode</Text>
+                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setShowBarcode(true)}>
+                  <Ionicons name="barcode-outline" size={22} color={colors.gray700} />
+                  <Text style={s.composerBtnText}>Barcode</Text>
                 </Pressable>
               </View>
             </>
@@ -1419,6 +1424,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   composerBtnText: { fontSize: 12, color: colors.gray700, fontWeight: '500', textAlign: 'center' },
+  composerBtnIcon: { flexDirection: 'column', gap: 4, paddingVertical: 8 },
 
   // Inputs
   input: {
