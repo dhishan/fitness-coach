@@ -50,3 +50,20 @@ class WorkoutCreate(BaseModel):
 class WorkoutUpdate(BaseModel):
     notes: str | None = None
     entries: list[WorkoutEntry] | None = None
+
+
+class TemplateEntry(BaseModel):
+    exercise_id: str
+    exercise_name: str
+    target_sets: int = Field(ge=1, le=20, default=3)
+    superset_group: str | None = None
+
+
+class TemplateCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    entries: list[TemplateEntry] = []
+
+
+class TemplateUpdate(BaseModel):
+    name: str | None = None
+    entries: list[TemplateEntry] | None = None

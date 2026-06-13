@@ -20,6 +20,7 @@ from app.routers.exercises import router as exercises_router
 from app.routers.workouts import router as workouts_router
 from app.routers.dashboard import router as dashboard_router
 from app.routers.chat import router as chat_router
+from app.routers.templates import router as templates_router
 from app.routers.usage import router as usage_router
 
 app.include_router(auth_router)
@@ -27,6 +28,7 @@ app.include_router(exercises_router)
 app.include_router(workouts_router)
 app.include_router(dashboard_router)
 app.include_router(chat_router)
+app.include_router(templates_router)
 app.include_router(usage_router)
 
 
