@@ -33,6 +33,16 @@ resource "google_secret_manager_secret_iam_member" "openai_key_accessor" {
   member    = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
 
+data "google_secret_manager_secret" "usda_key" {
+  secret_id = "fitness-tracker-usda-key-prod"
+}
+
+resource "google_secret_manager_secret_iam_member" "usda_key_accessor" {
+  secret_id = data.google_secret_manager_secret.usda_key.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
 data "google_secret_manager_secret" "langfuse_public" {
   secret_id = "fitness-tracker-langfuse-public-prod"
 }
