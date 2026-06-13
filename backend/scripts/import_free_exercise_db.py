@@ -174,6 +174,15 @@ def _normalise_name(name: str) -> str:
 SOURCE_URL = (
     "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json"
 )
+IMAGE_BASE_URL = (
+    "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/"
+)
+
+LEVEL_MAP: dict[str, str] = {
+    "beginner": "beginner",
+    "intermediate": "intermediate",
+    "expert": "expert",
+}
 CHUNK_SIZE = 400
 
 
@@ -231,6 +240,17 @@ def process_exercise(raw: dict, seed_names: set[str]) -> Optional[dict]:
 
     doc_id = "fxdb-" + str(raw.get("id", ""))
 
+    # images: convert relative paths to absolute URLs
+    raw_images: list[str] = raw.get("images", []) or []
+    images = [IMAGE_BASE_URL + img for img in raw_images]
+
+    # instructions: keep as-is
+    instructions: list[str] = raw.get("instructions", []) or []
+
+    # difficulty: map level field, default to "intermediate"
+    raw_level: Optional[str] = raw.get("level")
+    difficulty = LEVEL_MAP.get((raw_level or "").lower().strip(), "intermediate")
+
     doc = {
         "name": name,
         "primary_muscles": primary_muscles,
@@ -239,6 +259,9 @@ def process_exercise(raw: dict, seed_names: set[str]) -> Optional[dict]:
         "equipment": equipment,
         "user_id": "system",
         "is_custom": False,
+        "images": images,
+        "instructions": instructions,
+        "difficulty": difficulty,
     }
     return {"id": doc_id, "doc": doc}
 

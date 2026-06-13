@@ -22,6 +22,9 @@ class Exercise(ExerciseCreate):
     id: str
     user_id: str
     is_custom: bool
+    images: list[str] = []
+    instructions: list[str] = []
+    difficulty: str | None = None
 
 
 class SetEntry(BaseModel):

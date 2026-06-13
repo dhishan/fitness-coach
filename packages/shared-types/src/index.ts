@@ -14,6 +14,9 @@ export interface Exercise {
   movement_pattern: MovementPattern
   equipment: Equipment
   is_custom: boolean
+  images?: string[]
+  instructions?: string[]
+  difficulty?: string | null
 }
 
 export interface ExerciseCreate {
