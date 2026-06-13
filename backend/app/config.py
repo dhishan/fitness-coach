@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     chat_generation_timeout_s: int = 1800
     cf_access_team_domain: str = ""
     cf_access_aud: str = ""
+    nutrition_model: str = "openai/gpt-4o-mini"
+    uploads_bucket: str = ""
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 
