@@ -16,7 +16,7 @@ from app.services import dashboard_service, exercise_service, workout_service
 
 logger = logging.getLogger(__name__)
 
-mcp = FastMCP("fitness-tracker", stateless_http=True)
+mcp = FastMCP("fitness-tracker", stateless_http=True, streamable_http_path="/")
 
 
 def _uid() -> str:
