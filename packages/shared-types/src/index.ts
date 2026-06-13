@@ -166,3 +166,42 @@ export interface DayLogs { items: FoodLog[]; totals: Macros }
 export interface Estimation { name: string; serving: string; macros: Macros; confidence: number }
 export interface GoalSuggestion { proposal: Goals; rationale: string }
 export interface SignedUpload { upload_url: string; gs_url: string; public_url: string; content_type: string }
+
+// Body Metrics types
+export interface BodyMetric {
+  id: string
+  user_id: string
+  date: string
+  weight_kg: number
+  body_fat_pct?: number | null
+  waist_cm?: number | null
+  chest_cm?: number | null
+  arm_cm?: number | null
+  thigh_cm?: number | null
+  photo_urls: string[]
+  notes: string
+  created_at: string
+}
+
+export interface BodyMetricCreate {
+  date: string
+  weight_kg: number
+  body_fat_pct?: number | null
+  waist_cm?: number | null
+  chest_cm?: number | null
+  arm_cm?: number | null
+  thigh_cm?: number | null
+  photo_urls?: string[]
+  notes?: string
+}
+
+export interface BodyMetricUpdate {
+  weight_kg?: number | null
+  body_fat_pct?: number | null
+  waist_cm?: number | null
+  chest_cm?: number | null
+  arm_cm?: number | null
+  thigh_cm?: number | null
+  photo_urls?: string[] | null
+  notes?: string | null
+}

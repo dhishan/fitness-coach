@@ -6,6 +6,7 @@ import type {
   WorkoutEntry, WorkoutListResponse, WorkoutTemplate,
   DayLogs, Estimation, Favorite, FavoriteCreate, FoodLog, FoodLogCreate, FoodLogUpdate,
   Goals, GoalSuggestion, SignedUpload,
+  BodyMetric, BodyMetricCreate, BodyMetricUpdate,
 } from '@fitness/shared-types'
 import { useAuth } from '../store/auth'
 
@@ -90,6 +91,19 @@ export const usageApi = {
 export const uploadsApi = {
   signFoodPhoto: (contentType: string) =>
     api.post<SignedUpload>('/uploads/sign-food-photo', { content_type: contentType }).then((r) => r.data),
+}
+
+export const bodyApi = {
+  list: (params?: { limit?: number }) =>
+    api.get<BodyMetric[]>('/body', { params }).then((r) => r.data),
+  latest: () =>
+    api.get<BodyMetric | null>('/body/latest').then((r) => r.data),
+  create: (body: BodyMetricCreate) =>
+    api.post<BodyMetric>('/body', body).then((r) => r.data),
+  update: (id: string, body: BodyMetricUpdate) =>
+    api.put<BodyMetric>(`/body/${id}`, body).then((r) => r.data),
+  remove: (id: string) =>
+    api.delete(`/body/${id}`),
 }
 
 export const nutritionApi = {
