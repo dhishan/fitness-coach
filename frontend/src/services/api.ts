@@ -84,9 +84,16 @@ export const templatesApi = {
   remove: (id: string) => api.delete(`/templates/${id}`),
 }
 
+export interface UsageBySource {
+  month: string
+  by_source: Record<string, { input_tokens: number; output_tokens: number; cost_usd: number; calls: number }>
+}
+
 export const usageApi = {
   summary: (month?: string) =>
     api.get<UsageSummary>('/usage/summary', { params: month ? { month } : {} }).then((r) => r.data),
+  summaryBySource: (month?: string) =>
+    api.get<UsageBySource>('/usage/summary/by-source', { params: month ? { month } : {} }).then((r) => r.data),
 }
 
 export const uploadsApi = {

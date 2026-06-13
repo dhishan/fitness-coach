@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from google.cloud import firestore
 
@@ -51,3 +51,27 @@ def monthly_summary(user_id: str, month: str) -> dict:
     except Exception:
         logger.exception("monthly summary read failed")
     return {"month": month, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "calls": 0}
+
+
+def monthly_summary_by_source(user_id: str, month: str) -> dict:
+    """Return per-source breakdown of usage events for the given YYYY-MM month."""
+    out: dict[str, dict] = {}
+    try:
+        start = datetime.strptime(month, "%Y-%m").replace(tzinfo=timezone.utc)
+        next_month = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        query = (get_db().collection("usage_events")
+                 .where(filter=firestore.FieldFilter("user_id", "==", user_id))
+                 .where(filter=firestore.FieldFilter("created_at", ">=", start))
+                 .where(filter=firestore.FieldFilter("created_at", "<", next_month)))
+        for d in query.stream():
+            doc = d.to_dict() or {}
+            src = doc.get("source") or "unknown"
+            bucket = out.setdefault(src, {"input_tokens": 0, "output_tokens": 0,
+                                          "cost_usd": 0.0, "calls": 0})
+            bucket["input_tokens"] += int(doc.get("input_tokens") or 0)
+            bucket["output_tokens"] += int(doc.get("output_tokens") or 0)
+            bucket["cost_usd"] += float(doc.get("cost_usd") or 0.0)
+            bucket["calls"] += 1
+    except Exception:
+        logger.exception("monthly summary by source read failed")
+    return {"month": month, "by_source": out}

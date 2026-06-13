@@ -10,6 +10,13 @@ interface Props {
 
 const UNIT_KEY = 'fitness-unit-pref'
 
+const SOURCE_LABELS: Record<string, string> = {
+  chat: 'Coach chat',
+  nutrition_text: 'Food (text)',
+  nutrition_photo: 'Food (photo)',
+  nutrition_goals: 'Goal suggestions',
+}
+
 export default function SettingsSheet({ open, onClose }: Props) {
   const { user, logout } = useAuth()
   const [unit, setUnitState] = useState<'kg' | 'lb'>(() => {
@@ -19,6 +26,11 @@ export default function SettingsSheet({ open, onClose }: Props) {
   const { data: usage, isLoading: loadingUsage } = useQuery({
     queryKey: ['usage-summary'],
     queryFn: () => usageApi.summary(),
+    enabled: open,
+  })
+  const { data: bySource } = useQuery({
+    queryKey: ['usage-summary-by-source'],
+    queryFn: () => usageApi.summaryBySource(),
     enabled: open,
   })
 
@@ -72,17 +84,33 @@ export default function SettingsSheet({ open, onClose }: Props) {
 
         {/* Monthly usage */}
         <div className="mb-6">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Coach usage this month</p>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">AI usage this month</p>
           {loadingUsage ? (
             <div className="h-10 bg-gray-100 rounded-lg animate-pulse" />
           ) : usage ? (
-            <div className="bg-gray-50 rounded-lg px-3 py-2 flex items-center justify-between">
-              <span className="text-xs text-gray-600">
-                {usage.input_tokens.toLocaleString()} in / {usage.output_tokens.toLocaleString()} out tokens
-              </span>
-              <span className="text-xs font-semibold text-gray-800">
-                ${usage.cost_usd.toFixed(4)}
-              </span>
+            <div className="flex flex-col gap-1.5">
+              <div className="bg-gray-50 rounded-lg px-3 py-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-700">Total</span>
+                <span className="text-xs font-semibold text-gray-800">${usage.cost_usd.toFixed(4)}</span>
+              </div>
+              {bySource && Object.keys(bySource.by_source).length > 0 ? (
+                Object.entries(bySource.by_source)
+                  .sort(([, a], [, b]) => b.cost_usd - a.cost_usd)
+                  .map(([src, v]) => {
+                    const label = SOURCE_LABELS[src] ?? src
+                    return (
+                      <div key={src} className="bg-gray-50 rounded-lg px-3 py-1.5 flex items-center justify-between">
+                        <span className="text-xs text-gray-500">{label}</span>
+                        <span className="text-xs text-gray-600">
+                          {v.calls.toLocaleString()} calls
+                          <span className="ml-2 font-medium text-gray-800">${v.cost_usd.toFixed(4)}</span>
+                        </span>
+                      </div>
+                    )
+                  })
+              ) : (
+                <p className="text-xs text-gray-400">No usage breakdown yet.</p>
+              )}
             </div>
           ) : (
             <p className="text-xs text-gray-400">No usage data yet.</p>

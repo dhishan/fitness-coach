@@ -13,3 +13,10 @@ router = APIRouter(prefix="/api/v1/usage", tags=["usage"])
 async def summary(month: str | None = None, user: CurrentUser = Depends(get_current_user)):
     m = month or datetime.now(timezone.utc).strftime("%Y-%m")
     return await asyncio.to_thread(usage_service.monthly_summary, user.user_id, m)
+
+
+@router.get("/summary/by-source")
+async def summary_by_source(month: str | None = None,
+                            user: CurrentUser = Depends(get_current_user)):
+    m = month or datetime.now(timezone.utc).strftime("%Y-%m")
+    return await asyncio.to_thread(usage_service.monthly_summary_by_source, user.user_id, m)
