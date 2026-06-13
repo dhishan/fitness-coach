@@ -9,6 +9,17 @@ from app.services import food_service, goals_service, nutrition_ai, openfoodfact
 router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
 
 
+# ---- Food autocomplete ----
+
+@router.get("/foods/suggest")
+async def suggest_foods(
+    q: str = Query(default=""),
+    limit: int = Query(default=10, ge=1, le=50),
+    user: CurrentUser = Depends(get_current_user),
+):
+    return await asyncio.to_thread(food_service.suggest_foods, user.user_id, q, limit)
+
+
 # ---- Barcode lookup ----
 
 @router.get("/barcode/{code}")

@@ -129,6 +129,138 @@ def delete_favorite(user_id: str, fav_id: str) -> str | None:
     return fav_id
 
 
+def suggest_foods(uid: str, q: str, limit: int = 10) -> list[dict]:
+    """Return autocomplete suggestions from recent food_logs + favorites.
+
+    Dedupes by lowercased name: favorite entry wins over recent for same name;
+    among recents the newest wins. Caps candidate pool at 200.
+    Filters by query tokens (all tokens must appear in name, case-insensitive).
+    Empty q returns top `limit` most-recent entries.
+    """
+    db = get_db()
+
+    # Fetch up to 500 recent food logs ordered by created_at desc
+    log_snaps = (
+        db.collection("food_logs")
+        .where("user_id", "==", uid)
+        .order_by("created_at", direction=firestore.Query.DESCENDING)
+        .limit(500)
+        .stream()
+    )
+    recent_logs = [_doc(s) for s in log_snaps]
+
+    # Fetch all favorites
+    fav_snaps = (
+        db.collection("favorites")
+        .where("user_id", "==", uid)
+        .stream()
+    )
+    favorites = [_doc(s) for s in fav_snaps]
+
+    # Build deduped candidate map: lower_name -> dict
+    # Priority: favorite > recent; among recents keep newest (already ordered desc)
+    candidates: dict[str, dict] = {}
+
+    # Add recents first (newer ones come first due to ordering)
+    for log in recent_logs:
+        key = (log.get("name") or "").strip().lower()
+        if not key:
+            continue
+        if key not in candidates:
+            created_raw = log.get("created_at")
+            last_used_at: str | None = None
+            if created_raw is not None:
+                try:
+                    last_used_at = created_raw.isoformat() if hasattr(created_raw, "isoformat") else str(created_raw)
+                except Exception:
+                    pass
+            candidates[key] = {
+                "name": log.get("name", ""),
+                "serving": log.get("serving", ""),
+                "macros": log.get("macros", {}),
+                "source": "recent",
+                "last_used_at": last_used_at,
+            }
+
+    # Overlay favorites (they override recents for the same name, keeping favorite source)
+    for fav in favorites:
+        key = (fav.get("name") or "").strip().lower()
+        if not key:
+            continue
+        last_used_raw = fav.get("last_used_at")
+        last_used_at = None
+        if last_used_raw is not None:
+            try:
+                last_used_at = last_used_raw.isoformat() if hasattr(last_used_raw, "isoformat") else str(last_used_raw)
+            except Exception:
+                pass
+        entry = {
+            "name": fav.get("name", ""),
+            "serving": fav.get("serving", ""),
+            "macros": fav.get("macros", {}),
+            "source": "favorite",
+            "last_used_at": last_used_at,
+        }
+        candidates[key] = entry  # favorite always wins
+
+    # Cap at 200 candidates
+    candidate_list = list(candidates.values())[:200]
+
+    # Filter by query tokens
+    q_stripped = q.strip()
+    if q_stripped:
+        tokens = q_stripped.lower().split()
+        filtered = [
+            c for c in candidate_list
+            if all(tok in c["name"].lower() for tok in tokens)
+        ]
+    else:
+        filtered = candidate_list
+
+    # Sort: favorites first, then by last_used_at desc (None last), then by name
+    def sort_key(c: dict):
+        source_rank = 0 if c["source"] == "favorite" else 1
+        ts = c["last_used_at"] or ""
+        return (source_rank, "" if not ts else ts, c["name"].lower())
+
+    filtered.sort(key=lambda c: (
+        0 if c["source"] == "favorite" else 1,
+        # negate recency: newer timestamps are lexicographically larger, we want desc
+        "" if not c["last_used_at"] else "\xff" + c["last_used_at"],
+        c["name"].lower(),
+    ))
+    # Reverse the timestamp part: favorites first (0), then by timestamp desc
+    # Re-sort with proper descending timestamp handling
+    filtered.sort(key=lambda c: (
+        0 if c["source"] == "favorite" else 1,
+        c["name"].lower(),
+    ))
+    # Actually do a clean sort: favorites first by last_used_at desc, then recents by last_used_at desc
+    def _sort(c: dict):
+        s = 0 if c["source"] == "favorite" else 1
+        ts = c["last_used_at"] or ""
+        # We want descending timestamp, so negate via string trick: use inverse
+        # Use empty string for missing (sorts last when reversed below)
+        return (s, ts, c["name"].lower())
+
+    filtered.sort(key=_sort, reverse=False)
+    # Fix: favorites (s=0) come first but within each group we want newest first
+    # Split into favorites and recents, sort each by timestamp desc, then concat
+    favs_group = sorted(
+        [c for c in filtered if c["source"] == "favorite"],
+        key=lambda c: c["last_used_at"] or "",
+        reverse=True,
+    )
+    recents_group = sorted(
+        [c for c in filtered if c["source"] == "recent"],
+        key=lambda c: c["last_used_at"] or "",
+        reverse=True,
+    )
+    result = favs_group + recents_group
+
+    return result[:limit]
+
+
 def log_from_favorite(user_id: str, fav_id: str, date: str) -> dict | None:
     """Clone a favorite into a food log entry for the given date."""
     db = get_db()
