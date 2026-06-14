@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -230,7 +231,13 @@ export default function EditPlanScreen() {
             </View>
           )}
 
-          <Pressable style={s.addExBtn} onPress={() => setShowPicker(true)}>
+          <Pressable
+            style={s.addExBtn}
+            onPress={() => {
+              Keyboard.dismiss()
+              setShowPicker(true)
+            }}
+          >
             <Text style={s.addExBtnText}>+ Add exercise</Text>
           </Pressable>
         </View>

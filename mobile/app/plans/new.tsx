@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  Keyboard,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
@@ -187,7 +188,13 @@ export default function NewPlanScreen() {
             </View>
           )}
 
-          <Pressable style={s.addExBtn} onPress={() => setShowPicker(true)}>
+          <Pressable
+            style={s.addExBtn}
+            onPress={() => {
+              Keyboard.dismiss()
+              setShowPicker(true)
+            }}
+          >
             <Text style={s.addExBtnText}>+ Add exercise</Text>
           </Pressable>
         </View>
