@@ -92,7 +92,13 @@ jobs:
             --notes "AltStore-source release. Built from ${{ github.sha }}." \
             || gh release upload "$VERSION" "$RUNNER_TEMP/FitnessTracker.ipa" --clobber
 
-      - name: Update shared AltStore source (sibling repo)
+      - name: Auth to GCS for shared source
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Update shared AltStore source (GCS + sibling repo)
         env:
           GH_TOKEN: ${{ secrets.ALTSTORE_PUSH_TOKEN }}
         run: |
@@ -124,9 +130,18 @@ jobs:
           print("updated", p)
           EOF
 
+          # Upload to the shared GCS bucket (primary source going forward).
+          gcloud storage cp "$RUNNER_TEMP/sibling/frontend/public/altstore.json" \
+            gs://blueelephants-altstore/altstore.json \
+            --content-type=application/json \
+            --cache-control="public,max-age=60" \
+            --project personal-projects-473219
+
+          # Also mirror to the family-expense-tracker repo so the old Firebase URL
+          # keeps working for phones subscribed there. Will deprecate eventually.
           cd "$RUNNER_TEMP/sibling"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           git add frontend/public/altstore.json
-          git commit -m "release: fitness-tracker $VERSION (AltStore source)"
-          git push
+          git commit -m "release: fitness-tracker $VERSION (AltStore source)" || echo "no changes"
+          git push || true
