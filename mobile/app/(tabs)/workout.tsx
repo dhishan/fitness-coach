@@ -487,15 +487,27 @@ export default function WorkoutScreen() {
   const [entries, setEntries] = useState<EntryWithHistory[]>([])
   const [starting, setStarting] = useState(false)
 
-  // Sync server -> local state once on load
+  // Sync server -> local state on load AND when a new active session
+  // appears OR an external change happens (e.g. Library "Add to current workout")
   useEffect(() => {
-    if (activeWorkout !== undefined && workout === null) {
-      setWorkout(activeWorkout)
-      if (activeWorkout) {
-        setEntries(activeWorkout.entries.map((e) => ({ ...e, lastTime: undefined })))
+    if (activeWorkout === undefined) return
+    if (activeWorkout === null) {
+      if (workout !== null) {
+        setWorkout(null)
+        setEntries([])
       }
+      return
     }
-  }, [activeWorkout, workout])
+    // Sync when ID changed (new session) OR when server has more entries
+    // than local (external add). Local-only edits in flight are protected by
+    // the autosave hook's debounce queueing.
+    const idChanged = workout?.id !== activeWorkout.id
+    const serverHasMore = activeWorkout.entries.length > entries.length
+    if (idChanged || serverHasMore) {
+      setWorkout(activeWorkout)
+      setEntries(activeWorkout.entries.map((e) => ({ ...e, lastTime: undefined })))
+    }
+  }, [activeWorkout, workout, entries.length])
 
   const [showAdd, setShowAdd] = useState(false)
   const [altFor, setAltFor] = useState<number | null>(null)

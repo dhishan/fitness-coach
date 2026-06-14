@@ -10,6 +10,9 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
@@ -310,8 +313,11 @@ function PreviewModal({
   }
 
   return (
-    <Modal visible transparent animationType="slide">
-      <View style={s.overlay}>
+    <Modal visible transparent animationType="slide" onRequestClose={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={s.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView style={s.sheetScroll} contentContainerStyle={s.sheet} keyboardShouldPersistTaps="handled">
           <View style={s.sheetHeader}>
             <Text style={s.sheetTitle}>{state.editId ? 'Edit log' : 'Confirm entry'}</Text>
@@ -411,7 +417,7 @@ function PreviewModal({
             </Pressable>
           </View>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
@@ -448,8 +454,11 @@ function GoalsSuggestModal({
   }
 
   return (
-    <Modal visible transparent animationType="slide">
-      <View style={s.overlay}>
+    <Modal visible transparent animationType="slide" onRequestClose={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={s.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={s.sheet}>
           <Text style={s.sheetTitle}>Suggest daily goals</Text>
 
@@ -531,7 +540,7 @@ function GoalsSuggestModal({
             </>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
@@ -576,8 +585,11 @@ function GoalsSetModal({
   }
 
   return (
-    <Modal visible transparent animationType="slide">
-      <View style={s.overlay}>
+    <Modal visible transparent animationType="slide" onRequestClose={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={s.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView style={s.sheetScroll} contentContainerStyle={s.sheet} keyboardShouldPersistTaps="handled">
           <Text style={s.sheetTitle}>Set daily goals</Text>
           <View style={s.macroRow}>
@@ -613,7 +625,7 @@ function GoalsSetModal({
             </Pressable>
           </View>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
@@ -641,8 +653,11 @@ function FavoritesModal({
   })
 
   return (
-    <Modal visible transparent animationType="slide">
-      <View style={s.overlay}>
+    <Modal visible transparent animationType="slide" onRequestClose={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={s.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={[s.sheet, { maxHeight: '70%' }]}>
           <Text style={s.sheetTitle}>Favorites</Text>
 
@@ -676,7 +691,7 @@ function FavoritesModal({
             <Text style={s.btnSecondaryText}>Cancel</Text>
           </Pressable>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
