@@ -33,6 +33,22 @@ jobs:
       - name: Install workspace deps
         run: npm install --no-audit --no-fund
 
+      - name: Inject release version into app.json
+        # AltStore validates that the IPA's CFBundleShortVersionString matches
+        # the version in altstore.json. Strip the "mobile-v" prefix off the tag
+        # and write it into mobile/app.json before prebuild so it lands in
+        # Info.plist.
+        run: |
+          VER="${VERSION#mobile-v}"
+          python3 - <<EOF
+          import json
+          p = "mobile/app.json"
+          d = json.load(open(p))
+          d["expo"]["version"] = "$VER"
+          json.dump(d, open(p, "w"), indent=2)
+          print("set version to", "$VER")
+          EOF
+
       - name: Expo prebuild (iOS)
         working-directory: mobile
         run: npx expo prebuild --platform ios --no-install --clean
