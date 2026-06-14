@@ -10,6 +10,7 @@ import {
   Modal,
   Dimensions,
   TextInput,
+  Platform,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -388,7 +389,7 @@ function AppleHealthCard() {
     )
   }
 
-  const available = HealthKit.isAvailable()
+  const available = HealthKit.isAvailable() || Platform.OS === 'ios'
 
   return (
     <View style={[card, s.cardPad]}>

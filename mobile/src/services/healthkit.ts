@@ -55,12 +55,21 @@ function getPermissions() {
 
 export function isAvailable(): boolean {
   // react-native-health is iOS-only; module surface includes initHealthKit + Constants
-  return (
+  const ok =
     Platform.OS === 'ios' &&
     !!AppleHealthKit &&
     typeof AppleHealthKit.initHealthKit === 'function' &&
     !!AppleHealthKit.Constants
-  )
+  if (!ok) {
+    // eslint-disable-next-line no-console
+    console.log('[HealthKit] isAvailable=false', {
+      platform: Platform.OS,
+      moduleTruthy: !!AppleHealthKit,
+      hasInit: typeof AppleHealthKit?.initHealthKit,
+      hasConstants: !!AppleHealthKit?.Constants,
+    })
+  }
+  return ok
 }
 
 export async function init(): Promise<boolean> {

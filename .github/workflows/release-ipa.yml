@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write   # to upload to GH Release
+  id-token: write   # WIF auth to GCP for shared bucket upload
 
 jobs:
   build-ipa:
