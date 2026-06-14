@@ -1,7 +1,7 @@
 TF_DIR=terraform/main
 TF_ENV?=prod
 
-.PHONY: backend-install backend-dev backend-test terraform-init terraform-plan terraform-apply mobile-build-ipa mobile-publish-ipa
+.PHONY: backend-install backend-dev backend-test terraform-init terraform-plan terraform-apply mobile-build-ipa mobile-publish-ipa mobile-release
 
 backend-install: ## install backend deps into .venv
 	cd backend && python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
@@ -93,3 +93,20 @@ mobile-publish-ipa: ## Publish the most-recent built .ipa to a GitHub Release an
 	json.dump(d, open(p,'w'), indent=2); print('updated', p)"
 	@cd ../family-expense-tracker && git add frontend/public/altstore.json && git commit -m "release: fitness-tracker v$(VERSION) (AltStore source)" && git push
 	@echo "Pushed. Both phones will see the update in AltStore after Firebase Hosting deploys (~1 min)."
+
+mobile-release: ## Bump version, tag, push — triggers GH Actions to build + publish IPA. BUMP=patch|minor|major (default patch).
+	@BUMP=$${BUMP:-patch}; \
+	LAST=$$(git tag --list 'mobile-v*' | sort -V | tail -1 | sed 's/^mobile-v//'); \
+	if [ -z "$$LAST" ]; then echo "No existing mobile-v* tag; starting at 1.0.0"; NEW=1.0.0; \
+	else \
+	  MAJOR=$$(echo $$LAST | cut -d. -f1); MINOR=$$(echo $$LAST | cut -d. -f2); PATCH=$$(echo $$LAST | cut -d. -f3); \
+	  case "$$BUMP" in \
+	    major) NEW=$$((MAJOR+1)).0.0 ;; \
+	    minor) NEW=$$MAJOR.$$((MINOR+1)).0 ;; \
+	    patch|*) NEW=$$MAJOR.$$MINOR.$$((PATCH+1)) ;; \
+	  esac; \
+	fi; \
+	echo "Last: $${LAST:-(none)}  ->  New: $$NEW ($$BUMP)"; \
+	if ! git diff-index --quiet HEAD --; then echo "Uncommitted changes — commit first."; exit 1; fi; \
+	git tag "mobile-v$$NEW" && git push --tags && \
+	  echo "Tagged mobile-v$$NEW. Watch: gh run watch --repo dhishan/fitness-coach --workflow release-ipa.yml"

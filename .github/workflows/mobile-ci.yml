@@ -1,0 +1,43 @@
+name: Mobile CI
+
+# Cheap validation on every push that touches mobile code: typecheck + expo
+# export. Catches JS-level breaks fast (~3 min) without spending macOS-minutes
+# on a full IPA build. The full IPA release runs only on mobile-v* tags
+# (see release-ipa.yml).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'packages/shared-types/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'packages/shared-types/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest      # JS-only check; no macOS needed
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        run: cd mobile && npx tsc --noEmit
+      - name: Expo export (validates bundle compiles)
+        run: cd mobile && CI=1 npx expo export --platform ios --output-dir /tmp/ft-ci
