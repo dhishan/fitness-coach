@@ -375,8 +375,8 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   chipScrollWrap: {
-    maxHeight: 40,
-    marginBottom: 4,
+    flexGrow: 0,
+    marginBottom: spacing.sm,
   },
   chipScroll: {
     paddingHorizontal: spacing.base,
