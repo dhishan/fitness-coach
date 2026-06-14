@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
+import * as FileSystem from 'expo-file-system'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { BodyMetric, BodyMetricCreate } from '@fitness/shared-types'
 import { bodyApi, uploadsApi } from '../src/services/api'
@@ -155,15 +156,17 @@ function AddMeasurementForm({ onSaved }: { onSaved: () => void }) {
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
       )
       const signed = await uploadsApi.signFoodPhoto('image/jpeg')
-      const putRes = await fetch(signed.upload_url, {
-        method: 'PUT',
-        body: await (await fetch(manipulated.uri)).blob(),
+      const putRes = await FileSystem.uploadAsync(signed.upload_url, manipulated.uri, {
+        httpMethod: 'PUT',
         headers: { 'Content-Type': 'image/jpeg' },
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
       })
-      if (!putRes.ok) throw new Error('Upload failed')
+      if (putRes.status < 200 || putRes.status >= 300) {
+        throw new Error(`Upload failed (${putRes.status})`)
+      }
       setForm((prev) => ({ ...prev, photo_urls: [...prev.photo_urls, signed.public_url] }))
-    } catch {
-      Alert.alert('Error', 'Could not upload photo. Try again.')
+    } catch (err) {
+      Alert.alert('Error', `Could not upload photo. ${(err as Error)?.message ?? 'Try again.'}`)
     } finally {
       setUploading(false)
     }

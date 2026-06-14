@@ -16,6 +16,7 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
+import * as FileSystem from 'expo-file-system'
 import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
@@ -886,18 +887,22 @@ function NutritionScreenInner() {
       // Get signed upload URL
       const signed = await uploadsApi.signFoodPhoto('image/jpeg')
 
-      // PUT directly to GCS signed URL - no Authorization header
-      const putRes = await fetch(signed.upload_url, {
-        method: 'PUT',
-        body: await (await fetch(manipulated.uri)).blob(),
+      // PUT directly to GCS signed URL via expo-file-system (RN fetch+blob
+      // is unreliable for file:// binary uploads on iOS)
+      const putRes = await FileSystem.uploadAsync(signed.upload_url, manipulated.uri, {
+        httpMethod: 'PUT',
         headers: { 'Content-Type': 'image/jpeg' },
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
       })
-      if (!putRes.ok) throw new Error('Upload failed')
+      if (putRes.status < 200 || putRes.status >= 300) {
+        throw new Error(`Upload failed (${putRes.status})`)
+      }
 
       const est = await nutritionApi.estimatePhoto(signed.public_url)
       setPreview({ estimation: est, source: 'ai_photo' })
-    } catch {
-      Alert.alert('Error', 'Could not process photo. Try again.')
+    } catch (err) {
+      console.warn('photo flow failed', err)
+      Alert.alert('Error', `Could not process photo. ${(err as Error)?.message ?? 'Try again.'}`)
     } finally {
       setEstimating(false)
     }
