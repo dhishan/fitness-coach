@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import {
   Alert,
   Platform,
@@ -7,8 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import * as WebBrowser from 'expo-web-browser'
-import * as Google from 'expo-auth-session/providers/google'
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin'
 import * as AppleAuthentication from 'expo-apple-authentication'
 import { useRouter } from 'expo-router'
 import { authApi } from '../src/services/api'
@@ -16,37 +14,46 @@ import { useAuth } from '../src/store/auth'
 import { colors, spacing, radius } from '../src/theme'
 import { IOS_CLIENT_ID, WEB_CLIENT_ID } from '../src/config'
 
-WebBrowser.maybeCompleteAuthSession()
+// Configure at module load. The native SDK uses ASWebAuthenticationSession
+// under the hood. Unlike expo-auth-session's generic OAuth, it sends only
+// the OAuth client id to Google (no bundle id), so AltStore's per-user
+// bundle suffix is invisible to Google's validation.
+GoogleSignin.configure({
+  iosClientId: IOS_CLIENT_ID,
+  webClientId: WEB_CLIENT_ID || undefined,
+  scopes: ['openid', 'profile', 'email'],
+  offlineAccess: false,
+})
 
 export default function Login() {
   const router = useRouter()
   const { setAuth } = useAuth()
 
-  const [_request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: WEB_CLIENT_ID,
-    iosClientId: IOS_CLIENT_ID || undefined,
-  })
-
-  useEffect(() => {
-    if (response?.type !== 'success') return
-    const idToken = response.params.id_token
-    if (!idToken) return
-
-    authApi
-      .google(idToken)
-      .then(async (data) => {
-        await setAuth(data.access_token, data.user)
-        router.replace('/(tabs)')
-      })
-      .catch((err: { response?: { status?: number } }) => {
-        const status = err?.response?.status
-        if (status === 403) {
-          Alert.alert('Access denied', 'This app is invite-only.')
-        } else {
-          Alert.alert('Sign-in failed', 'Please try again.')
-        }
-      })
-  }, [response, setAuth, router])
+  const handleGoogle = async () => {
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false })
+      const userInfo = await GoogleSignin.signIn()
+      const idToken =
+        (userInfo as unknown as { data?: { idToken?: string } })?.data?.idToken ??
+        (userInfo as unknown as { idToken?: string })?.idToken
+      if (!idToken) {
+        Alert.alert('Sign-in failed', 'Google did not return an id token.')
+        return
+      }
+      const data = await authApi.google(idToken)
+      await setAuth(data.access_token, data.user)
+      router.replace('/(tabs)')
+    } catch (e: unknown) {
+      const err = e as { code?: string; response?: { status?: number } }
+      if (err?.code === statusCodes.SIGN_IN_CANCELLED) return
+      if (err?.code === statusCodes.IN_PROGRESS) return
+      if (err?.response?.status === 403) {
+        Alert.alert('Access denied', 'This app is invite-only.')
+        return
+      }
+      Alert.alert('Sign-in failed', 'Please try again.')
+    }
+  }
 
   const handleApple = async () => {
     try {
@@ -94,7 +101,7 @@ export default function Login() {
         <Text style={styles.subtitle}>Track your training, talk to your coach.</Text>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => promptAsync()}
+          onPress={handleGoogle}
           activeOpacity={0.8}
         >
           <Text style={styles.buttonText}>Sign in with Google</Text>
