@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
@@ -241,6 +243,10 @@ export default function AddExerciseSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <Pressable style={s.overlay} onPress={handleClose}>
         <Pressable style={s.sheet} onPress={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -333,6 +339,7 @@ export default function AddExerciseSheet({
         )}
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
