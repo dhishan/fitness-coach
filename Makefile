@@ -49,6 +49,8 @@ mobile-typecheck: ## tsc --noEmit
 
 mobile-build-ipa: ## Build an unsigned .ipa locally for AltStore sideload (no Apple Developer Program needed)
 	@cd mobile && npx expo prebuild --platform ios --no-install 2>/dev/null || true
+	@# macOS 15 + Xcode 16 sandbox blocks Node bundler in xcode build phase; flip flag.
+	@sed -i '' 's/ENABLE_USER_SCRIPT_SANDBOXING = YES/ENABLE_USER_SCRIPT_SANDBOXING = NO/g' mobile/ios/FitnessTracker.xcodeproj/project.pbxproj
 	@cd mobile/ios && xcodebuild \
 		-workspace FitnessTracker.xcworkspace \
 		-scheme FitnessTracker \
