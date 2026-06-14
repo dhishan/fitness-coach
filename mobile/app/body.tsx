@@ -14,7 +14,7 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
-import * as FileSystem from 'expo-file-system'
+import * as FileSystem from 'expo-file-system/legacy'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { BodyMetric, BodyMetricCreate } from '@fitness/shared-types'
 import { bodyApi, uploadsApi } from '../src/services/api'

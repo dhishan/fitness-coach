@@ -26,6 +26,20 @@ resource "google_firestore_index" "food_logs_user_date_desc" {
   }
 }
 
+resource "google_firestore_index" "food_logs_user_created_desc" {
+  project    = var.project_id
+  database   = google_firestore_database.db.name
+  collection = "food_logs"
+  fields {
+    field_path = "user_id"
+    order      = "ASCENDING"
+  }
+  fields {
+    field_path = "created_at"
+    order      = "DESCENDING"
+  }
+}
+
 resource "google_firestore_index" "favorites_user_last_used" {
   project    = var.project_id
   database   = google_firestore_database.db.name
