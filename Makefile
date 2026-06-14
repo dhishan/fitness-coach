@@ -62,5 +62,8 @@ mobile-build-ipa: ## Build an unsigned .ipa locally for AltStore sideload (no Ap
 	@mkdir -p /tmp/FitnessTracker-ipa/Payload
 	@cp -R /tmp/FitnessTracker.xcarchive/Products/Applications/FitnessTracker.app /tmp/FitnessTracker-ipa/Payload/
 	@cd /tmp/FitnessTracker-ipa && zip -qr ~/Downloads/FitnessTracker.ipa Payload && rm -rf /tmp/FitnessTracker-ipa /tmp/FitnessTracker.xcarchive
+	@mkdir -p "$$HOME/Library/Mobile Documents/com~apple~CloudDocs/Share"
+	@cp ~/Downloads/FitnessTracker.ipa "$$HOME/Library/Mobile Documents/com~apple~CloudDocs/Share/FitnessTracker.ipa"
 	@echo "Built: ~/Downloads/FitnessTracker.ipa"
+	@echo "Also copied to: ~/Library/Mobile Documents/com~apple~CloudDocs/Share/FitnessTracker.ipa"
 	@echo "Drag this onto AltServer's menubar icon to install via AltStore."
