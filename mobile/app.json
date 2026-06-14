@@ -13,7 +13,14 @@
       "infoPlist": {
         "NSHealthShareUsageDescription": "Read steps, weight, workouts, HRV, and sleep from Apple Health to track your training.",
         "NSHealthUpdateUsageDescription": "We do not write to Apple Health.",
-        "NSCameraUsageDescription": "Scan barcodes to log packaged foods."
+        "NSCameraUsageDescription": "Scan barcodes to log packaged foods.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.610355955735-o419lsj7882jl3dqfn02nm1kmmm21vf6"
+            ]
+          }
+        ]
       }
     },
     "android": {
@@ -68,7 +75,7 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "16.4"
           }
         }
       ]
