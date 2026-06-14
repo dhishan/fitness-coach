@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     cf_access_aud: str = ""
     nutrition_model: str = "openai/gpt-4o-mini"
     uploads_bucket: str = ""
+    usda_api_key: str = ""
+    apple_audience_prefix: str = "org.blueelephants.fitnesstracker"
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 
