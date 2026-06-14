@@ -99,6 +99,9 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
       - name: Update shared AltStore source (GCS + sibling repo)
         env:
           GH_TOKEN: ${{ secrets.ALTSTORE_PUSH_TOKEN }}

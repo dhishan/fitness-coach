@@ -305,6 +305,7 @@ export default function AddExerciseSheet({
             data={exercises}
             keyExtractor={(item) => item.id}
             style={s.list}
+            keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
               isLoading ? (
                 <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.lg }} />
@@ -354,8 +355,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '80%',
+    height: '80%',
     paddingBottom: 24,
+    flexDirection: 'column',
   },
   sheetHeader: {
     flexDirection: 'row',
