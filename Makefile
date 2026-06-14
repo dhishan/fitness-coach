@@ -1,7 +1,7 @@
 TF_DIR=terraform/main
 TF_ENV?=prod
 
-.PHONY: backend-install backend-dev backend-test terraform-init terraform-plan terraform-apply mobile-build-ipa
+.PHONY: backend-install backend-dev backend-test terraform-init terraform-plan terraform-apply mobile-build-ipa mobile-publish-ipa
 
 backend-install: ## install backend deps into .venv
 	cd backend && python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
@@ -67,3 +67,29 @@ mobile-build-ipa: ## Build an unsigned .ipa locally for AltStore sideload (no Ap
 	@echo "Built: ~/Downloads/FitnessTracker.ipa"
 	@echo "Also copied to: ~/Library/Mobile Documents/com~apple~CloudDocs/Share/FitnessTracker.ipa"
 	@echo "Drag this onto AltServer's menubar icon to install via AltStore."
+
+mobile-publish-ipa: ## Publish the most-recent built .ipa to a GitHub Release and update the shared AltStore source so both phones get an "Update available" notification. Pass VERSION=x.y.z (required).
+	@if [ -z "$$VERSION" ]; then echo "Usage: make mobile-publish-ipa VERSION=1.2.3"; exit 1; fi
+	@IPA="$$HOME/Library/Mobile Documents/com~apple~CloudDocs/Share/FitnessTracker.ipa"; \
+	BUNDLE_ID="org.blueelephants.fitnesstracker"; \
+	REPO="dhishan/fitness-coach"; \
+	SOURCE="../family-expense-tracker/frontend/public/altstore.json"; \
+	if [ ! -f "$$IPA" ]; then echo "No .ipa at $$IPA. Run 'make mobile-build-ipa' first."; exit 1; fi; \
+	echo "Creating GH Release mobile-v$$VERSION with $$IPA..."; \
+	gh release create "mobile-v$$VERSION" "$$IPA" --repo "$$REPO" \
+	  --title "Mobile v$$VERSION" \
+	  --notes "AltStore-source release. JS-only changes ship via EAS Update; this release is only needed when native deps change." || \
+	gh release upload "mobile-v$$VERSION" "$$IPA" --repo "$$REPO" --clobber; \
+	IPA_SIZE=$$(stat -f %z "$$IPA"); \
+	IPA_DATE=$$(date -u +"%Y-%m-%dT%H:%M:%SZ"); \
+	echo "Updating $$SOURCE to point at mobile-v$$VERSION..."; \
+	python3 -c "import json; \
+	p='$$SOURCE'; \
+	d=json.load(open(p)); \
+	bid='$$BUNDLE_ID'; \
+	app=next(a for a in d['apps'] if a['bundleIdentifier']==bid); \
+	new_v={'version':'$$VERSION','buildVersion':'1','date':'$$IPA_DATE','localizedDescription':'New version $$VERSION','downloadURL':'https://github.com/$$REPO/releases/download/mobile-v$$VERSION/FitnessTracker.ipa','size':$$IPA_SIZE,'minOSVersion':'16.0'}; \
+	app['versions']=[new_v]+[v for v in app['versions'] if v['version']!='$$VERSION']; \
+	json.dump(d, open(p,'w'), indent=2); print('updated', p)"
+	@cd ../family-expense-tracker && git add frontend/public/altstore.json && git commit -m "release: fitness-tracker v$(VERSION) (AltStore source)" && git push
+	@echo "Pushed. Both phones will see the update in AltStore after Firebase Hosting deploys (~1 min)."
