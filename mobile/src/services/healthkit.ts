@@ -14,6 +14,7 @@
 // resolved by tsc depending on the moduleResolution strategy; runtime access is guarded below
 import AppleHealthKitModule from 'react-native-health'
 
+import { Platform } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 import type { HealthKitSample } from '@fitness/shared-types'
 import { api } from './api'
@@ -53,7 +54,13 @@ function getPermissions() {
 // ---------------------------------------------------------------------------
 
 export function isAvailable(): boolean {
-  return !!AppleHealthKit && typeof AppleHealthKit.isAvailable === 'function'
+  // react-native-health is iOS-only; module surface includes initHealthKit + Constants
+  return (
+    Platform.OS === 'ios' &&
+    !!AppleHealthKit &&
+    typeof AppleHealthKit.initHealthKit === 'function' &&
+    !!AppleHealthKit.Constants
+  )
 }
 
 export async function init(): Promise<boolean> {
