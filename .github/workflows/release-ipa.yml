@@ -1,0 +1,116 @@
+name: Release IPA
+
+on:
+  push:
+    tags:
+      - 'mobile-v*'
+
+permissions:
+  contents: write   # to upload to GH Release
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    env:
+      VERSION: ${{ github.ref_name }}   # e.g. "mobile-v1.0.1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install workspace deps
+        run: npm install --no-audit --no-fund
+
+      - name: Expo prebuild (iOS)
+        working-directory: mobile
+        run: npx expo prebuild --platform ios --no-install --clean
+
+      - name: Disable script-phase sandboxing (Xcode 16 + Node bundler)
+        run: |
+          sed -i '' 's/ENABLE_USER_SCRIPT_SANDBOXING = YES/ENABLE_USER_SCRIPT_SANDBOXING = NO/g' \
+            mobile/ios/FitnessTracker.xcodeproj/project.pbxproj
+
+      - name: Pod install
+        working-directory: mobile/ios
+        run: pod install --repo-update
+
+      - name: Archive
+        working-directory: mobile/ios
+        run: |
+          xcodebuild \
+            -workspace FitnessTracker.xcworkspace \
+            -scheme FitnessTracker \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/FitnessTracker.xcarchive" \
+            -destination 'generic/platform=iOS' \
+            archive \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/FitnessTracker.xcarchive/Products/Applications/FitnessTracker.app" \
+            "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa" && zip -qr "$RUNNER_TEMP/FitnessTracker.ipa" Payload
+          ls -lh "$RUNNER_TEMP/FitnessTracker.ipa"
+
+      - name: Upload IPA to GH Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Try create release; if it exists, fall back to upload --clobber
+          gh release create "$VERSION" "$RUNNER_TEMP/FitnessTracker.ipa" \
+            --title "Mobile ${VERSION#mobile-}" \
+            --notes "AltStore-source release. Built from ${{ github.sha }}." \
+            || gh release upload "$VERSION" "$RUNNER_TEMP/FitnessTracker.ipa" --clobber
+
+      - name: Update shared AltStore source (sibling repo)
+        env:
+          GH_TOKEN: ${{ secrets.ALTSTORE_PUSH_TOKEN }}
+        run: |
+          VER="${VERSION#mobile-v}"   # strip prefix → "1.0.1"
+          IPA_SIZE=$(stat -f %z "$RUNNER_TEMP/FitnessTracker.ipa")
+          IPA_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Clone the sibling repo with push access
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/dhishan/family-expense-tracker.git" \
+            "$RUNNER_TEMP/sibling"
+
+          python3 - <<EOF
+          import json
+          p = "$RUNNER_TEMP/sibling/frontend/public/altstore.json"
+          d = json.load(open(p))
+          bid = "org.blueelephants.fitnesstracker"
+          app = next(a for a in d["apps"] if a["bundleIdentifier"] == bid)
+          new_v = {
+            "version": "$VER",
+            "buildVersion": "1",
+            "date": "$IPA_DATE",
+            "localizedDescription": "New version $VER",
+            "downloadURL": "https://github.com/${{ github.repository }}/releases/download/$VERSION/FitnessTracker.ipa",
+            "size": $IPA_SIZE,
+            "minOSVersion": "16.0",
+          }
+          app["versions"] = [new_v] + [v for v in app["versions"] if v["version"] != "$VER"]
+          json.dump(d, open(p, "w"), indent=2)
+          print("updated", p)
+          EOF
+
+          cd "$RUNNER_TEMP/sibling"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add frontend/public/altstore.json
+          git commit -m "release: fitness-tracker $VERSION (AltStore source)"
+          git push
