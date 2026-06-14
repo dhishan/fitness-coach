@@ -376,7 +376,9 @@ const styles = StyleSheet.create({
   },
   chipScrollWrap: {
     flexGrow: 0,
-    marginBottom: spacing.sm,
+    flexShrink: 0,
+    height: 44,
+    marginBottom: spacing.xs,
   },
   chipScroll: {
     paddingHorizontal: spacing.base,

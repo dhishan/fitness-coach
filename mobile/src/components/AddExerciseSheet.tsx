@@ -241,8 +241,8 @@ export default function AddExerciseSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <Pressable style={s.overlay} onPress={handleClose} />
-      <View style={s.sheet}>
+      <Pressable style={s.overlay} onPress={handleClose}>
+        <Pressable style={s.sheet} onPress={(e) => e.stopPropagation()}>
         {/* Header */}
         <View style={s.sheetHeader}>
           {showCreate ? (
@@ -331,7 +331,8 @@ export default function AddExerciseSheet({
             )}
           />
         )}
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   )
 }
@@ -340,12 +341,14 @@ const s = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
+    paddingBottom: 24,
   },
   sheetHeader: {
     flexDirection: 'row',

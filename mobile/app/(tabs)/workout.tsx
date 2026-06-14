@@ -549,6 +549,9 @@ export default function WorkoutScreen() {
     setStarting(true)
     try {
       const w = await workoutsApi.create({ date: toLocalISODate() })
+      // Seed the query cache BEFORE setWorkout so the sync useEffect
+      // doesn't immediately reset it back to null.
+      qc.setQueryData(['workout', 'active'], w)
       setWorkout(w)
       setEntries([])
     } catch {
@@ -568,6 +571,7 @@ export default function WorkoutScreen() {
       const workoutId = await startFromPlan(template)
       const w = await workoutsApi.active()
       if (w && w.id === workoutId) {
+        qc.setQueryData(['workout', 'active'], w)
         setWorkout(w)
         setEntries(w.entries.map((e) => ({ ...e, lastTime: undefined })))
       } else {
@@ -669,7 +673,11 @@ export default function WorkoutScreen() {
           }
         },
       )
-      void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
+      // Explicitly clear local + cache so the screen returns to empty
+      // state immediately, without waiting on a refetch.
+      qc.setQueryData(['workout', 'active'], null)
+      setWorkout(null)
+      setEntries([])
     } catch {
       Alert.alert('Error', 'Could not finish workout')
     } finally {

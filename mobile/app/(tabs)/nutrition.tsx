@@ -17,6 +17,7 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
 import * as FileSystem from 'expo-file-system/legacy'
+import DateTimePicker from '@react-native-community/datetimepicker'
 import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
@@ -261,12 +262,15 @@ function PreviewModal({
   const [saving, setSaving] = useState(false)
   const [mealType, setMealType] = useState<MealType>(defaultMealType())
 
-  // Time as two separate inputs
-  const now = new Date()
-  const initHH = String(now.getHours()).padStart(2, '0')
-  const initMM = String(now.getMinutes()).padStart(2, '0')
-  const [timeHH, setTimeHH] = useState(initHH)
-  const [timeMM, setTimeMM] = useState(initMM)
+  // Time picker (defaults to now; only sent if user changes it)
+  const [initialTime] = useState(() => new Date())
+  const [time, setTime] = useState<Date>(initialTime)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const timeChanged =
+    time.getHours() !== initialTime.getHours() ||
+    time.getMinutes() !== initialTime.getMinutes()
+  const fmtTime = (d: Date) =>
+    d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
 
   const qc = useQueryClient()
 
@@ -281,12 +285,7 @@ function PreviewModal({
       fat_g: Number(fat),
     }
     // Only send logged_at if user changed time
-    let logged_at: string | undefined
-    if (timeHH !== initHH || timeMM !== initMM) {
-      const dt = new Date()
-      dt.setHours(Number(timeHH), Number(timeMM), 0, 0)
-      logged_at = dt.toISOString()
-    }
+    const logged_at: string | undefined = timeChanged ? time.toISOString() : undefined
     try {
       if (state.editId) {
         await nutritionApi.logs.update(state.editId, { name, serving, macros })
@@ -343,23 +342,25 @@ function PreviewModal({
               </View>
               <View style={s.timeRow}>
                 <Text style={s.timeLabel}>Time:</Text>
-                <TextInput
-                  style={s.timeInput}
-                  value={timeHH}
-                  onChangeText={setTimeHH}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  placeholderTextColor={colors.gray400}
-                />
-                <Text style={s.timeColon}>:</Text>
-                <TextInput
-                  style={s.timeInput}
-                  value={timeMM}
-                  onChangeText={setTimeMM}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  placeholderTextColor={colors.gray400}
-                />
+                <Pressable style={s.timePill} onPress={() => setPickerOpen(true)}>
+                  <Text style={s.timePillText}>{fmtTime(time)}</Text>
+                </Pressable>
+                {pickerOpen && (
+                  <DateTimePicker
+                    value={time}
+                    mode="time"
+                    display="compact"
+                    onChange={(_evt, selected) => {
+                      if (Platform.OS !== 'ios') setPickerOpen(false)
+                      if (selected) setTime(selected)
+                    }}
+                  />
+                )}
+                {Platform.OS === 'ios' && pickerOpen && (
+                  <Pressable onPress={() => setPickerOpen(false)} style={s.timeDone}>
+                    <Text style={s.timeDoneText}>Done</Text>
+                  </Pressable>
+                )}
               </View>
             </>
           )}
@@ -1396,6 +1397,17 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   timeColon: { fontSize: 14, color: colors.gray500 },
+  timePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.gray50,
+  },
+  timePillText: { fontSize: 14, color: colors.text, fontWeight: '500' },
+  timeDone: { marginLeft: 'auto', paddingHorizontal: 10, paddingVertical: 6 },
+  timeDoneText: { color: colors.primary, fontWeight: '600' },
 
   // Micros panel
   microsPanel: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.gray100, paddingTop: spacing.sm },
