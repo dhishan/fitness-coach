@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import {
   Alert,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -8,6 +9,7 @@ import {
 } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import * as Google from 'expo-auth-session/providers/google'
+import * as AppleAuthentication from 'expo-apple-authentication'
 import { useRouter } from 'expo-router'
 import { authApi } from '../src/services/api'
 import { useAuth } from '../src/store/auth'
@@ -46,6 +48,42 @@ export default function Login() {
       })
   }, [response, setAuth, router])
 
+  const handleApple = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      })
+      const idToken = credential.identityToken
+      if (!idToken) {
+        Alert.alert('Sign in failed', 'No identity token received')
+        return
+      }
+      const fullName = credential.fullName
+        ? [credential.fullName.givenName, credential.fullName.familyName]
+            .filter(Boolean)
+            .join(' ')
+        : undefined
+      const res = await authApi.apple(
+        idToken,
+        fullName || undefined,
+        credential.email ?? undefined,
+      )
+      await setAuth(res.access_token, res.user)
+      router.replace('/(tabs)')
+    } catch (e: unknown) {
+      const err = e as { code?: string; response?: { status?: number }; message?: string }
+      if (err?.code === 'ERR_REQUEST_CANCELED') return
+      if (err?.response?.status === 403) {
+        Alert.alert('Not allowed', 'This app is invite-only.')
+        return
+      }
+      Alert.alert('Sign in failed', String(err?.message ?? e))
+    }
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -61,6 +99,15 @@ export default function Login() {
         >
           <Text style={styles.buttonText}>Sign in with Google</Text>
         </TouchableOpacity>
+        {Platform.OS === 'ios' && (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            cornerRadius={8}
+            style={styles.appleButton}
+            onPress={handleApple}
+          />
+        )}
       </View>
     </View>
   )
@@ -121,5 +168,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
+  },
+  appleButton: {
+    width: '100%',
+    height: 48,
+    marginTop: spacing.sm,
   },
 })

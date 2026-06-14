@@ -54,7 +54,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(undefined, (error) => {
   if (
     error.response?.status === 401 &&
-    !error.config?.url?.includes('/auth/google')
+    !error.config?.url?.includes('/auth/google') &&
+    !error.config?.url?.includes('/auth/apple')
   ) {
     useAuth.getState().logout()
   }
@@ -64,6 +65,10 @@ api.interceptors.response.use(undefined, (error) => {
 export const authApi = {
   google: (idToken: string) =>
     api.post<AuthResponse>('/auth/google', { id_token: idToken }).then((r) => r.data),
+  apple: (identity_token: string, name?: string, email?: string) =>
+    api
+      .post<AuthResponse>('/auth/apple', { identity_token, name, email })
+      .then((r) => r.data),
 }
 
 export const exercisesApi = {
