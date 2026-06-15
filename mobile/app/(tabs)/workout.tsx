@@ -926,8 +926,19 @@ function EmptyWorkoutScreen({
               <View style={{ flex: 1 }}>
                 <Text style={s.recentDate}>{w.date}</Text>
                 <Text style={s.recentMeta}>
-                  {w.entries?.length ?? 0} exercises
-                  {w.total_volume ? ` • ${Math.round(w.total_volume)} kg` : ''}
+                  {(() => {
+                    const exs = w.entries?.length ?? 0
+                    const sets = w.entries?.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0) ?? 0
+                    const reps = w.entries?.reduce(
+                      (sum, e) => sum + (e.sets?.reduce((s, x) => s + (x.reps ?? 0), 0) ?? 0),
+                      0,
+                    ) ?? 0
+                    const parts = [`${exs} exercise${exs === 1 ? '' : 's'}`]
+                    if (sets) parts.push(`${sets} sets`)
+                    if (w.total_volume) parts.push(`${Math.round(w.total_volume)} kg`)
+                    else if (reps) parts.push(`${reps} reps`)
+                    return parts.join(' · ')
+                  })()}
                 </Text>
               </View>
               <Text style={s.recentChevron}>›</Text>

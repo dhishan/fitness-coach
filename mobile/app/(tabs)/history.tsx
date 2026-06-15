@@ -30,6 +30,18 @@ function formatVolume(v: number): string {
   return v + ' kg'
 }
 
+function workoutStatLine(w: Workout): string {
+  const sets = w.entries.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)
+  const reps = w.entries.reduce(
+    (sum, e) => sum + (e.sets?.reduce((s, x) => s + (x.reps ?? 0), 0) ?? 0),
+    0,
+  )
+  // Volume only matters when something was actually loaded
+  if (w.total_volume > 0) return `${sets} sets · ${formatVolume(w.total_volume)}`
+  if (sets > 0) return `${sets} sets · ${reps} reps`
+  return ''
+}
+
 function exerciseNamesLine(w: Workout): string {
   const names = w.entries.map((e) => e.exercise_name)
   if (names.length === 0) return 'No exercises'
@@ -173,7 +185,7 @@ function WorkoutRow({ workout }: { workout: Workout }) {
           {exerciseNamesLine(workout)}
         </Text>
       </View>
-      <Text style={styles.workoutVolume}>{formatVolume(workout.total_volume)}</Text>
+      <Text style={styles.workoutVolume}>{workoutStatLine(workout)}</Text>
     </Pressable>
   )
 }
