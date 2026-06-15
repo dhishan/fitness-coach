@@ -73,12 +73,27 @@ export function isAvailable(): boolean {
 }
 
 export async function init(): Promise<boolean> {
-  if (!isAvailable()) return false
+  // Don't gate on isAvailable() — even if the JS-side surface looks partial,
+  // try the native call so iOS gets a chance to show the permission prompt.
+  if (Platform.OS !== 'ios') return false
+  if (typeof AppleHealthKit?.initHealthKit !== 'function') {
+    // eslint-disable-next-line no-console
+    console.log('[HealthKit] init: native module not linked')
+    return false
+  }
   const perms = getPermissions()
-  if (!perms) return false
+  if (!perms) {
+    // eslint-disable-next-line no-console
+    console.log('[HealthKit] init: no Constants.Permissions on module')
+    return false
+  }
 
   return new Promise((resolve) => {
     AppleHealthKit.initHealthKit(perms, (err: unknown) => {
+      if (err) {
+        // eslint-disable-next-line no-console
+        console.log('[HealthKit] init error:', err)
+      }
       resolve(!err)
     })
   })
