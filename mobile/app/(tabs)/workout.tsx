@@ -681,6 +681,17 @@ export default function WorkoutScreen() {
       qc.setQueryData(['workout', 'active'], null)
       setWorkout(null)
       setEntries([])
+      // Refresh every cached workouts list: home "Last workout", workout-tab
+      // recent list, history month view, history infinite list. Single
+      // predicate avoids forgetting one.
+      void qc.invalidateQueries({
+        predicate: (q) =>
+          Array.isArray(q.queryKey) &&
+          typeof q.queryKey[0] === 'string' &&
+          (q.queryKey[0] === 'workouts' ||
+            q.queryKey[0] === 'workouts-list' ||
+            q.queryKey[0] === 'workouts-month'),
+      })
     } catch {
       Alert.alert('Error', 'Could not finish workout')
     } finally {
