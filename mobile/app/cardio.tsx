@@ -18,6 +18,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useLocalSearchParams } from 'expo-router'
 import type { CardioLog, CardioLogCreate, CardioLogUpdate, CardioType } from '@fitness/shared-types'
 import { cardioApi } from '../src/services/api'
 import { colors, spacing, radius, card, shadow } from '../src/theme'
@@ -263,7 +264,8 @@ function CardioForm({ initial, isEdit, onSave, onCancel, saving }: FormProps) {
 
 export default function CardioScreen() {
   const qc = useQueryClient()
-  const [showForm, setShowForm] = useState(false)
+  const { new: newParam } = useLocalSearchParams<{ new?: string }>()
+  const [showForm, setShowForm] = useState(newParam === '1')
   const [editLog, setEditLog] = useState<CardioLog | null>(null)
 
   const { data: logs = [], isLoading } = useQuery<CardioLog[]>({

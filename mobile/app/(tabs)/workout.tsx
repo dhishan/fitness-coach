@@ -903,13 +903,21 @@ function EmptyWorkoutScreen({
     <View style={s.screen}>
       <View style={s.emptyHeader}>
         <Text style={s.emptyTitle}>Recent workouts</Text>
-        <TouchableOpacity
-          style={[s.startSmallBtn, starting && s.startBtnDisabled]}
-          onPress={onStart}
-          disabled={starting}
-        >
-          <Text style={s.startSmallBtnText}>{starting ? '...' : '+ Start workout'}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <TouchableOpacity
+            style={s.cardioLinkBtn}
+            onPress={() => router.push('/cardio')}
+          >
+            <Text style={s.cardioLinkBtnText}>Cardio</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.startSmallBtn, starting && s.startBtnDisabled]}
+            onPress={onStart}
+            disabled={starting}
+          >
+            <Text style={s.startSmallBtnText}>{starting ? '...' : '+ Start'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       {isLoading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.lg }} />
@@ -1111,6 +1119,14 @@ const s = StyleSheet.create({
     borderRadius: radius.full,
   },
   startSmallBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  cardioLinkBtn: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+  },
+  cardioLinkBtnText: { color: colors.text, fontWeight: '600', fontSize: 13 },
   emptyListText: {
     textAlign: 'center',
     marginTop: spacing.xl,

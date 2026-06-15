@@ -471,9 +471,14 @@ function CardioCard() {
     <View style={[card, s.cardPad]}>
       <View style={s.row}>
         <Text style={s.sectionTitle}>Cardio</Text>
-        <Pressable onPress={() => router.push('/cardio')}>
-          <Text style={s.bodyHistoryLink}>View all</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <Pressable onPress={() => router.push('/cardio?new=1')}>
+            <Text style={s.bodyHistoryLink}>+ Log</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/cardio')}>
+            <Text style={s.bodyHistoryLink}>View all</Text>
+          </Pressable>
+        </View>
       </View>
 
       {isLoading ? (
