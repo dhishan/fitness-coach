@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ActivityIndicator, View, Pressable, Keyboard } from 'react-native'
+import { ActivityIndicator, View, Keyboard } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -63,7 +63,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Pressable style={{ flex: 1 }} onPress={() => Keyboard.dismiss()}>
+      <View style={{ flex: 1 }} onStartShouldSetResponder={() => false} onTouchStart={() => Keyboard.dismiss()}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -80,7 +80,7 @@ export default function RootLayout() {
         <Stack.Screen name="cardio" options={{ title: 'Cardio' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
-      </Pressable>
+      </View>
     </QueryClientProvider>
   )
 }
