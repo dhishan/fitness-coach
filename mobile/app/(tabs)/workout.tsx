@@ -112,13 +112,16 @@ function SetRow({
   return (
     <View style={[s.setRow, isWarmup && s.setRowWarmup]}>
       {/* Warmup toggle */}
-      <Switch
-        value={isWarmup}
-        onValueChange={(v) => onUpdate({ ...set, is_warmup: v })}
-        trackColor={{ false: colors.gray200, true: '#fbbf24' }}
-        thumbColor={isWarmup ? '#f59e0b' : colors.gray400}
-        style={s.warmupSwitch}
-      />
+      <View style={s.warmupCol}>
+        <Switch
+          value={isWarmup}
+          onValueChange={(v) => onUpdate({ ...set, is_warmup: v })}
+          trackColor={{ false: colors.gray200, true: '#fbbf24' }}
+          thumbColor={isWarmup ? '#f59e0b' : colors.gray400}
+          style={s.warmupSwitch}
+        />
+        <Text style={s.warmupLabel}>Warmup</Text>
+      </View>
 
       {/* Weight stepper */}
       <View style={s.stepperGroup}>
@@ -744,26 +747,15 @@ export default function WorkoutScreen() {
     )
   }
 
-  // Empty state
+  // Empty state — show recent workouts + Start button in the corner
   if (!workout) {
-    return (
-      <View style={s.centered}>
-        <Text style={s.emptyStateText}>No active session.</Text>
-        <TouchableOpacity
-          style={[s.startBtn, starting && s.startBtnDisabled]}
-          onPress={showStartChooser}
-          disabled={starting}
-        >
-          <Text style={s.startBtnText}>{starting ? 'Starting...' : 'START WORKOUT'}</Text>
-        </TouchableOpacity>
-        {/* Plan chooser modal */}
-        <PlanChooserModal
-          visible={planModalVisible}
-          onClose={() => setPlanModalVisible(false)}
-          onSelect={(t) => void handleStartFromPlan(t)}
-        />
-      </View>
-    )
+    return <EmptyWorkoutScreen
+      starting={starting}
+      onStart={showStartChooser}
+      planModalVisible={planModalVisible}
+      onClosePlanModal={() => setPlanModalVisible(false)}
+      onSelectPlan={(t) => void handleStartFromPlan(t)}
+    />
   }
 
   return (
@@ -843,7 +835,10 @@ export default function WorkoutScreen() {
       <AddExerciseSheet
         visible={showAdd}
         onClose={() => setShowAdd(false)}
-        onAdd={(ex, hist) => void handleAddExercise(ex, hist)}
+        onAdd={(ex) => {
+          setShowAdd(false)
+          router.push(`/library/${ex.id}`)
+        }}
       />
 
       {/* Alternatives sheet */}
@@ -864,6 +859,77 @@ export default function WorkoutScreen() {
         />
       )}
     </KeyboardAvoidingView>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// EmptyWorkoutScreen — shown when there is no active workout. Has Start in the
+// header and a list of recent workouts below.
+// ---------------------------------------------------------------------------
+
+function EmptyWorkoutScreen({
+  starting,
+  onStart,
+  planModalVisible,
+  onClosePlanModal,
+  onSelectPlan,
+}: {
+  starting: boolean
+  onStart: () => void
+  planModalVisible: boolean
+  onClosePlanModal: () => void
+  onSelectPlan: (t: WorkoutTemplate) => void
+}) {
+  const router = useRouter()
+  const { data, isLoading } = useQuery({
+    queryKey: ['workouts', 'recent'],
+    queryFn: () => workoutsApi.list({ limit: 20 }),
+    staleTime: 60_000,
+  })
+  const recent = (data?.items ?? []).filter((w) => w.ended_at)
+
+  return (
+    <View style={s.screen}>
+      <View style={s.emptyHeader}>
+        <Text style={s.emptyTitle}>Recent workouts</Text>
+        <TouchableOpacity
+          style={[s.startSmallBtn, starting && s.startBtnDisabled]}
+          onPress={onStart}
+          disabled={starting}
+        >
+          <Text style={s.startSmallBtnText}>{starting ? '...' : '+ Start workout'}</Text>
+        </TouchableOpacity>
+      </View>
+      {isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.lg }} />
+      ) : recent.length === 0 ? (
+        <Text style={s.emptyListText}>No workouts yet. Tap "Start workout" to begin.</Text>
+      ) : (
+        <ScrollView contentContainerStyle={s.recentList}>
+          {recent.map((w) => (
+            <TouchableOpacity
+              key={w.id}
+              style={s.recentRow}
+              onPress={() => router.push(`/history/${w.id}`)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={s.recentDate}>{w.date}</Text>
+                <Text style={s.recentMeta}>
+                  {w.entries?.length ?? 0} exercises
+                  {w.total_volume ? ` • ${Math.round(w.total_volume)} kg` : ''}
+                </Text>
+              </View>
+              <Text style={s.recentChevron}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+      <PlanChooserModal
+        visible={planModalVisible}
+        onClose={onClosePlanModal}
+        onSelect={onSelectPlan}
+      />
+    </View>
   )
 }
 
@@ -1005,6 +1071,44 @@ const s = StyleSheet.create({
   },
   setRowWarmup: { opacity: 0.6 },
   warmupSwitch: { transform: [{ scaleX: 0.7 }, { scaleY: 0.7 }] },
+  warmupCol: { alignItems: 'center', width: 50 },
+  warmupLabel: { fontSize: 9, color: colors.gray500, marginTop: -2 },
+  emptyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  startSmallBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+  },
+  startSmallBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  emptyListText: {
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    color: colors.gray500,
+    fontSize: 14,
+    paddingHorizontal: spacing.lg,
+  },
+  recentList: { padding: spacing.base, gap: spacing.sm },
+  recentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  recentDate: { fontSize: 14, fontWeight: '600', color: colors.text },
+  recentMeta: { fontSize: 12, color: colors.gray500, marginTop: 2 },
+  recentChevron: { fontSize: 22, color: colors.gray400 },
   stepperGroup: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   stepBtn: {
     width: 28,
