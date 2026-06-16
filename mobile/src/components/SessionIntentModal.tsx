@@ -1,26 +1,26 @@
 /**
- * Pre-workout intent modal. Captures optional goal + energy/mental/physical
- * (1–10) so the next-exercise AI suggestion can factor in subjective state.
- *
- * Values are passed forward via onStart. Everything is optional — user can
- * tap Start with nothing filled in.
+ * Pre-workout intent modal. Captures optional goal + physical / mental energy
+ * sliders (1-10) so the next-exercise AI suggestion can factor in how the user
+ * is feeling.
  */
 import React, { useState } from 'react'
 import {
   ActivityIndicator,
   Modal,
-  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  ScrollView,
 } from 'react-native'
+import Slider from '@react-native-community/slider'
 import { colors, radius, spacing } from '../theme'
 
 export type SessionIntent = {
   goal: string
+  // We preserve `energy` for backwards-compat with the API payload shape but no
+  // longer collect it from the user.
   energy: number | null
   mental: number | null
   physical: number | null
@@ -33,48 +33,61 @@ type Props = {
   onStart: (intent: SessionIntent) => void
 }
 
-function ScaleRow({
+function ScaleSlider({
   label,
   value,
   onChange,
 }: {
   label: string
-  value: number | null
+  value: number
   onChange: (v: number) => void
 }) {
   return (
-    <View style={s.row}>
-      <Text style={s.rowLabel}>{label}</Text>
-      <View style={s.chipRow}>
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-          <TouchableOpacity
-            key={n}
-            onPress={() => onChange(n)}
-            style={[s.chip, value === n && s.chipActive]}
-          >
-            <Text style={[s.chipText, value === n && s.chipTextActive]}>{n}</Text>
-          </TouchableOpacity>
-        ))}
+    <View style={{ gap: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <Text style={s.rowLabel}>{label}</Text>
+        <Text style={s.rowValue}>{value} / 10</Text>
       </View>
+      <Slider
+        style={{ width: '100%', height: 36 }}
+        minimumValue={1}
+        maximumValue={10}
+        step={1}
+        value={value}
+        onValueChange={onChange}
+        minimumTrackTintColor={colors.primary}
+        maximumTrackTintColor={colors.gray200}
+        thumbTintColor={colors.primary}
+      />
     </View>
   )
 }
 
 export default function SessionIntentModal({ visible, starting, onCancel, onStart }: Props) {
   const [goal, setGoal] = useState('')
-  const [energy, setEnergy] = useState<number | null>(null)
-  const [mental, setMental] = useState<number | null>(null)
-  const [physical, setPhysical] = useState<number | null>(null)
+  const [physical, setPhysical] = useState(5)
+  const [mental, setMental] = useState(5)
 
   const reset = () => {
     setGoal('')
-    setEnergy(null)
-    setMental(null)
-    setPhysical(null)
+    setPhysical(5)
+    setMental(5)
   }
 
+  const collect = (skipped: boolean): SessionIntent => ({
+    goal: skipped ? '' : goal.trim(),
+    energy: null,
+    mental: skipped ? null : mental,
+    physical: skipped ? null : physical,
+  })
+
   const handleStart = () => {
-    onStart({ goal: goal.trim(), energy, mental, physical })
+    onStart(collect(false))
+    reset()
+  }
+
+  const handleSkip = () => {
+    onStart(collect(true))
     reset()
   }
 
@@ -83,18 +96,15 @@ export default function SessionIntentModal({ visible, starting, onCancel, onStar
     onCancel()
   }
 
-  const handleSkip = () => {
-    onStart({ goal: '', energy: null, mental: null, physical: null })
-    reset()
-  }
-
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleCancel}>
       <View style={s.overlay}>
         <View style={s.card}>
-          <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-            <Text style={s.title}>How are you feeling?</Text>
-            <Text style={s.subtitle}>Tell the coach what to aim for today. All optional.</Text>
+          <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
+            <View style={{ gap: 4 }}>
+              <Text style={s.title}>How are you feeling?</Text>
+              <Text style={s.subtitle}>Tell the coach what to aim for today. All optional.</Text>
+            </View>
 
             <View style={{ gap: 6 }}>
               <Text style={s.fieldLabel}>Goal (optional)</Text>
@@ -108,9 +118,8 @@ export default function SessionIntentModal({ visible, starting, onCancel, onStar
               />
             </View>
 
-            <ScaleRow label="Energy" value={energy} onChange={setEnergy} />
-            <ScaleRow label="Mental" value={mental} onChange={setMental} />
-            <ScaleRow label="Physical" value={physical} onChange={setPhysical} />
+            <ScaleSlider label="Physical energy" value={physical} onChange={setPhysical} />
+            <ScaleSlider label="Mental energy" value={mental} onChange={setMental} />
             <Text style={s.scaleHint}>1 = wrecked  ·  10 = ready to PR</Text>
           </ScrollView>
 
@@ -148,7 +157,7 @@ const s = StyleSheet.create({
     maxHeight: '88%',
   },
   title: { fontSize: 20, fontWeight: '700', color: colors.text },
-  subtitle: { fontSize: 13, color: colors.gray500, marginTop: -spacing.xs },
+  subtitle: { fontSize: 13, color: colors.gray500 },
   fieldLabel: { fontSize: 12, color: colors.gray500, fontWeight: '600', textTransform: 'uppercase' },
   input: {
     borderWidth: 1,
@@ -160,21 +169,8 @@ const s = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surface,
   },
-  row: { gap: 6 },
-  rowLabel: { fontSize: 13, fontWeight: '600', color: colors.text },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    width: 30,
-    height: 32,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 12, color: colors.gray600 },
-  chipTextActive: { color: '#fff', fontWeight: '700' },
+  rowLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
+  rowValue: { fontSize: 13, color: colors.gray500, fontVariant: ['tabular-nums'] },
   scaleHint: { fontSize: 11, color: colors.gray400, fontStyle: 'italic' },
   actions: {
     flexDirection: 'row',

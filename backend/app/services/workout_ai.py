@@ -20,8 +20,8 @@ SYSTEM = (
     "in-progress workout. The user will approve or cancel in the UI before it's "
     "saved — your job is to make a good recommendation.\n\n"
     "Inputs:\n"
-    "- intent: user's stated goal for THIS session + subjective state (energy/mental/"
-    "physical on 1-10, where 10 is best). Treat this as load-bearing.\n"
+    "- intent: user's stated goal for THIS session + subjective state (physical "
+    "and mental on 1-10, where 10 is fresh / PR-ready). Treat as load-bearing.\n"
     "- already_done: exercises in this session with primary muscles, top set, and "
     "average RPE across working sets. Higher avg_rpe (>= 8) = the user is taxed; "
     "lower (<= 6) = they have gas in the tank.\n"
@@ -30,12 +30,12 @@ SYSTEM = (
     "- user_goals (optional): nutrition targets, coarse signal only.\n"
     "- candidates: exercises in the user's library (id, name, primary_muscles, pattern, equipment).\n\n"
     "How to use the signals:\n"
-    "- If energy/physical <= 4 OR avg_rpe of completed work is high (>= 8.5): pick "
+    "- If physical <= 4 OR avg_rpe of completed work is high (>= 8.5): pick "
     "something LIGHTER or accessory (isolation, machines, lower reps with moderate "
     "weight). Do NOT add another heavy compound.\n"
-    "- If energy/physical >= 7 AND avg_rpe so far is moderate (<= 7): a working "
+    "- If physical >= 7 AND avg_rpe so far is moderate (<= 7): a working "
     "compound is fair game.\n"
-    "- If mental is low: prefer a familiar movement (already in their history), "
+    "- If mental is low (<= 4): prefer a familiar movement (already in their history), "
     "not a novel one.\n"
     "- If intent.goal mentions a body part or theme, prioritize it.\n\n"
     "Selection rules:\n"
@@ -106,7 +106,8 @@ def suggest_next_exercise(user_id: str, workout_id: str) -> dict | None:
     session_avg_rpe = round(sum(all_rpes) / len(all_rpes), 1) if all_rpes else None
 
     # Recent-history themes from the last ~7 days of finished sessions
-    recent_workouts = workout_service.list_workouts(user_id, None, None, 10, 0) or []
+    recent = workout_service.list_workouts(user_id, None, None, 10, 0) or {}
+    recent_workouts = recent.get("items", []) if isinstance(recent, dict) else (recent or [])
     recent_history: list[str] = []
     for w in recent_workouts[:5]:
         if w.get("id") == workout_id:

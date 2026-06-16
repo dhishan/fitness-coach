@@ -1,12 +1,12 @@
 /**
- * Pre-workout intent modal (web). Captures optional goal + energy/mental/physical
- * on a 1-10 scale, which the next-exercise AI suggestion uses.
+ * Pre-workout intent modal (web). Captures optional goal + physical + mental
+ * energy sliders (1-10) used by the next-exercise AI suggestion.
  */
 import { useState } from 'react'
 
 export type SessionIntent = {
   goal: string
-  energy: number | null
+  energy: number | null // kept for API back-compat; not collected
   mental: number | null
   physical: number | null
 }
@@ -18,55 +18,49 @@ type Props = {
   onStart: (intent: SessionIntent) => void
 }
 
-function ScaleRow({
+function ScaleSlider({
   label,
   value,
   onChange,
 }: {
   label: string
-  value: number | null
+  value: number
   onChange: (v: number) => void
 }) {
   return (
     <div>
-      <div className="text-sm font-semibold text-gray-800 mb-1">{label}</div>
-      <div className="flex gap-1.5">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
-            className={`w-8 h-9 rounded-md text-xs font-semibold border transition ${
-              value === n
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
-            }`}
-          >
-            {n}
-          </button>
-        ))}
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm font-semibold text-gray-800">{label}</span>
+        <span className="text-xs text-gray-500 tabular-nums">{value} / 10</span>
       </div>
+      <input
+        type="range"
+        min={1}
+        max={10}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value, 10))}
+        className="w-full accent-blue-600 h-2 mt-1"
+      />
     </div>
   )
 }
 
 export default function SessionIntentModal({ open, starting, onCancel, onStart }: Props) {
   const [goal, setGoal] = useState('')
-  const [energy, setEnergy] = useState<number | null>(null)
-  const [mental, setMental] = useState<number | null>(null)
-  const [physical, setPhysical] = useState<number | null>(null)
+  const [physical, setPhysical] = useState(5)
+  const [mental, setMental] = useState(5)
 
   if (!open) return null
 
   const reset = () => {
     setGoal('')
-    setEnergy(null)
-    setMental(null)
-    setPhysical(null)
+    setPhysical(5)
+    setMental(5)
   }
 
   const submit = () => {
-    onStart({ goal: goal.trim(), energy, mental, physical })
+    onStart({ goal: goal.trim(), energy: null, physical, mental })
     reset()
   }
 
@@ -83,7 +77,7 @@ export default function SessionIntentModal({ open, starting, onCancel, onStart }
   return (
     <div className="fixed inset-0 z-40 bg-black/40 flex items-end sm:items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md max-h-[88vh] overflow-y-auto shadow-xl">
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-5">
           <div>
             <h2 className="text-lg font-bold text-gray-900">How are you feeling?</h2>
             <p className="text-sm text-gray-500">
@@ -105,9 +99,8 @@ export default function SessionIntentModal({ open, starting, onCancel, onStart }
             />
           </div>
 
-          <ScaleRow label="Energy" value={energy} onChange={setEnergy} />
-          <ScaleRow label="Mental" value={mental} onChange={setMental} />
-          <ScaleRow label="Physical" value={physical} onChange={setPhysical} />
+          <ScaleSlider label="Physical energy" value={physical} onChange={setPhysical} />
+          <ScaleSlider label="Mental energy" value={mental} onChange={setMental} />
           <p className="text-[11px] text-gray-400 italic">
             1 = wrecked &nbsp;·&nbsp; 10 = ready to PR
           </p>

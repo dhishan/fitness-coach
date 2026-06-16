@@ -6,6 +6,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@fitness/shared-types": "*",
     "@react-native-community/datetimepicker": "9.1.0",
+    "@react-native-community/slider": "5.2.0",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@tanstack/react-query": "^5.56.0",
     "axios": "^1.7.9",
