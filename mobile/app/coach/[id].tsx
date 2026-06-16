@@ -23,6 +23,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Markdown from 'react-native-markdown-display'
+import CoachContent from '../../src/components/CoachSuggestions'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { chatApi } from '../../src/services/api'
 import { openTurnStream } from '../../src/services/chatStream'
@@ -296,7 +297,7 @@ export default function CoachThread() {
               {turn.status === 'pending' && !turn.content ? (
                 <ActivityIndicator size="small" color={colors.gray400} />
               ) : (
-                <Markdown style={mdStyles}>{turn.content || ' '}</Markdown>
+                <CoachContent content={turn.content || ' '} mdStyle={mdStyles} />
               )}
             </>
           )}

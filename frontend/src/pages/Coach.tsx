@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
+import CoachContent from '../components/CoachSuggestions'
 import { chatApi } from '../services/api'
 import { openTurnStream } from '../services/chatStream'
 import type { ChatEvent } from '@fitness/shared-types'
@@ -390,7 +391,7 @@ function ConversationThread({ convId }: { convId: string }) {
                 </button>
               ) : turn.role === 'assistant' ? (
                 <>
-                  <ReactMarkdown components={mdComponents} rehypePlugins={REHYPE_PLUGINS}>{turn.content}</ReactMarkdown>
+                  <CoachContent content={turn.content} mdComponents={mdComponents} />
                   {turn.status === 'pending' && !turn.content && (
                     <span className="inline-block w-2 h-4 bg-gray-400 animate-pulse rounded-sm align-middle" />
                   )}
