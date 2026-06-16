@@ -77,7 +77,6 @@ export default function RootLayout() {
         <Stack.Screen name="plans/[id]" options={{ title: 'Edit plan' }} />
         <Stack.Screen name="library/[id]" options={{ title: 'Exercise' }} />
         <Stack.Screen name="history/[id]" options={{ title: 'Workout' }} />
-        <Stack.Screen name="coach/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="body" options={{ title: 'Body metrics' }} />
         <Stack.Screen name="cardio" options={{ title: 'Cardio' }} />
         <Stack.Screen name="+not-found" />

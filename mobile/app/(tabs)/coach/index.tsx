@@ -14,8 +14,8 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { chatApi } from '../../src/services/api'
-import { colors, spacing, radius } from '../../src/theme'
+import { chatApi } from '../../../src/services/api'
+import { colors, spacing, radius } from '../../../src/theme'
 import type { Conversation } from '@fitness/shared-types'
 
 // ---- helpers ----
