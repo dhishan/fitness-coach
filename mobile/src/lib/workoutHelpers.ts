@@ -13,17 +13,21 @@ export function formatLastTime(
   sets: SetEntry[],
   date: string,
   today: string = toLocalISODate(),
+  unit: 'kg' | 'lb' = 'kg',
 ): string {
   const working = sets.filter((s) => !s.is_warmup)
   if (working.length === 0) return ''
 
-  const weight = working[0].weight
+  const kg = working[0].weight ?? 0
+  const display = unit === 'lb' ? kg / 0.45359237 : kg
+  const rounded = Math.round(display * 10) / 10
+  const weightStr = rounded % 1 === 0 ? String(rounded.toFixed(0)) : String(rounded)
   const reps = working.map((s) => s.reps).join('/')
 
   const daysDiff = dateDiffDays(date, today)
   const ago = daysDiff === 0 ? 'today' : `${daysDiff}d ago`
 
-  return `${weight}kg ${reps}, ${ago}`
+  return `${weightStr}${unit} ${reps}, ${ago}`
 }
 
 export function nextSupersetGroup(entries: WorkoutEntry[]): string {

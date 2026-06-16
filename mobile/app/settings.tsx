@@ -9,26 +9,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import * as SecureStore from 'expo-secure-store'
 import { useRouter } from 'expo-router'
 import { useAuth } from '../src/store/auth'
+import { useUnitStore } from '../src/store/units'
 import { usageApi } from '../src/services/api'
 import { colors, spacing, radius, card } from '../src/theme'
 import type { UsageSummary } from '@fitness/shared-types'
 
-const UNITS_KEY = 'fitness-units'
-
 export default function Settings() {
   const router = useRouter()
   const { user, logout } = useAuth()
-  const [useKg, setUseKg] = useState(true)
+  const unit = useUnitStore((s) => s.unit)
+  const setUnit = useUnitStore((s) => s.set)
+  const useKg = unit === 'kg'
   const [usage, setUsage] = useState<UsageSummary | null>(null)
   const [loadingUsage, setLoadingUsage] = useState(true)
 
   useEffect(() => {
-    SecureStore.getItemAsync(UNITS_KEY).then((v) => {
-      if (v !== null) setUseKg(v === 'kg')
-    })
     usageApi
       .summary()
       .then(setUsage)
@@ -37,8 +34,7 @@ export default function Settings() {
   }, [])
 
   const toggleUnits = async (value: boolean) => {
-    setUseKg(value)
-    await SecureStore.setItemAsync(UNITS_KEY, value ? 'kg' : 'lb')
+    await setUnit(value ? 'kg' : 'lb')
   }
 
   const handleSignOut = () => {

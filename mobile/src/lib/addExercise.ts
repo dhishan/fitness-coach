@@ -14,6 +14,7 @@ export interface EntryWithHistory extends WorkoutEntry {
 export function buildEntryFromHistory(
   exercise: Exercise,
   hist: ExerciseHistoryItem[],
+  unit: 'kg' | 'lb' = 'kg',
 ): EntryWithHistory {
   const lastSession = hist[0]
   let prefilled: SetEntry[]
@@ -24,7 +25,7 @@ export function buildEntryFromHistory(
       .filter((s) => !s.is_warmup)
       .map((s) => ({ weight: s.weight, reps: s.reps, is_warmup: false as const }))
     if (prefilled.length === 0) prefilled = [{ weight: 0, reps: 0 }]
-    lastTime = formatLastTime(lastSession.sets, lastSession.date)
+    lastTime = formatLastTime(lastSession.sets, lastSession.date, undefined, unit)
   } else {
     prefilled = [{ weight: 0, reps: 0 }]
     lastTime = undefined

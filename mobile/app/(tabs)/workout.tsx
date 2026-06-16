@@ -27,6 +27,7 @@ import type { EntryWithHistory } from '../../src/lib/addExercise'
 import AddExerciseSheet from '../../src/components/AddExerciseSheet'
 import { card, colors, radius, spacing } from '../../src/theme'
 import { startFromPlan } from '../../src/lib/startFromPlan'
+import { displayToKg, formatWeight, kgToDisplay, stepFor, useWeightUnit } from '../../src/store/units'
 
 // ---------------------------------------------------------------------------
 // Autosave hook
@@ -103,10 +104,18 @@ function SetRow({
   onRemove: () => void
 }) {
   const isWarmup = !!set.is_warmup
+  const unit = useWeightUnit()
+  const weightDisplay = kgToDisplay(set.weight ?? 0, unit)
+  const weightStep = stepFor(unit)
 
   const step = (field: 'weight' | 'reps', delta: number) => {
-    const val = Math.max(0, (set[field] ?? 0) + delta)
-    onUpdate({ ...set, [field]: val })
+    if (field === 'weight') {
+      const newDisplay = Math.max(0, weightDisplay + delta)
+      onUpdate({ ...set, weight: displayToKg(newDisplay, unit) })
+      return
+    }
+    const val = Math.max(0, (set.reps ?? 0) + delta)
+    onUpdate({ ...set, reps: val })
   }
 
   return (
@@ -126,7 +135,7 @@ function SetRow({
       {/* Weight stepper */}
       <View style={s.stepperGroup}>
         <TouchableOpacity
-          onPress={() => step('weight', -2.5)}
+          onPress={() => step('weight', -weightStep)}
           style={s.stepBtn}
           accessibilityLabel="decrease weight"
         >
@@ -134,19 +143,21 @@ function SetRow({
         </TouchableOpacity>
         <TextInput
           style={s.stepInput}
-          value={String(set.weight ?? 0)}
-          onChangeText={(t) => onUpdate({ ...set, weight: parseFloat(t) || 0 })}
+          value={formatWeight(weightDisplay)}
+          onChangeText={(t) =>
+            onUpdate({ ...set, weight: displayToKg(parseFloat(t) || 0, unit) })
+          }
           keyboardType="decimal-pad"
           accessibilityLabel={`set ${index + 1} weight`}
         />
         <TouchableOpacity
-          onPress={() => step('weight', 2.5)}
+          onPress={() => step('weight', weightStep)}
           style={s.stepBtn}
           accessibilityLabel="increase weight"
         >
           <Text style={s.stepBtnText}>+</Text>
         </TouchableOpacity>
-        <Text style={s.unit}>kg</Text>
+        <Text style={s.unit}>{unit}</Text>
       </View>
 
       {/* Reps stepper */}
@@ -587,10 +598,11 @@ export default function WorkoutScreen() {
     }
   }
 
+  const userUnit = useWeightUnit()
   const handleAddExercise = async (exercise: Exercise, hist: import('@fitness/shared-types').ExerciseHistoryItem[]) => {
     setShowAdd(false)
     if (!workout) return
-    const newEntry = buildEntryFromHistory(exercise, hist)
+    const newEntry = buildEntryFromHistory(exercise, hist, userUnit)
     setEntries((prev) => [...prev, newEntry])
   }
 
@@ -899,6 +911,7 @@ function EmptyWorkoutScreen({
   onSelectPlan: (t: WorkoutTemplate) => void
 }) {
   const router = useRouter()
+  const unit = useWeightUnit()
   const { data, isLoading } = useQuery({
     queryKey: ['workouts', 'recent'],
     queryFn: () => workoutsApi.list({ limit: 20 }),
@@ -950,7 +963,7 @@ function EmptyWorkoutScreen({
                     ) ?? 0
                     const parts = [`${exs} exercise${exs === 1 ? '' : 's'}`]
                     if (sets) parts.push(`${sets} sets`)
-                    if (w.total_volume) parts.push(`${Math.round(w.total_volume)} kg`)
+                    if (w.total_volume) parts.push(`${Math.round(kgToDisplay(w.total_volume, unit))} ${unit}`)
                     else if (reps) parts.push(`${reps} reps`)
                     return parts.join(' · ')
                   })()}

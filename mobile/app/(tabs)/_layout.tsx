@@ -1,21 +1,26 @@
 import { Tabs, Link } from 'expo-router'
 import { Pressable, Text } from 'react-native'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { colors } from '../../src/theme'
 import { useAuth } from '../../src/store/auth'
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Home: '⊙',
-    Workout: '◈',
-    Nutrition: '▦',
-    History: '◷',
-    Coach: '◉',
+  const tint = focused ? colors.primary : colors.gray400
+  const size = 22
+  switch (label) {
+    case 'Home':
+      return <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={tint} />
+    case 'Workout':
+      return <MaterialCommunityIcons name="dumbbell" size={size + 2} color={tint} />
+    case 'Nutrition':
+      return <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={size} color={tint} />
+    case 'History':
+      return <Ionicons name={focused ? 'time' : 'time-outline'} size={size} color={tint} />
+    case 'Coach':
+      return <Ionicons name={focused ? 'chatbubble' : 'chatbubble-outline'} size={size} color={tint} />
+    default:
+      return <Text style={{ color: tint }}>○</Text>
   }
-  return (
-    <Text style={{ fontSize: 20, color: focused ? colors.primary : colors.gray400 }}>
-      {icons[label] ?? '○'}
-    </Text>
-  )
 }
 
 export default function TabLayout() {

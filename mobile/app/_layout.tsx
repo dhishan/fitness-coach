@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuth } from '../src/store/auth'
+import { useUnitStore } from '../src/store/units'
 import { colors } from '../src/theme'
 
 const queryClient = new QueryClient({
@@ -31,6 +32,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     hydrate()
+    void useUnitStore.getState().hydrate()
   }, [])
 
   useEffect(() => {
