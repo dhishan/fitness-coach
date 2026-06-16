@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
-import rehypeSanitize from 'rehype-sanitize'
 import CoachContent from '../components/CoachSuggestions'
 import { chatApi } from '../services/api'
 import { openTurnStream } from '../services/chatStream'
@@ -41,7 +40,6 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
   },
 }
 
-const REHYPE_PLUGINS = [rehypeSanitize]
 
 // ---- helpers ----
 

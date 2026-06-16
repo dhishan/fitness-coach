@@ -36,14 +36,18 @@ export default function BarcodeScanner({ visible, onCode, onCancel }: Props) {
 
   const handleBarcode = ({ data }: { type: string; data: string }) => {
     if (!data) return
+    // Trim and keep digits only — EAN/UPC scanners can emit whitespace and
+    // some emit a leading prefix character (group separator) we don't want.
+    const code = data.trim().replace(/\D/g, '')
+    if (code.length < 8 || code.length > 14) return
     // Debounce: only fire once per scan session; reset after 3s
-    if (lastScanned.current === data) return
-    lastScanned.current = data
+    if (lastScanned.current === code) return
+    lastScanned.current = code
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
     debounceTimer.current = setTimeout(() => {
       lastScanned.current = null
     }, 3000)
-    onCode(data)
+    onCode(code)
   }
 
   const handleRequestPermission = async () => {
