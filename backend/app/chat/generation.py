@@ -74,7 +74,9 @@ SYSTEM_PROMPT = (
     "}\n"
     "```\n\n"
 
-    "Format 3 — propose adding an exercise to the user's ACTIVE workout (only when one is running):\n"
+    "Format 3 — propose adding an exercise to the user's ACTIVE workout. Before "
+    "emitting this card, call `get_active_workout` to confirm a session is running. "
+    "If it returns None, emit fitness:plan or fitness:exercise instead, or just describe:\n"
     "```fitness:add-to-workout\n"
     "{\"exercise_name\": \"Romanian Deadlift\", \"sets\": 3, \"reps\": 8}\n"
     "```\n\n"

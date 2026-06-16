@@ -14,18 +14,19 @@ from app.auth.mcp_auth import _current_user_id
 
 
 def test_tool_count():
-    """Exactly 7 tools must be registered."""
+    """Exactly 8 tools must be registered."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
-    assert len(tools) == 7
+    assert len(tools) == 8
 
 
 def test_tool_names():
-    """All 7 expected tool names are present."""
+    """All 8 expected tool names are present."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
     names = {t.name for t in tools}
     expected = {
         "get_dashboard_summary",
         "get_workouts",
+        "get_active_workout",
         "get_exercise_progress",
         "get_exercise_history",
         "get_alternatives",

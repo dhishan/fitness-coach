@@ -46,6 +46,24 @@ def get_dashboard_summary(reference_date: Optional[str] = None) -> dict[str, Any
 
 
 @mcp.tool()
+def get_active_workout() -> dict | None:
+    """Return the user's IN-PROGRESS workout (started but not finished), or None.
+
+    Use this BEFORE proposing fitness:add-to-workout cards so you know whether
+    a session is actually running. If this returns None, do NOT emit
+    fitness:add-to-workout — emit fitness:plan or just describe the exercise.
+    """
+    uid = _uid()
+    w = workout_service.get_active_workout(uid)
+    if w is None:
+        return None
+    row: dict[str, Any] = {}
+    for k, v in w.items():
+        row[k] = str(v) if hasattr(v, "isoformat") else v
+    return row
+
+
+@mcp.tool()
 def get_workouts(
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,

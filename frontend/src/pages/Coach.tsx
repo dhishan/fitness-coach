@@ -327,9 +327,9 @@ function ConversationThread({ convId }: { convId: string }) {
   const isEmpty = turns.length === 0
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col bg-gray-50">
       {/* header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white">
         <button
           onClick={() => navigate('/coach')}
           className="text-gray-500 hover:text-gray-700"
@@ -356,7 +356,7 @@ function ConversationThread({ convId }: { convId: string }) {
               <button
                 key={s}
                 onClick={() => send(s)}
-                className="w-full text-left text-sm text-gray-700 border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-50 transition-colors"
+                className="w-full text-left text-sm text-gray-800 bg-white rounded-2xl px-4 py-3.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all font-medium"
               >
                 {s}
               </button>
@@ -367,10 +367,10 @@ function ConversationThread({ convId }: { convId: string }) {
         {turns.map((turn) => (
           <div key={turn.id} className={`flex flex-col ${turn.role === 'user' ? 'items-end' : 'items-start'}`}>
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+              className={`max-w-[85%] px-4 py-2.5 text-sm ${
                 turn.role === 'user'
-                  ? 'bg-primary-500 text-white whitespace-pre-wrap'
-                  : 'bg-gray-100 text-gray-800'
+                  ? 'bg-primary-500 text-white whitespace-pre-wrap rounded-2xl rounded-br-md'
+                  : 'bg-white text-gray-800 rounded-2xl rounded-bl-md shadow-sm'
               }`}
             >
               {turn.status === 'failed' ? (
@@ -419,9 +419,9 @@ function ConversationThread({ convId }: { convId: string }) {
       </div>
 
       {/* input */}
-      <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
+      <div className="px-4 py-3 border-t border-gray-100 bg-white flex gap-2">
         <input
-          className="flex-1 text-sm border border-gray-200 rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+          className="flex-1 text-sm bg-gray-100 rounded-full px-4 py-2.5 outline-none focus:bg-white focus:ring-2 focus:ring-primary-500/30 transition-colors"
           placeholder="Ask your coach..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
