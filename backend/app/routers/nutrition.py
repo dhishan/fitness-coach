@@ -1,9 +1,10 @@
 import asyncio
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.schemas import FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate
+from app.security.validators import sanitize_hint, validate_food_image_url
 from app.services import food_service, goals_service, nutrition_ai, openfoodfacts
 
 router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
@@ -23,7 +24,10 @@ async def suggest_foods(
 # ---- Barcode lookup ----
 
 @router.get("/barcode/{code}")
-async def barcode_lookup(code: str, user: CurrentUser = Depends(get_current_user)):
+async def barcode_lookup(
+    code: str = Path(pattern=r"^\d{8,14}$"),
+    user: CurrentUser = Depends(get_current_user),
+):
     result = await asyncio.to_thread(openfoodfacts.lookup_barcode, code)
     if result is None:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -48,7 +52,11 @@ async def estimate_photo(body: dict, user: CurrentUser = Depends(get_current_use
     image_url = body.get("image_url", "")
     if not image_url:
         raise HTTPException(status_code=422, detail="image_url is required")
-    hint = body.get("hint", "")
+    if not validate_food_image_url(image_url, user.user_id):
+        # Reject anything not under THIS user's GCS food/ prefix. Blocks SSRF
+        # (no metadata endpoints) and cross-user reads (path includes user_id).
+        raise HTTPException(status_code=422, detail="invalid image_url")
+    hint = sanitize_hint(body.get("hint", ""))
     result = await asyncio.to_thread(
         nutrition_ai.estimate_from_image, user.user_id, image_url, hint
     )

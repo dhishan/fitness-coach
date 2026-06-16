@@ -21,6 +21,7 @@
     "react-hot-toast": "^2.6.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.17.0",
+    "rehype-sanitize": "^6.0.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

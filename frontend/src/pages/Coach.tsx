@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import { chatApi } from '../services/api'
 import { openTurnStream } from '../services/chatStream'
 import type { ChatEvent } from '@fitness/shared-types'
@@ -25,7 +26,21 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
   h1: ({ children }) => <h1 className="font-semibold mt-3 mb-1 text-base">{children}</h1>,
   h2: ({ children }) => <h2 className="font-semibold mt-3 mb-1 text-base">{children}</h2>,
   h3: ({ children }) => <h3 className="font-semibold mt-3 mb-1 text-sm">{children}</h3>,
+  // Strip javascript:/data: links — LLM output could include `[click](javascript:...)`
+  // via prompt injection from user-supplied workout notes or food labels.
+  a: ({ href, children }) => {
+    const safe = typeof href === 'string' && /^https?:\/\//i.test(href)
+    return safe ? (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+        {children}
+      </a>
+    ) : (
+      <span>{children}</span>
+    )
+  },
 }
+
+const REHYPE_PLUGINS = [rehypeSanitize]
 
 // ---- helpers ----
 
@@ -375,7 +390,7 @@ function ConversationThread({ convId }: { convId: string }) {
                 </button>
               ) : turn.role === 'assistant' ? (
                 <>
-                  <ReactMarkdown components={mdComponents}>{turn.content}</ReactMarkdown>
+                  <ReactMarkdown components={mdComponents} rehypePlugins={REHYPE_PLUGINS}>{turn.content}</ReactMarkdown>
                   {turn.status === 'pending' && !turn.content && (
                     <span className="inline-block w-2 h-4 bg-gray-400 animate-pulse rounded-sm align-middle" />
                   )}

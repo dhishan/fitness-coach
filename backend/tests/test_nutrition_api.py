@@ -64,7 +64,10 @@ def test_estimate_text_ai_error(client):
 
 # ---- Estimate photo ----
 
-def test_estimate_photo_happy(client):
+def test_estimate_photo_happy(client, monkeypatch):
+    monkeypatch.setenv("UPLOADS_BUCKET", "bucket")
+    from app.config import get_settings
+    get_settings.cache_clear()
     estimate = {"name": "Salad", "serving": "1 plate", "macros": MACROS, "confidence": 0.7}
     with patch(f"{AI_SVC}.estimate_from_image", return_value=estimate):
         r = client.post(

@@ -1,0 +1,46 @@
+name: Security Scans
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 8 * * 1"   # weekly Monday 08:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  python-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pip-audit bandit
+      - name: pip-audit
+        run: pip-audit -r backend/requirements.txt --strict || true
+      - name: bandit
+        run: bandit -r backend/app -ll -q
+
+  npm-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: frontend audit
+        working-directory: frontend
+        run: npm audit --audit-level=high || true
+      - name: mobile audit
+        working-directory: mobile
+        run: npm audit --audit-level=high || true

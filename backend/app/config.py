@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     gcp_project: str = "personal-projects-473219"
     firestore_database: str = "fitness-tracker-dev"
     jwt_secret_key: str = "dev-only-secret"
-    jwt_expiry_hours: int = 24 * 30
+    jwt_expiry_hours: int = 24
     google_oauth_client_id: str = ""
     google_oauth_client_ids: str = ""
     allowed_emails: str = "iamdhishan@gmail.com"

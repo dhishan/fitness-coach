@@ -1,1 +1,23 @@
-{ "hosting": { "site": "fitness-tracker-ble", "public": "dist", "ignore": ["firebase.json"], "rewrites": [{ "source": "**", "destination": "/index.html" }] } }
+{
+  "hosting": {
+    "site": "fitness-tracker-ble",
+    "public": "dist",
+    "ignore": ["firebase.json"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; connect-src 'self' https://api.fitness-tracker.blueelephants.org https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com; img-src 'self' data: https://storage.googleapis.com https://lh3.googleusercontent.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'"
+          },
+          { "key": "X-Frame-Options", "value": "DENY" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+          { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" }
+        ]
+      }
+    ]
+  }
+}

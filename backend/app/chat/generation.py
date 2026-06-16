@@ -112,11 +112,13 @@ def generate_turn_sync(user_id: str, conv_id: str, turn_id: str,
             status = "completed"
 
         chat_store.append_events(conv_id, turn_id, turn, [{"type": "done"}])
-    except Exception as e:
+    except Exception:
         logger.exception("generation failed for turn %s", turn_id)
         try:
+            # Never leak exception type/message to the client — could expose
+            # internal hostnames, model names, or stack details.
             chat_store.append_events(conv_id, turn_id, turn, [
-                {"type": "error", "message": f"{type(e).__name__}: {e}"}])
+                {"type": "error", "message": "Generation failed. Please try again."}])
         except Exception:
             logger.exception("failed to append error event")
     finally:

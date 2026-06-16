@@ -1,10 +1,26 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from app.config import get_settings
 from app.mcp_server import build_mcp_app, mcp
+
+
+settings = get_settings()
+
+# Fail fast in production if JWT secret is still the dev placeholder.
+# Without this assertion a misconfigured deploy silently accepts forgeable tokens.
+if settings.environment != "development" and settings.jwt_secret_key == "dev-only-secret":
+    raise RuntimeError(
+        "JWT_SECRET_KEY env var must be set in production. "
+        "Refusing to start with the default 'dev-only-secret'."
+    )
 
 
 @asynccontextmanager
@@ -13,9 +29,13 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="fitness-tracker-backend", lifespan=lifespan)
+# Rate limiter — per-IP by default; specific routes raise per-user limits.
+limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 
-settings = get_settings()
+app = FastAPI(title="fitness-tracker-backend", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -23,6 +43,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
 
 
 from app.auth.router import router as auth_router

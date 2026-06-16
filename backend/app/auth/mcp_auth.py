@@ -20,8 +20,9 @@ from __future__ import annotations
 import json
 import logging
 from contextvars import ContextVar
-from functools import lru_cache
 from typing import Any
+
+from cachetools import TTLCache
 
 from fastapi import HTTPException
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -49,23 +50,26 @@ def get_mcp_user_id() -> str | None:
 # ---------------------------------------------------------------------------
 
 
-@lru_cache(maxsize=64)
-def _lookup_uid_by_email(email: str) -> str | None:
-    """Return the Firestore user_id (Google UID) for the given email, or None.
+_uid_cache: TTLCache[str, str | None] = TTLCache(maxsize=64, ttl=300)
 
-    Queries the `users` collection where email == `email`. The result is
-    lru_cached so repeated MCP requests from the same user skip Firestore.
-    Cache is process-scoped; a cold start re-queries automatically.
+
+def _lookup_uid_by_email(email: str) -> str | None:
+    """Return the Firestore user_id for the given email, or None.
+
+    Cached for 5 minutes so a deleted account stops authenticating soon after
+    deletion (vs `lru_cache` which would persist for the container lifetime).
     """
+    if email in _uid_cache:
+        return _uid_cache[email]
     from app.firestore import get_db
 
     db = get_db()
     matches = list(
         db.collection("users").where("email", "==", email).limit(1).stream()
     )
-    if not matches:
-        return None
-    return matches[0].id
+    uid: str | None = matches[0].id if matches else None
+    _uid_cache[email] = uid
+    return uid
 
 
 # ---------------------------------------------------------------------------

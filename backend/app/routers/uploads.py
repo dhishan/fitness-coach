@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.config import get_settings
+from app.security.validators import ALLOWED_IMAGE_CONTENT_TYPES
 
 router = APIRouter(prefix="/api/v1/uploads", tags=["uploads"])
 
@@ -40,6 +41,8 @@ async def sign_food_photo(
     content_type: str = "image/jpeg",
     user: CurrentUser = Depends(get_current_user),
 ):
+    if content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
+        raise HTTPException(status_code=422, detail="unsupported content type")
     s = get_settings()
     if not s.uploads_bucket:
         raise HTTPException(status_code=503, detail="uploads not configured")
