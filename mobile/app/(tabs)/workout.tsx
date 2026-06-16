@@ -600,6 +600,13 @@ export default function WorkoutScreen() {
 
   const handleRemoveEntry = (i: number) => {
     setEntries((prev) => prev.filter((_, idx) => idx !== i))
+    // Surgically drop the removed entry from the cached active workout so the
+    // next sync useEffect doesn't see "server has more" and re-add it before
+    // autosave finishes its PUT.
+    qc.setQueryData<Workout | null>(['workout', 'active'], (old) => {
+      if (!old) return old
+      return { ...old, entries: old.entries.filter((_, idx) => idx !== i) }
+    })
   }
 
   const handleSwapExercise = (i: number, ex: Exercise) => {
@@ -1096,12 +1103,12 @@ const s = StyleSheet.create({
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     paddingVertical: 6,
   },
   setRowWarmup: { opacity: 0.6 },
-  warmupSwitch: { transform: [{ scaleX: 0.7 }, { scaleY: 0.7 }] },
-  warmupCol: { alignItems: 'center', width: 50 },
+  warmupSwitch: { transform: [{ scaleX: 0.65 }, { scaleY: 0.65 }] },
+  warmupCol: { alignItems: 'center', width: 42 },
   warmupLabel: { fontSize: 9, color: colors.gray500, marginTop: -2 },
   emptyHeader: {
     flexDirection: 'row',
@@ -1147,36 +1154,38 @@ const s = StyleSheet.create({
   recentDate: { fontSize: 14, fontWeight: '600', color: colors.text },
   recentMeta: { fontSize: 12, color: colors.gray500, marginTop: 2 },
   recentChevron: { fontSize: 22, color: colors.gray400 },
-  stepperGroup: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  stepperGroup: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   stepBtn: {
-    width: 28,
+    width: 24,
     height: 28,
     borderRadius: radius.sm,
     backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepBtnText: { fontSize: 16, color: colors.gray600, lineHeight: 20 },
+  stepBtnText: { fontSize: 14, color: colors.gray600, lineHeight: 18 },
   stepInput: {
-    width: 48,
-    height: 28,
-    textAlign: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    fontSize: 13,
-    color: colors.text,
-  },
-  unit: { fontSize: 11, color: colors.gray400, marginLeft: 2 },
-  rpeInput: {
-    width: 44,
+    width: 38,
     height: 28,
     textAlign: 'center',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,
     fontSize: 12,
+    color: colors.text,
+    paddingHorizontal: 0,
+  },
+  unit: { fontSize: 9, color: colors.gray400, marginLeft: 1 },
+  rpeInput: {
+    width: 36,
+    height: 28,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    fontSize: 10,
     color: colors.textSecondary,
+    paddingHorizontal: 0,
   },
   removeSetBtn: { marginLeft: 'auto' },
   removeSetText: { fontSize: 16, color: colors.gray300 },
