@@ -122,8 +122,44 @@ def suggest_next_exercise(user_id: str, workout_id: str) -> dict | None:
 
     user_goals = goals_service.get_goals(user_id) or {}
 
-    # Compact the candidate list to keep tokens small. 80 is plenty.
-    candidates = [_compact(ex) for ex in library[:80]]
+    # Pre-filter candidates to keep input tokens small and the model fast.
+    # Prefer exercises matching the session's apparent pattern + uncovered
+    # muscle groups; fall back to a broad sample if we still have room.
+    done_patterns = {ex.get("movement_pattern") for ex in (
+        next((x for x in library if x["id"] == e.get("exercise_id")), {})
+        for e in workout.get("entries", []) or []
+    ) if ex.get("movement_pattern")}
+    done_muscles: set[str] = set()
+    for entry in already_done:
+        done_muscles.update(entry.get("primary_muscles") or [])
+
+    by_priority: list[dict] = []
+    seen_ids: set[str] = set()
+    def _add(ex: dict):
+        if ex["id"] in seen_ids:
+            return
+        seen_ids.add(ex["id"])
+        by_priority.append(ex)
+
+    # 1. Same pattern, NEW muscle
+    if done_patterns:
+        for ex in library:
+            if ex.get("movement_pattern") in done_patterns and not (
+                set(ex.get("primary_muscles") or []) & done_muscles
+            ):
+                _add(ex)
+    # 2. Same pattern, any muscle (covers single-muscle focus + accessories)
+    if done_patterns:
+        for ex in library:
+            if ex.get("movement_pattern") in done_patterns:
+                _add(ex)
+    # 3. Broad sample to give the model latitude (or first pick if nothing done yet)
+    for ex in library:
+        _add(ex)
+        if len(by_priority) >= 40:
+            break
+
+    candidates = [_compact(ex) for ex in by_priority[:40]]
 
     user_payload = json.dumps({
         "intent": workout.get("intent") or {},
@@ -135,9 +171,10 @@ def suggest_next_exercise(user_id: str, workout_id: str) -> dict | None:
     })
 
     s = get_settings()
-    # GPT-5-mini: latest mid-tier OpenAI model. Better instruction-following than
-    # gpt-4o-mini at similar cost. Falls back to chat_model_cheap if env-overridden.
-    model = "openai/gpt-5-mini"
+    # gpt-4o-mini for low latency (~2-3s). gpt-5-mini is smarter but a
+    # reasoning model — too slow (~20s) for an inline tap. The task is
+    # narrow (pick one exercise from a list) so 4o-mini quality is fine.
+    model = "openai/gpt-4o-mini"
     start = time.monotonic()
     try:
         resp = llm.complete(
