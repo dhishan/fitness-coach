@@ -39,9 +39,14 @@ The iOS app is sideloaded via AltStore. No App Store, no developer account neede
 
 **Track workouts**
 - Build plan templates (push day, pull day, anything custom)
-- Run a session — log sets, reps, weight, RPE
+- Run a session — log sets, reps, weight, RPE in kg or lb (your choice)
 - See your last performance for the same exercise so you can progressively overload
-- Full exercise library with muscle/movement/equipment tags; add your own custom exercises
+
+**Exercise catalog**
+- Hundreds of exercises with animated GIF demos showing proper form
+- Each one tagged with primary + secondary muscle groups, movement pattern (push / pull / squat / hinge / carry / core), and equipment (barbell, dumbbell, machine, cable, bodyweight, other)
+- Add your own custom exercises when something isn't covered
+- **Intent-based search**: type "chest" and Bench Press shows up, type "legs" and Squat / Lunge / Deadlift surface, type "db curl" and dumbbell biceps work appears. Search expands aliases (chest → push, bench, press, fly, dip) and scores across name + muscles + movement + equipment, not just exact name match
 
 **Log food**
 - Type, snap a photo, or scan a barcode — AI estimates macros from any of them
