@@ -71,6 +71,71 @@ The iOS app is sideloaded via AltStore. No App Store, no developer account neede
 
 ---
 
+## Use the coach from Claude / Cursor / any MCP client
+
+The backend exposes an **MCP server** so any MCP-aware chat client (Claude Desktop, Cursor, Windsurf, etc.) can read your training data and answer questions in-chat.
+
+**Endpoint**
+```
+https://api.fitness-tracker.blueelephants.org/mcp/
+```
+
+**Tools available**
+- `get_dashboard_summary` - this week's streak, volume, sessions, muscle split
+- `get_workouts` - list past workouts in a date range
+- `get_active_workout` - the in-progress session, if one is running
+- `get_exercise_progress` - volume-over-time for a single exercise
+- `get_exercise_history` - last N sets for a single exercise
+- `get_alternatives` - same-muscle alternative exercises
+- `list_exercises` - browse the library
+- `log_workout` - record a finished workout
+
+### Claude Desktop
+
+Open **Settings -> Developer -> Edit Config** and add:
+
+```json
+{
+  "mcpServers": {
+    "fitness-tracker": {
+      "transport": "http",
+      "url": "https://api.fitness-tracker.blueelephants.org/mcp/",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_HERE"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop. The 8 tools appear in the tools menu of any conversation.
+
+### Cursor
+
+Open **Settings -> MCP -> Add Server** and paste the same JSON snippet above. Reload the window.
+
+### Windsurf / other clients
+
+Any client that speaks **Streamable HTTP MCP** works. Point it at the URL above with your JWT in the `Authorization` header.
+
+### Where do I get the JWT?
+
+The app's JWT is the same one your phone or browser uses to call the API. Easiest paths:
+
+1. **Web app** -> open `https://ui.fitness-tracker.blueelephants.org` -> DevTools -> Network tab -> any request to `api.fitness-tracker.blueelephants.org` -> copy the `Authorization: Bearer ...` header value.
+2. **iOS app** -> currently no in-app token export; pull from the web app above.
+
+Tokens expire after 24 hours (post security-hardening). Refresh by signing in again on web and copying the new token.
+
+### Example prompts to try in Claude / Cursor
+
+- "How is my bench progressing? Use the fitness-tracker tools."
+- "What should I train today given my last 7 days?"
+- "Show me my weekly volume by muscle group."
+- "List alternatives for Romanian Deadlift if I only have dumbbells."
+
+---
+
 ## For developers
 
 Codebase notes and architecture lessons live in `CLAUDE.md`. Sister project: [family-expense-tracker](https://github.com/dhishan/family-expense-tracker) — same AltStore source, same patterns.
