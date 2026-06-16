@@ -41,15 +41,25 @@ class WorkoutEntry(BaseModel):
     sets: list[SetEntry] = []
 
 
+class SessionIntent(BaseModel):
+    """Subjective state captured at the start of a session."""
+    goal: str = Field(default="", max_length=200)
+    energy: int | None = Field(default=None, ge=1, le=10)
+    mental: int | None = Field(default=None, ge=1, le=10)
+    physical: int | None = Field(default=None, ge=1, le=10)
+
+
 class WorkoutCreate(BaseModel):
     date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     notes: str = ""
     entries: list[WorkoutEntry] = []
+    intent: SessionIntent | None = None
 
 
 class WorkoutUpdate(BaseModel):
     notes: str | None = None
     entries: list[WorkoutEntry] | None = None
+    intent: SessionIntent | None = None
 
 
 class TemplateEntry(BaseModel):

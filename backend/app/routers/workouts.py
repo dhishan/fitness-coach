@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.schemas import WorkoutCreate, WorkoutUpdate
-from app.services import workout_service
+from app.services import workout_ai, workout_service
 
 router = APIRouter(prefix="/api/v1/workouts", tags=["workouts"])
 
@@ -51,6 +51,18 @@ async def update_workout(workout_id: str, body: WorkoutUpdate,
     if doc is None:
         raise HTTPException(status_code=404, detail="Workout not found")
     return doc
+
+
+@router.post("/{workout_id}/suggest-next")
+async def suggest_next(workout_id: str, user: CurrentUser = Depends(get_current_user)):
+    """Return one AI-picked exercise to add next, with sets / reps / reason.
+
+    User reviews and either Adds (which calls PUT /workouts/{id}) or cancels.
+    """
+    result = await asyncio.to_thread(workout_ai.suggest_next_exercise, user.user_id, workout_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Could not generate a suggestion")
+    return result
 
 
 @router.post("/{workout_id}/finish")

@@ -54,6 +54,7 @@ def create_workout(user_id: str, payload: dict) -> dict:
         "started_at": datetime.now(timezone.utc),
         "ended_at": None,
         "total_volume": 0,
+        "intent": payload.get("intent") or None,
     }
     ref = db.collection("workouts").document()
     ref.set(doc)
@@ -105,6 +106,8 @@ def update_workout(workout_id: str, user_id: str, payload: dict) -> dict | None:
     if payload.get("entries") is not None:
         updates["entries"] = payload["entries"]
         updates["exercise_ids"] = exercise_ids_from_entries(payload["entries"])
+    if payload.get("intent") is not None:
+        updates["intent"] = payload["intent"]
     if updates:
         get_db().collection("workouts").document(workout_id).update(updates)
         doc.update(updates)

@@ -84,8 +84,15 @@ export const exercisesApi = {
       .then((r) => r.data),
 }
 
+export interface SessionIntentPayload {
+  goal?: string
+  energy?: number | null
+  mental?: number | null
+  physical?: number | null
+}
+
 export const workoutsApi = {
-  create: (body: { date: string; notes?: string; entries?: WorkoutEntry[] }) =>
+  create: (body: { date: string; notes?: string; entries?: WorkoutEntry[]; intent?: SessionIntentPayload }) =>
     api.post<Workout>('/workouts', body).then((r) => r.data),
   list: (params?: { from?: string; to?: string; limit?: number; offset?: number }) =>
     api.get<WorkoutListResponse>('/workouts', { params }).then((r) => r.data),
@@ -96,6 +103,19 @@ export const workoutsApi = {
   finish: (id: string) =>
     api.post<FinishResponse>(`/workouts/${id}/finish`).then((r) => r.data),
   remove: (id: string) => api.delete(`/workouts/${id}`),
+  suggestNext: (id: string) =>
+    api.post<NextExerciseSuggestion>(`/workouts/${id}/suggest-next`).then((r) => r.data),
+}
+
+export interface NextExerciseSuggestion {
+  exercise_id: string
+  exercise_name: string
+  primary_muscles?: string[]
+  movement_pattern?: string
+  equipment?: string
+  sets: number
+  reps: number
+  reason: string
 }
 
 export const dashboardApi = {

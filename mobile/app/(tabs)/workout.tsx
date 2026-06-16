@@ -25,6 +25,7 @@ import { nextSupersetGroup } from '../../src/lib/workoutHelpers'
 import { buildEntryFromHistory } from '../../src/lib/addExercise'
 import type { EntryWithHistory } from '../../src/lib/addExercise'
 import AddExerciseSheet from '../../src/components/AddExerciseSheet'
+import SessionIntentModal, { type SessionIntent } from '../../src/components/SessionIntentModal'
 import { card, colors, radius, spacing } from '../../src/theme'
 import { startFromPlan } from '../../src/lib/startFromPlan'
 import { displayToKg, formatWeight, kgToDisplay, stepFor, useWeightUnit } from '../../src/store/units'
@@ -525,6 +526,46 @@ export default function WorkoutScreen() {
 
   const [showAdd, setShowAdd] = useState(false)
   const [altFor, setAltFor] = useState<number | null>(null)
+  const [suggestion, setSuggestion] = useState<import('../../src/services/api').NextExerciseSuggestion | null>(null)
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const [suggestAdding, setSuggestAdding] = useState(false)
+  const userUnit = useWeightUnit()
+
+  const requestSuggestion = async () => {
+    if (!workout) return
+    setSuggestLoading(true)
+    try {
+      const s = await workoutsApi.suggestNext(workout.id)
+      setSuggestion(s)
+    } catch {
+      Alert.alert('Could not suggest', 'Try again in a moment.')
+    } finally {
+      setSuggestLoading(false)
+    }
+  }
+
+  const approveSuggestion = async () => {
+    if (!workout || !suggestion) return
+    setSuggestAdding(true)
+    try {
+      const hist = await exercisesApi.history(suggestion.exercise_id, 1).catch(() => [])
+      const ex = { id: suggestion.exercise_id, name: suggestion.exercise_name } as Exercise
+      const built = buildEntryFromHistory(ex, hist, userUnit)
+      // Override prefilled sets with the suggested sets/reps if user has no
+      // history (otherwise honor what they did last time).
+      if (!hist.length) {
+        built.sets = Array.from({ length: suggestion.sets }).map(() => ({
+          weight: 0,
+          reps: suggestion.reps,
+          is_warmup: false,
+        }))
+      }
+      setEntries((prev) => [...prev, built])
+      setSuggestion(null)
+    } finally {
+      setSuggestAdding(false)
+    }
+  }
 
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -541,6 +582,9 @@ export default function WorkoutScreen() {
     : saveState === 'error' ? 'Save failed'
     : ''
 
+  const [intentModalOpen, setIntentModalOpen] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState<WorkoutTemplate | null>(null)
+
   const showStartChooser = () => {
     Alert.alert(
       'Start workout',
@@ -548,7 +592,10 @@ export default function WorkoutScreen() {
       [
         {
           text: 'Start blank workout',
-          onPress: () => void handleStartBlank(),
+          onPress: () => {
+            setPendingTemplate(null)
+            setIntentModalOpen(true)
+          },
         },
         {
           text: 'Start from plan',
@@ -559,15 +606,21 @@ export default function WorkoutScreen() {
     )
   }
 
-  const handleStartBlank = async () => {
+  const handleStartBlank = async (intent: SessionIntent) => {
     setStarting(true)
     try {
-      const w = await workoutsApi.create({ date: toLocalISODate() })
+      const w = await workoutsApi.create({
+        date: toLocalISODate(),
+        intent: intent.goal || intent.energy != null || intent.mental != null || intent.physical != null
+          ? intent
+          : undefined,
+      })
       // Seed the query cache BEFORE setWorkout so the sync useEffect
       // doesn't immediately reset it back to null.
       qc.setQueryData(['workout', 'active'], w)
       setWorkout(w)
       setEntries([])
+      setIntentModalOpen(false)
     } catch {
       Alert.alert('Error', 'Could not start workout')
     } finally {
@@ -576,13 +629,18 @@ export default function WorkoutScreen() {
   }
 
   // Keep handleStart as alias for blank start (used nowhere else now)
-  const handleStart = handleStartBlank
-
   const handleStartFromPlan = async (template: WorkoutTemplate) => {
     setPlanModalVisible(false)
+    setPendingTemplate(template)
+    setIntentModalOpen(true)
+  }
+
+  const handleStartFromPlanWithIntent = async (template: WorkoutTemplate, intent: SessionIntent) => {
     setStarting(true)
     try {
-      const workoutId = await startFromPlan(template)
+      const hasIntent =
+        intent.goal || intent.energy != null || intent.mental != null || intent.physical != null
+      const workoutId = await startFromPlan(template, hasIntent ? intent : undefined)
       const w = await workoutsApi.active()
       if (w && w.id === workoutId) {
         qc.setQueryData(['workout', 'active'], w)
@@ -591,6 +649,8 @@ export default function WorkoutScreen() {
       } else {
         void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
       }
+      setIntentModalOpen(false)
+      setPendingTemplate(null)
     } catch {
       Alert.alert('Error', 'Could not start workout from plan')
     } finally {
@@ -598,7 +658,14 @@ export default function WorkoutScreen() {
     }
   }
 
-  const userUnit = useWeightUnit()
+  const handleIntentStart = (intent: SessionIntent) => {
+    if (pendingTemplate) {
+      void handleStartFromPlanWithIntent(pendingTemplate, intent)
+    } else {
+      void handleStartBlank(intent)
+    }
+  }
+
   const handleAddExercise = async (exercise: Exercise, hist: import('@fitness/shared-types').ExerciseHistoryItem[]) => {
     setShowAdd(false)
     if (!workout) return
@@ -785,6 +852,9 @@ export default function WorkoutScreen() {
       planModalVisible={planModalVisible}
       onClosePlanModal={() => setPlanModalVisible(false)}
       onSelectPlan={(t) => void handleStartFromPlan(t)}
+      intentModalOpen={intentModalOpen}
+      onCancelIntent={() => { setIntentModalOpen(false); setPendingTemplate(null) }}
+      onIntentStart={handleIntentStart}
     />
   }
 
@@ -853,13 +923,64 @@ export default function WorkoutScreen() {
         )}
         {grouped.map((item) => renderGrouped(item))}
 
-        <TouchableOpacity
-          style={s.addExerciseBtn}
-          onPress={() => setShowAdd(true)}
-        >
-          <Text style={s.addExerciseBtnText}>+ Add exercise</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <TouchableOpacity
+            style={[s.addExerciseBtn, { flex: 1 }]}
+            onPress={() => setShowAdd(true)}
+          >
+            <Text style={s.addExerciseBtnText}>+ Add exercise</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.suggestBtn}
+            onPress={() => void requestSuggestion()}
+            disabled={suggestLoading}
+          >
+            <Text style={s.suggestBtnText}>
+              {suggestLoading ? '...' : '✨ Suggest'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      {/* Suggest-next approve/cancel modal */}
+      <Modal
+        visible={suggestion !== null}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setSuggestion(null)}
+      >
+        <View style={s.suggestOverlay}>
+          <View style={s.suggestCard}>
+            <Text style={s.suggestTitle}>{suggestion?.exercise_name}</Text>
+            <Text style={s.suggestMeta}>
+              {suggestion?.sets} sets x {suggestion?.reps} reps
+              {suggestion?.primary_muscles?.length
+                ? ` · ${suggestion?.primary_muscles.join(', ')}`
+                : ''}
+            </Text>
+            {suggestion?.reason ? (
+              <Text style={s.suggestReason}>{suggestion.reason}</Text>
+            ) : null}
+            <View style={s.suggestActions}>
+              <TouchableOpacity
+                style={s.suggestCancel}
+                onPress={() => setSuggestion(null)}
+              >
+                <Text style={s.suggestCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.suggestApprove}
+                onPress={() => void approveSuggestion()}
+                disabled={suggestAdding}
+              >
+                <Text style={s.suggestApproveText}>
+                  {suggestAdding ? 'Adding...' : 'Add to workout'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Add exercise sheet */}
       <AddExerciseSheet
@@ -903,12 +1024,18 @@ function EmptyWorkoutScreen({
   planModalVisible,
   onClosePlanModal,
   onSelectPlan,
+  intentModalOpen,
+  onCancelIntent,
+  onIntentStart,
 }: {
   starting: boolean
   onStart: () => void
   planModalVisible: boolean
   onClosePlanModal: () => void
   onSelectPlan: (t: WorkoutTemplate) => void
+  intentModalOpen: boolean
+  onCancelIntent: () => void
+  onIntentStart: (intent: SessionIntent) => void
 }) {
   const router = useRouter()
   const unit = useWeightUnit()
@@ -978,6 +1105,12 @@ function EmptyWorkoutScreen({
         visible={planModalVisible}
         onClose={onClosePlanModal}
         onSelect={onSelectPlan}
+      />
+      <SessionIntentModal
+        visible={intentModalOpen}
+        starting={starting}
+        onCancel={onCancelIntent}
+        onStart={onIntentStart}
       />
     </View>
   )
@@ -1230,6 +1363,59 @@ const s = StyleSheet.create({
     marginTop: 8,
   },
   addExerciseBtnText: { fontSize: 14, fontWeight: '500', color: colors.gray400 },
+  suggestBtn: {
+    paddingHorizontal: spacing.base,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suggestBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  suggestOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  suggestCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 400,
+  },
+  suggestTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  suggestMeta: { fontSize: 13, color: colors.gray500, marginTop: 4 },
+  suggestReason: {
+    fontSize: 14,
+    color: colors.text,
+    marginTop: spacing.md,
+    fontStyle: 'italic',
+  },
+  suggestActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  suggestCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  suggestCancelText: { color: colors.text, fontSize: 14, fontWeight: '500' },
+  suggestApprove: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  suggestApproveText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 
   // Plan chooser sheet
   planSheet: {
