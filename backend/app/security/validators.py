@@ -26,35 +26,31 @@ HINT_MAX_LEN = 200
 
 
 def validate_food_image_url(url: str, user_id: str) -> bool:
-    """Permit only GCS objects under the user's own food/ prefix.
+    """Permit only GCS objects under the user's own food/ prefix."""
+    return _check_food_image_url(url, user_id) is None
 
-    Blocks SSRF (no metadata endpoints, no internal hosts) and cross-user
-    access (URL path must include the caller's user_id).
-    """
+
+def _check_food_image_url(url: str, user_id: str) -> str | None:
+    """Same checks as validate_food_image_url but returns the reason string
+    when the URL is rejected (None on success). Used by the route to return
+    structured error detail without leaking internals to the client."""
     if not url or not isinstance(url, str):
-        return False
+        return "empty_url"
     try:
         parsed = urlparse(url)
     except Exception:
-        return False
+        return "unparseable"
     if parsed.scheme != "https":
-        logger.warning("validate_food_image_url: bad scheme %s", parsed.scheme)
-        return False
+        return f"scheme={parsed.scheme}"
     if parsed.netloc != "storage.googleapis.com":
-        logger.warning("validate_food_image_url: bad netloc %s", parsed.netloc)
-        return False
+        return f"netloc={parsed.netloc}"
     bucket = get_settings().uploads_bucket
     if not bucket:
-        logger.warning("validate_food_image_url: no uploads_bucket configured")
-        return False
+        return "no_bucket"
     expected_prefix = f"/{bucket}/food/{user_id}/"
     if not parsed.path.startswith(expected_prefix):
-        logger.warning(
-            "validate_food_image_url: path mismatch path=%s expected_prefix=%s",
-            parsed.path, expected_prefix,
-        )
-        return False
-    return True
+        return f"path={parsed.path} expected_prefix={expected_prefix}"
+    return None
 
 
 def sanitize_hint(hint: str | None) -> str:

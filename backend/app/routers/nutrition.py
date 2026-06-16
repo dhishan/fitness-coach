@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.schemas import FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate
-from app.security.validators import sanitize_hint, validate_food_image_url
+from app.security.validators import _check_food_image_url, sanitize_hint
 from app.services import food_service, goals_service, nutrition_ai, openfoodfacts, usda
 
 router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
@@ -65,10 +65,12 @@ async def estimate_photo(body: dict, user: CurrentUser = Depends(get_current_use
     image_url = body.get("image_url", "")
     if not image_url:
         raise HTTPException(status_code=422, detail="image_url is required")
-    if not validate_food_image_url(image_url, user.user_id):
+    reason = _check_food_image_url(image_url, user.user_id)
+    if reason is not None:
         # Reject anything not under THIS user's GCS food/ prefix. Blocks SSRF
         # (no metadata endpoints) and cross-user reads (path includes user_id).
-        raise HTTPException(status_code=422, detail="invalid image_url")
+        # Reason string is verbose intentionally so we can diagnose live.
+        raise HTTPException(status_code=422, detail=f"invalid image_url: {reason}")
     hint = sanitize_hint(body.get("hint", ""))
     result = await asyncio.to_thread(
         nutrition_ai.estimate_from_image, user.user_id, image_url, hint

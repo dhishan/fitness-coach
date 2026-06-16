@@ -903,7 +903,9 @@ function NutritionScreenInner() {
       setPreview({ estimation: est, source: 'ai_photo' })
     } catch (err) {
       console.warn('photo flow failed', err)
-      Alert.alert('Error', `Could not process photo. ${(err as Error)?.message ?? 'Try again.'}`)
+      const e = err as { response?: { data?: { detail?: string } }; message?: string }
+      const detail = e?.response?.data?.detail ?? e?.message ?? 'Try again.'
+      Alert.alert('Error', `Could not process photo. ${detail}`)
     } finally {
       setEstimating(false)
     }
