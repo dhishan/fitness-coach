@@ -45,8 +45,11 @@ export function buildWorkoutEntries(
 /**
  * Orchestration: create a workout for today, prefill from history, return workout id.
  */
-export async function startFromPlan(template: WorkoutTemplate): Promise<string> {
-  const workout = await workoutsApi.create({ date: toLocalISODate() })
+export async function startFromPlan(
+  template: WorkoutTemplate,
+  intent?: { goal: string; energy: number | null; mental: number | null; physical: number | null },
+): Promise<string> {
+  const workout = await workoutsApi.create({ date: toLocalISODate(), intent })
 
   const historyResults = await Promise.all(
     template.entries.map((entry) =>

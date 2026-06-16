@@ -10,6 +10,8 @@ import { buildEntryFromHistory } from '../lib/addExercise'
 import type { EntryWithHistory } from '../lib/addExercise'
 import AddExerciseSheet from '../components/AddExerciseSheet'
 import { startFromPlan } from '../lib/startFromPlan'
+import SessionIntentModal, { type SessionIntent } from '../components/SessionIntentModal'
+import type { NextExerciseSuggestion } from '../services/api'
 
 // ---------------------------------------------------------------------------
 // Autosave hook
@@ -484,6 +486,11 @@ export default function Workout() {
   const [entries, setEntries] = useState<EntryWithHistory[]>([])
   const [starting, setStarting] = useState(false)
   const [showChooser, setShowChooser] = useState(false)
+  const [showIntent, setShowIntent] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState<WorkoutTemplate | null>(null)
+  const [suggestion, setSuggestion] = useState<NextExerciseSuggestion | null>(null)
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const [suggestAdding, setSuggestAdding] = useState(false)
 
   // Sync server -> local state once on load (not on every re-render)
   useEffect(() => {
@@ -518,13 +525,42 @@ export default function Workout() {
     : saveState === 'error' ? 'Save failed'
     : ''
 
-  const handleStart = async () => {
+  const handleStart = () => {
     setShowChooser(false)
+    setPendingTemplate(null)
+    setShowIntent(true)
+  }
+
+  const handleStartFromPlan = (template: WorkoutTemplate) => {
+    setShowChooser(false)
+    setPendingTemplate(template)
+    setShowIntent(true)
+  }
+
+  const handleIntentStart = async (intent: SessionIntent) => {
     setStarting(true)
+    const hasIntent =
+      intent.goal || intent.energy != null || intent.mental != null || intent.physical != null
     try {
-      const w = await workoutsApi.create({ date: toLocalISODate() })
-      setWorkout(w)
-      setEntries([])
+      if (pendingTemplate) {
+        const workoutId = await startFromPlan(pendingTemplate, hasIntent ? intent : undefined)
+        const w = await workoutsApi.active()
+        if (w && w.id === workoutId) {
+          setWorkout(w)
+          setEntries(w.entries.map((e) => ({ ...e, lastTime: undefined })))
+        } else {
+          void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
+        }
+      } else {
+        const w = await workoutsApi.create({
+          date: toLocalISODate(),
+          intent: hasIntent ? intent : undefined,
+        })
+        setWorkout(w)
+        setEntries([])
+      }
+      setShowIntent(false)
+      setPendingTemplate(null)
     } catch {
       toast.error('Could not start workout')
     } finally {
@@ -532,24 +568,39 @@ export default function Workout() {
     }
   }
 
-  const handleStartFromPlan = async (template: WorkoutTemplate) => {
-    setShowChooser(false)
-    setStarting(true)
+  const requestSuggestion = async () => {
+    if (!workout) return
+    setSuggestLoading(true)
     try {
-      const workoutId = await startFromPlan(template)
-      // Fetch the created workout and set local state
-      const w = await workoutsApi.active()
-      if (w && w.id === workoutId) {
-        setWorkout(w)
-        setEntries(w.entries.map((e) => ({ ...e, lastTime: undefined })))
-      } else {
-        // fallback: reload active
-        void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
-      }
+      const s = await workoutsApi.suggestNext(workout.id)
+      setSuggestion(s)
     } catch {
-      toast.error('Could not start workout from plan')
+      toast.error('Could not suggest')
     } finally {
-      setStarting(false)
+      setSuggestLoading(false)
+    }
+  }
+
+  const approveSuggestion = async () => {
+    if (!workout || !suggestion) return
+    setSuggestAdding(true)
+    try {
+      const hist = await exercisesApi.history(suggestion.exercise_id, 1).catch(() => [])
+      const built = buildEntryFromHistory(
+        { id: suggestion.exercise_id, name: suggestion.exercise_name } as Exercise,
+        hist,
+      )
+      if (!hist.length) {
+        built.sets = Array.from({ length: suggestion.sets }).map(() => ({
+          weight: 0,
+          reps: suggestion.reps,
+          is_warmup: false,
+        }))
+      }
+      setEntries((prev) => [...prev, built])
+      setSuggestion(null)
+    } finally {
+      setSuggestAdding(false)
     }
   }
 
@@ -680,11 +731,17 @@ export default function Workout() {
         </button>
         {showChooser && (
           <PlanChooserSheet
-            onBlank={() => void handleStart()}
+            onBlank={() => handleStart()}
             onClose={() => setShowChooser(false)}
-            onPlanStart={(t) => void handleStartFromPlan(t)}
+            onPlanStart={(t) => handleStartFromPlan(t)}
           />
         )}
+        <SessionIntentModal
+          open={showIntent}
+          starting={starting}
+          onCancel={() => { setShowIntent(false); setPendingTemplate(null) }}
+          onStart={(intent) => void handleIntentStart(intent)}
+        />
       </div>
     )
   }
@@ -796,13 +853,62 @@ export default function Workout() {
           )
         })}
 
-        <button
-          onClick={() => setShowAdd(true)}
-          className="w-full border-2 border-dashed border-gray-200 rounded-xl py-4 text-sm text-gray-400 font-medium hover:border-blue-300 hover:text-blue-400 mt-2"
-        >
-          + Add exercise
-        </button>
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex-1 border-2 border-dashed border-gray-200 rounded-xl py-4 text-sm text-gray-400 font-medium hover:border-blue-300 hover:text-blue-400"
+          >
+            + Add exercise
+          </button>
+          <button
+            onClick={() => void requestSuggestion()}
+            disabled={suggestLoading}
+            className="px-4 py-4 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {suggestLoading ? '...' : '✨ Suggest'}
+          </button>
+        </div>
       </div>
+
+      {/* Approve / cancel AI suggestion */}
+      {suggestion && (
+        <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900">{suggestion.exercise_name}</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {suggestion.sets} sets × {suggestion.reps} reps
+              {suggestion.primary_muscles?.length
+                ? ` · ${suggestion.primary_muscles.join(', ')}`
+                : ''}
+            </p>
+            {suggestion.reason && (
+              <p className="text-sm text-gray-700 mt-3 italic">{suggestion.reason}</p>
+            )}
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setSuggestion(null)}
+                className="flex-1 px-3 py-2 text-sm font-medium border border-gray-200 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void approveSuggestion()}
+                disabled={suggestAdding}
+                className="flex-1 px-3 py-2 text-sm font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {suggestAdding ? 'Adding...' : 'Add to workout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SessionIntentModal
+        open={showIntent}
+        starting={starting}
+        onCancel={() => { setShowIntent(false); setPendingTemplate(null) }}
+        onStart={(intent) => void handleIntentStart(intent)}
+      />
 
       {/* Sheets */}
       {showAdd && (
