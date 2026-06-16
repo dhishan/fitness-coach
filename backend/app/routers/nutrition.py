@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.schemas import FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate
 from app.security.validators import sanitize_hint, validate_food_image_url
-from app.services import food_service, goals_service, nutrition_ai, openfoodfacts
+from app.services import food_service, goals_service, nutrition_ai, openfoodfacts, usda
 
 router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
 
@@ -28,10 +28,23 @@ async def barcode_lookup(
     code: str = Path(pattern=r"^\d{8,14}$"),
     user: CurrentUser = Depends(get_current_user),
 ):
+    # 1. Open Food Facts — best for European brands
     result = await asyncio.to_thread(openfoodfacts.lookup_barcode, code)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return result
+    if result is not None:
+        return result
+    # 2. USDA FoodData Central — best for US-packaged foods
+    result = await asyncio.to_thread(usda.lookup_by_barcode, code)
+    if result is not None:
+        return result
+    # 3. Tell the client to prompt the user to type the product name.
+    raise HTTPException(
+        status_code=404,
+        detail={
+            "error": "product_not_found",
+            "message": "We don't recognize this barcode.",
+            "next": "type_name",
+        },
+    )
 
 
 # ---- AI estimation ----

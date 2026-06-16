@@ -135,6 +135,66 @@ def get_nutrients(fdc_id: int) -> dict | None:
     return out
 
 
+def lookup_by_barcode(code: str) -> dict | None:
+    """Search USDA Branded foods for a UPC/GTIN match. None on miss.
+
+    Returned shape matches openfoodfacts.lookup_barcode (Estimation-shaped)
+    so the router can use either result interchangeably.
+    """
+    if not code or not code.strip():
+        return None
+    key = _key()
+    if not key:
+        return None
+    # USDA's search endpoint matches GTIN/UPC when the query is the bare digits
+    # and dataType is Branded.
+    try:
+        r = requests.get(
+            f"{USDA_BASE}/foods/search",
+            params={
+                "api_key": key,
+                "query": code,
+                "pageSize": 5,
+                "dataType": "Branded",
+            },
+            timeout=TIMEOUT_S,
+        )
+        if r.status_code != 200:
+            return None
+        foods = (r.json().get("foods") or [])
+    except Exception:
+        logger.exception("usda barcode search failed for code=%s", code)
+        return None
+
+    # Prefer rows whose gtinUpc actually equals the scanned code.
+    hit = next((f for f in foods if (f.get("gtinUpc") or "").lstrip("0") == code.lstrip("0")), None)
+    if hit is None and foods:
+        hit = foods[0]
+    if hit is None:
+        return None
+
+    nutrients = get_nutrients(hit.get("fdcId"))
+    if nutrients is None:
+        return None
+
+    # Brand the name if we have one — matches OFF's "Name (Brand)" formatting.
+    name = nutrients.get("name", "Unknown")
+    brand = (hit.get("brandOwner") or "").strip()
+    if brand and brand.lower() not in name.lower():
+        name = f"{name} ({brand})"
+
+    return {
+        "name": name,
+        "serving": nutrients.get("serving", "100 g"),
+        "macros": nutrients.get("macros", {}),
+        "micros": nutrients.get("micros", {}),
+        "confidence": 0.85,
+        "source": "usda",
+        "code": code,
+        "usda_fdc_id": nutrients.get("usda_fdc_id"),
+    }
+
+
 def enrich_estimation(name_query: str) -> dict | None:
     """Search USDA for name_query; if a confident hit exists, return its nutrient dict.
     None when no key, no hit, or below confidence threshold."""

@@ -937,7 +937,32 @@ function NutritionScreenInner() {
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 404) {
-        Alert.alert('Product not found', 'No nutrition data found for that barcode.')
+        // Backend tried OFF + USDA and missed. Ask the user to type a name and
+        // run the text AI estimator on what they type.
+        Alert.prompt(
+          'Barcode not in our database',
+          "Type the product name and we'll estimate macros from that.",
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Estimate',
+              onPress: async (name?: string) => {
+                const q = (name ?? '').trim()
+                if (!q) return
+                setEstimating(true)
+                try {
+                  const est = await nutritionApi.estimateText(q)
+                  setPreview({ estimation: est, source: 'ai_text' })
+                } catch {
+                  Alert.alert('Error', 'Could not estimate. Try again.')
+                } finally {
+                  setEstimating(false)
+                }
+              },
+            },
+          ],
+          'plain-text',
+        )
       } else {
         Alert.alert('Error', 'Could not look up barcode. Try again.')
       }
