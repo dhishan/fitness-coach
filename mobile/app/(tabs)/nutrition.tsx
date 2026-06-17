@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   ScrollView,
   View,
@@ -1634,7 +1634,11 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  recipePickRowActive: { backgroundColor: '#F0F7FF' },
+  recipePickRowActive: {
+    backgroundColor: '#EBF3FF',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
   recipePickName: { fontSize: 14, fontWeight: '600', color: colors.text },
   recipePickMeta: { fontSize: 12, color: colors.gray500, marginTop: 2 },
   recipePickCheck: { color: colors.primary, fontSize: 18, fontWeight: '700' },
@@ -1712,6 +1716,14 @@ function RecipePickerModal({
   const [servings, setServings] = useState('1')
   const [saving, setSaving] = useState(false)
 
+  // Auto-select the first recipe when the list arrives so the user can hit
+  // Log without an extra tap. If they have multiple, they can still re-pick.
+  useEffect(() => {
+    if (recipes && recipes.length > 0 && picked === null) {
+      setPicked(recipes[0].id)
+    }
+  }, [recipes, picked])
+
   const handleLog = async () => {
     if (!picked) return
     const n = parseFloat(servings)
@@ -1735,6 +1747,10 @@ function RecipePickerModal({
 
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <View style={s.modalOverlay}>
         <View style={s.modalCard}>
           <View style={s.modalHeader}>
@@ -1808,6 +1824,7 @@ function RecipePickerModal({
           )}
         </View>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
