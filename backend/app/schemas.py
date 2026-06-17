@@ -136,6 +136,51 @@ class FavoriteCreate(BaseModel):
     macros: Macros
 
 
+class RecipeIngredient(BaseModel):
+    """One ingredient in a recipe. Per-100g nutrition is the source of truth —
+    when ingredient grams change, the recipe totals are recomputed from this."""
+    name: str = Field(min_length=1, max_length=120)
+    grams: float = Field(gt=0)
+    # Per-100g — what 100g of this raw ingredient contains
+    calories_per_100g: float = Field(default=0, ge=0)
+    protein_g_per_100g: float = Field(default=0, ge=0)
+    carbs_g_per_100g: float = Field(default=0, ge=0)
+    fat_g_per_100g: float = Field(default=0, ge=0)
+    # Per-100g micros (optional — defaults to 0 if unknown)
+    fiber_g_per_100g: float = Field(default=0, ge=0)
+    sugar_g_per_100g: float = Field(default=0, ge=0)
+    sodium_mg_per_100g: float = Field(default=0, ge=0)
+    potassium_mg_per_100g: float = Field(default=0, ge=0)
+    calcium_mg_per_100g: float = Field(default=0, ge=0)
+    iron_mg_per_100g: float = Field(default=0, ge=0)
+    vitamin_c_mg_per_100g: float = Field(default=0, ge=0)
+    vitamin_d_mcg_per_100g: float = Field(default=0, ge=0)
+    saturated_fat_g_per_100g: float = Field(default=0, ge=0)
+    cholesterol_mg_per_100g: float = Field(default=0, ge=0)
+    usda_fdc_id: int | None = None
+
+
+class RecipeCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    yields_servings: float = Field(default=1.0, gt=0)
+    ingredients: list[RecipeIngredient] = Field(default_factory=list, max_length=50)
+    notes: str = Field(default="", max_length=1000)
+
+
+class RecipeUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    yields_servings: float | None = Field(default=None, gt=0)
+    ingredients: list[RecipeIngredient] | None = Field(default=None, max_length=50)
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class RecipeLogRequest(BaseModel):
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    servings_eaten: float = Field(gt=0, le=20)
+    meal_type: Optional[MealType] = None
+    logged_at: str | None = None
+
+
 class GoalsUpdate(BaseModel):
     calories: float = Field(ge=0)
     protein_g: float = Field(ge=0)

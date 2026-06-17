@@ -3,9 +3,9 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 
 from app.auth.dependencies import CurrentUser, get_current_user
-from app.schemas import FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate
+from app.schemas import FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate, RecipeCreate, RecipeLogRequest, RecipeUpdate
 from app.security.validators import _check_food_image_url, sanitize_hint
-from app.services import food_service, goals_service, nutrition_ai, openfoodfacts, usda
+from app.services import food_service, goals_service, nutrition_ai, openfoodfacts, recipe_service, usda
 
 router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
 
@@ -168,4 +168,63 @@ async def suggest_goals(body: dict, user: CurrentUser = Depends(get_current_user
     )
     if "error" in result:
         raise HTTPException(status_code=422, detail=result["error"])
+    return result
+
+
+# ---- Recipes ----
+
+@router.get("/recipes")
+async def list_recipes(user: CurrentUser = Depends(get_current_user)):
+    return await asyncio.to_thread(recipe_service.list_recipes, user.user_id)
+
+
+@router.post("/recipes", status_code=201)
+async def create_recipe(body: RecipeCreate, user: CurrentUser = Depends(get_current_user)):
+    return await asyncio.to_thread(recipe_service.create_recipe, user.user_id, body.model_dump())
+
+
+@router.get("/recipes/{recipe_id}")
+async def get_recipe(recipe_id: str, user: CurrentUser = Depends(get_current_user)):
+    doc = await asyncio.to_thread(recipe_service.get_recipe, recipe_id, user.user_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return doc
+
+
+@router.put("/recipes/{recipe_id}")
+async def update_recipe(
+    recipe_id: str,
+    body: RecipeUpdate,
+    user: CurrentUser = Depends(get_current_user),
+):
+    doc = await asyncio.to_thread(
+        recipe_service.update_recipe,
+        recipe_id,
+        user.user_id,
+        body.model_dump(exclude_unset=True),
+    )
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return doc
+
+
+@router.delete("/recipes/{recipe_id}", status_code=204)
+async def delete_recipe(recipe_id: str, user: CurrentUser = Depends(get_current_user)):
+    ok = await asyncio.to_thread(recipe_service.delete_recipe, recipe_id, user.user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return Response(status_code=204)
+
+
+@router.post("/recipes/{recipe_id}/log", status_code=201)
+async def log_recipe(
+    recipe_id: str,
+    body: RecipeLogRequest,
+    user: CurrentUser = Depends(get_current_user),
+):
+    result = await asyncio.to_thread(
+        recipe_service.log_recipe, recipe_id, user.user_id, body.model_dump()
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
     return result
