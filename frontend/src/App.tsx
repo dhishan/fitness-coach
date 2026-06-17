@@ -15,6 +15,8 @@ import Nutrition from './pages/Nutrition'
 import PlanEditor from './pages/PlanEditor'
 import Body from './pages/Body'
 import Cardio from './pages/Cardio'
+import Recipes from './pages/Recipes'
+import RecipeEditor from './pages/RecipeEditor'
 import SettingsSheet from './components/SettingsSheet'
 import UpdateBanner from './components/UpdateBanner'
 
@@ -124,6 +126,8 @@ function AuthedLayout() {
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<HistoryDetail />} />
           <Route path="/nutrition" element={<Nutrition />} />
+          <Route path="/recipes" element={<Recipes />} />
+          <Route path="/recipes/:id" element={<RecipeEditor />} />
           <Route path="/coach" element={<Coach />} />
           <Route path="/coach/:id" element={<Coach />} />
           <Route path="/plans/new" element={<PlanEditor />} />

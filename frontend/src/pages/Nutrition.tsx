@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import type { Estimation, FoodLog, FoodSuggestion, Goals, GoalSuggestion, Macros, MealType, Micros } from '@fitness/shared-types'
@@ -600,10 +601,11 @@ function GoalsSetModal({
 // Main page
 // ---------------------------------------------------------------------------
 
-type Composer = 'idle' | 'text' | 'photo' | 'favorites' | 'barcode'
+type Composer = 'idle' | 'text' | 'photo' | 'favorites' | 'barcode' | 'recipe'
 
 export default function Nutrition() {
   const today = toLocalISODate()
+  const navigate = useNavigate()
   const [date, setDate] = useState(today)
   const [composer, setComposer] = useState<Composer>('idle')
   const [preview, setPreview] = useState<PreviewState | null>(null)
@@ -905,7 +907,15 @@ export default function Nutrition() {
       {/* Composer */}
       {!preview && !estimating && (
         <div className="card p-4 flex flex-col gap-3">
-          <span className="text-sm font-semibold text-gray-900">Log food</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-900">Log food</span>
+            <button
+              onClick={() => navigate('/recipes')}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+            >
+              Manage recipes
+            </button>
+          </div>
 
           {composer === 'idle' && (
             <div className="flex gap-2 flex-wrap">
@@ -936,6 +946,13 @@ export default function Nutrition() {
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5v14M7 5v14M11 5v10M15 5v14M19 5v14"/></svg>
                 <span>Barcode</span>
+              </button>
+              <button
+                onClick={() => setComposer('recipe')}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 21v-3a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v3"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>Recipe</span>
               </button>
             </div>
           )}
@@ -1070,6 +1087,18 @@ export default function Nutrition() {
                 </button>
               </div>
             </div>
+          )}
+
+          {composer === 'recipe' && (
+            <RecipePicker
+              date={date}
+              onCancel={() => setComposer('idle')}
+              onLogged={() => {
+                setComposer('idle')
+                void qc.invalidateQueries({ queryKey: ['day-logs', date] })
+                void qc.invalidateQueries({ queryKey: ['dashboard'] })
+              }}
+            />
           )}
 
           {composer === 'favorites' && (
@@ -1269,6 +1298,129 @@ export default function Nutrition() {
           onClose={() => setGoalsModalOpen(false)}
           onSave={(g) => void handleSaveGoals(g)}
         />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Recipe picker — pick a saved recipe + servings, log as a FoodLog
+// ---------------------------------------------------------------------------
+
+function fmt(n: number): string {
+  const r = Math.round(n * 10) / 10
+  return Number.isInteger(r) ? String(r) : r.toFixed(1)
+}
+
+function RecipePicker({
+  date,
+  onCancel,
+  onLogged,
+}: {
+  date: string
+  onCancel: () => void
+  onLogged: () => void
+}) {
+  const navigate = useNavigate()
+  const { data: recipes, isLoading } = useQuery({
+    queryKey: ['recipes'],
+    queryFn: () => nutritionApi.recipes.list(),
+  })
+  const [picked, setPicked] = useState<string | null>(null)
+  const [servings, setServings] = useState('1')
+  const [saving, setSaving] = useState(false)
+
+  const selected = recipes?.find((r) => r.id === picked) ?? null
+  const n = parseFloat(servings) || 0
+  const scaledCal = selected ? Math.round(selected.per_serving_macros.calories * n) : 0
+
+  const handleLog = async () => {
+    if (!picked) return
+    if (!Number.isFinite(n) || n <= 0) {
+      alert('Enter servings')
+      return
+    }
+    setSaving(true)
+    try {
+      await nutritionApi.recipes.log(picked, { date, servings_eaten: n })
+      onLogged()
+    } catch {
+      alert('Could not log recipe')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {isLoading ? (
+        <p className="text-sm text-gray-400 py-2">Loading…</p>
+      ) : !recipes || recipes.length === 0 ? (
+        <div className="text-center py-3 space-y-3">
+          <p className="text-sm text-gray-500">No recipes yet.</p>
+          <button
+            onClick={() => navigate('/recipes/new')}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-full hover:bg-blue-700"
+          >
+            + Create recipe
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+            {recipes.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => setPicked(r.id)}
+                className={`w-full text-left px-3 py-2.5 flex items-center justify-between border-b border-gray-100 last:border-0 ${
+                  picked === r.id ? 'bg-blue-50' : 'hover:bg-gray-50'
+                }`}
+              >
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">{r.name}</div>
+                  <div className="text-xs text-gray-500 tabular-nums">
+                    {r.per_serving_macros.calories} kcal · {r.ingredients.length} ingredients
+                  </div>
+                </div>
+                {picked === r.id ? <span className="text-blue-600 font-bold">✓</span> : null}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-semibold text-gray-700 flex-1">Servings eaten</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={servings}
+              onChange={(e) => setServings(e.target.value)}
+              className="w-24 border border-gray-200 rounded-md px-3 py-1.5 text-sm text-center outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+          {selected ? (
+            <p className="text-xs text-gray-500 tabular-nums">
+              = {scaledCal} kcal · {fmt(selected.per_serving_macros.protein_g * n)}g P ·{' '}
+              {fmt(selected.per_serving_macros.carbs_g * n)}g C ·{' '}
+              {fmt(selected.per_serving_macros.fat_g * n)}g F
+            </p>
+          ) : null}
+
+          <div className="flex gap-2">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2 border border-gray-200 rounded-md text-sm font-medium hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => void handleLog()}
+              disabled={!picked || saving}
+              className="flex-1 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 disabled:opacity-40"
+            >
+              {saving ? 'Logging…' : 'Log to today'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   )
