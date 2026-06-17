@@ -60,6 +60,38 @@ async def estimate_text(body: dict, user: CurrentUser = Depends(get_current_user
     return result
 
 
+@router.post("/estimate/label")
+async def estimate_label(body: dict, user: CurrentUser = Depends(get_current_user)):
+    """Read a Nutrition Facts label photo. Returns per-serving values verbatim.
+
+    Same image-URL rules as /estimate/photo — must be a GCS object the user
+    uploaded under their own food/ prefix.
+    """
+    image_url = body.get("image_url", "")
+    if not image_url:
+        raise HTTPException(status_code=422, detail="image_url is required")
+    reason = _check_food_image_url(image_url, user.user_id)
+    if reason is not None:
+        raise HTTPException(status_code=422, detail=f"invalid image_url: {reason}")
+    result = await asyncio.to_thread(
+        nutrition_ai.estimate_from_label, user.user_id, image_url
+    )
+    if "error" in result:
+        raise HTTPException(status_code=422, detail=result["error"])
+    return result
+
+
+@router.get("/foods/search")
+async def search_foods(
+    q: str = Query(min_length=1, max_length=80),
+    limit: int = Query(default=8, ge=1, le=20),
+    user: CurrentUser = Depends(get_current_user),
+):
+    """USDA-backed search for ingredient picker. Each hit is per-serving
+    Estimation-shape so the recipe builder can drop values straight in."""
+    return await asyncio.to_thread(usda.search_full, q, limit)
+
+
 @router.post("/estimate/photo")
 async def estimate_photo(body: dict, user: CurrentUser = Depends(get_current_user)):
     image_url = body.get("image_url", "")

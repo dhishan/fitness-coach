@@ -111,6 +111,15 @@ export const workoutsApi = {
     api.post<NextExerciseSuggestion>(`/workouts/${id}/suggest-next`).then((r) => r.data),
 }
 
+export interface IngredientHit {
+  name: string
+  serving: string
+  macros: { calories: number; protein_g: number; carbs_g: number; fat_g: number }
+  micros?: Record<string, number>
+  usda_fdc_id?: number | null
+  data_type?: string
+}
+
 export interface NextExerciseSuggestion {
   exercise_id: string
   exercise_name: string
@@ -207,6 +216,10 @@ export const healthkitApi = {
 export const nutritionApi = {
   suggestFoods: (q: string, limit = 10) =>
     api.get<FoodSuggestion[]>('/nutrition/foods/suggest', { params: { q, limit } }).then((r) => r.data),
+  estimateLabel: (image_url: string) =>
+    api.post<Estimation>('/nutrition/estimate/label', { image_url }).then((r) => r.data),
+  searchFoods: (q: string, limit = 8) =>
+    api.get<IngredientHit[]>('/nutrition/foods/search', { params: { q, limit } }).then((r) => r.data),
   estimateText: (text: string) =>
     api.post<Estimation>('/nutrition/estimate/text', { text }).then((r) => r.data),
   estimatePhoto: (image_url: string, hint?: string) =>

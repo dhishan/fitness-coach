@@ -25,8 +25,10 @@ import {
 } from 'react-native'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Recipe, RecipeIngredient } from '@fitness/shared-types'
+import { Ionicons } from '@expo/vector-icons'
+import type { RecipeIngredient } from '@fitness/shared-types'
 import { nutritionApi } from '../../src/services/api'
+import IngredientLookupSheet from '../../src/components/IngredientLookupSheet'
 import { colors, radius, spacing } from '../../src/theme'
 
 type IngredientForm = RecipeIngredient & { _key: string }
@@ -320,6 +322,7 @@ function IngredientCard({
   onRemove?: () => void
 }) {
   const [showMicros, setShowMicros] = useState(false)
+  const [lookupOpen, setLookupOpen] = useState(false)
   return (
     <View style={s.ingCard}>
       <View style={s.ingHeader}>
@@ -330,6 +333,17 @@ function IngredientCard({
           </TouchableOpacity>
         ) : null}
       </View>
+
+      <TouchableOpacity style={s.lookupBtn} onPress={() => setLookupOpen(true)}>
+        <Ionicons name="sparkles-outline" size={16} color={colors.primary} />
+        <Text style={s.lookupBtnText}>Auto-fill from barcode, label, or search</Text>
+      </TouchableOpacity>
+
+      <IngredientLookupSheet
+        visible={lookupOpen}
+        onClose={() => setLookupOpen(false)}
+        onFill={(patch) => onChange(patch)}
+      />
 
       <Field label="Name">
         <TextInput
@@ -632,6 +646,18 @@ const s = StyleSheet.create({
     letterSpacing: 0.4,
   },
   removeText: { color: colors.error, fontSize: 12, fontWeight: '600' },
+  lookupBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    backgroundColor: '#EBF3FF',
+    borderWidth: 1,
+    borderColor: '#B6D4FE',
+  },
+  lookupBtnText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   row2: { flexDirection: 'row', gap: spacing.sm },
   row4: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   microsGrid: {

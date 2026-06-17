@@ -135,6 +135,32 @@ def get_nutrients(fdc_id: int) -> dict | None:
     return out
 
 
+def search_full(query: str, limit: int = 8) -> list[dict]:
+    """Search USDA and return each hit with full per-serving nutrients.
+
+    Each item is the same Estimation-shaped dict get_nutrients() returns
+    (name, serving, macros, micros, usda_fdc_id). Used to populate the
+    recipe ingredient picker.
+    """
+    hits = search(query, limit=limit)
+    out: list[dict] = []
+    for h in hits:
+        nutrients = get_nutrients(h.get("fdc_id"))
+        if nutrients is None:
+            continue
+        # Branded foods often have brandOwner not yet in nutrients name
+        name = nutrients.get("name", "")
+        brand = (h.get("brand_owner") or "").strip()
+        if brand and brand.lower() not in name.lower():
+            name = f"{name} ({brand})"
+        out.append({
+            **nutrients,
+            "name": name,
+            "data_type": h.get("data_type"),
+        })
+    return out
+
+
 def lookup_by_barcode(code: str) -> dict | None:
     """Search USDA Branded foods for a UPC/GTIN match. None on miss.
 

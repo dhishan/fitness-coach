@@ -95,6 +95,62 @@ def estimate_from_text(user_id: str, text: str) -> dict:
         return {"error": f"{type(e).__name__}: {e}"}
 
 
+LABEL_SYSTEM = (
+    "You read a photo of a packaged-food NUTRITION FACTS label and extract the "
+    "per-serving values literally. Return JSON only matching this schema: "
+    '{"name": string, "serving": string, '
+    '"macros": {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}, '
+    '"micros": {"fiber_g": number, "sugar_g": number, "sodium_mg": number, "potassium_mg": number, '
+    '"calcium_mg": number, "iron_mg": number, "vitamin_c_mg": number, "vitamin_d_mcg": number, '
+    '"saturated_fat_g": number, "cholesterol_mg": number}, '
+    '"confidence": number between 0 and 1}. '
+    "Read PER SERVING values exactly as printed. Do NOT scale, do NOT average, "
+    "do NOT estimate portion. If the product name/brand is visible elsewhere on the package, "
+    "set name to '<Product> (<Brand>)'. Set serving to the label's serving size including the "
+    "unit + gram weight in parentheses if shown, e.g. '1 scoop (31g)'. Use 0 for any field "
+    "you cannot read clearly. confidence: 0.95 if every required value is clearly visible, "
+    "0.7 if some fields blurry, 0.4 if label is partially hidden."
+)
+
+
+def estimate_from_label(user_id: str, image_url: str) -> dict:
+    """Read a Nutrition Facts label and return per-serving values verbatim.
+    No USDA enrichment — the label IS the truth."""
+    s = get_settings()
+    start = time.monotonic()
+    try:
+        content = [
+            {"type": "text", "text": "Read the nutrition facts label and return per-serving values."},
+            {"type": "image_url", "image_url": {"url": image_url}},
+        ]
+        resp = llm.complete(
+            [
+                {"role": "system", "content": LABEL_SYSTEM},
+                {"role": "user", "content": content},
+            ],
+            model=s.nutrition_model,
+            metadata={
+                "generation_name": "nutrition-label",
+                "trace_user_id": user_id,
+                "tags": ["nutrition", "label"],
+            },
+        )
+        _record(user_id, "nutrition_label", resp, int((time.monotonic() - start) * 1000))
+        parsed = _parse(resp)
+        # Don't enrich from USDA — the label values are authoritative.
+        macros = parsed.get("macros") or {}
+        for k in ("calories", "protein_g", "carbs_g", "fat_g"):
+            macros[k] = float(macros.get(k, 0) or 0)
+        parsed["macros"] = macros
+        ai_micros = parsed.get("micros") or {}
+        parsed["micros"] = {k: float(ai_micros.get(k, 0) or 0) for k in _MICRO_KEYS}
+        parsed["micros_source"] = "label"
+        return parsed
+    except Exception as e:
+        logger.exception("estimate_from_label failed")
+        return {"error": f"{type(e).__name__}: {e}"}
+
+
 def estimate_from_image(user_id: str, image_url: str, hint: str = "") -> dict:
     s = get_settings()
     start = time.monotonic()
