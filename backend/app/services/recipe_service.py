@@ -33,10 +33,11 @@ _MICRO_KEYS = (
 def compute_totals(ingredients: list[dict], yields_servings: float) -> tuple[dict, dict, dict, dict]:
     """Return (totals_macros, totals_micros, per_serving_macros, per_serving_micros).
 
-    `totals_*` = sum of ingredient nutrient values across all grams of the recipe.
-    `per_serving_*` = totals / yields_servings.
+    Each ingredient contributes `per_serving_value * servings_used` for every
+    nutrient. Totals are summed across ingredients. Per-serving (recipe) is
+    totals / yields_servings.
 
-    Yields_servings <= 0 raises ValueError (callers should validate first).
+    Yields_servings <= 0 raises ValueError.
     """
     if yields_servings <= 0:
         raise ValueError("yields_servings must be > 0")
@@ -45,16 +46,15 @@ def compute_totals(ingredients: list[dict], yields_servings: float) -> tuple[dic
     totals_micros = {k: 0.0 for k in _MICRO_KEYS}
 
     for ing in ingredients:
-        grams = float(ing.get("grams") or 0)
-        if grams <= 0:
+        servings_used = float(ing.get("servings_used") or 0)
+        if servings_used <= 0:
             continue
-        factor = grams / 100.0
         for k in _MACRO_KEYS:
-            v = float(ing.get(f"{k}_per_100g") or 0)
-            totals_macros[k] += v * factor
+            v = float(ing.get(f"{k}_per_serving") or 0)
+            totals_macros[k] += v * servings_used
         for k in _MICRO_KEYS:
-            v = float(ing.get(f"{k}_per_100g") or 0)
-            totals_micros[k] += v * factor
+            v = float(ing.get(f"{k}_per_serving") or 0)
+            totals_micros[k] += v * servings_used
 
     per_serving_macros = {k: _round(totals_macros[k] / yields_servings, k) for k in _MACRO_KEYS}
     per_serving_micros = {k: _round(totals_micros[k] / yields_servings, k) for k in _MICRO_KEYS}

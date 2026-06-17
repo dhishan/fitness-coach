@@ -137,26 +137,31 @@ class FavoriteCreate(BaseModel):
 
 
 class RecipeIngredient(BaseModel):
-    """One ingredient in a recipe. Per-100g nutrition is the source of truth —
-    when ingredient grams change, the recipe totals are recomputed from this."""
+    """One ingredient in a recipe.
+
+    Values are entered straight off the nutrition label — per serving — and
+    multiplied by how many servings the user used. Matches how labels actually
+    read (1 scoop / 1 cup / 1 tbsp etc., each with its own gram weight).
+    """
     name: str = Field(min_length=1, max_length=120)
-    grams: float = Field(gt=0)
-    # Per-100g — what 100g of this raw ingredient contains
-    calories_per_100g: float = Field(default=0, ge=0)
-    protein_g_per_100g: float = Field(default=0, ge=0)
-    carbs_g_per_100g: float = Field(default=0, ge=0)
-    fat_g_per_100g: float = Field(default=0, ge=0)
-    # Per-100g micros (optional — defaults to 0 if unknown)
-    fiber_g_per_100g: float = Field(default=0, ge=0)
-    sugar_g_per_100g: float = Field(default=0, ge=0)
-    sodium_mg_per_100g: float = Field(default=0, ge=0)
-    potassium_mg_per_100g: float = Field(default=0, ge=0)
-    calcium_mg_per_100g: float = Field(default=0, ge=0)
-    iron_mg_per_100g: float = Field(default=0, ge=0)
-    vitamin_c_mg_per_100g: float = Field(default=0, ge=0)
-    vitamin_d_mcg_per_100g: float = Field(default=0, ge=0)
-    saturated_fat_g_per_100g: float = Field(default=0, ge=0)
-    cholesterol_mg_per_100g: float = Field(default=0, ge=0)
+    serving_label: str = Field(default="1 serving", max_length=40)
+    servings_used: float = Field(default=1.0, gt=0)
+    # Per single serving — what one serving_label contributes
+    calories_per_serving: float = Field(default=0, ge=0)
+    protein_g_per_serving: float = Field(default=0, ge=0)
+    carbs_g_per_serving: float = Field(default=0, ge=0)
+    fat_g_per_serving: float = Field(default=0, ge=0)
+    # Per-serving micros (optional — defaults to 0 when unknown)
+    fiber_g_per_serving: float = Field(default=0, ge=0)
+    sugar_g_per_serving: float = Field(default=0, ge=0)
+    sodium_mg_per_serving: float = Field(default=0, ge=0)
+    potassium_mg_per_serving: float = Field(default=0, ge=0)
+    calcium_mg_per_serving: float = Field(default=0, ge=0)
+    iron_mg_per_serving: float = Field(default=0, ge=0)
+    vitamin_c_mg_per_serving: float = Field(default=0, ge=0)
+    vitamin_d_mcg_per_serving: float = Field(default=0, ge=0)
+    saturated_fat_g_per_serving: float = Field(default=0, ge=0)
+    cholesterol_mg_per_serving: float = Field(default=0, ge=0)
     usda_fdc_id: int | None = None
 
 
