@@ -68,7 +68,19 @@ def _record(user_id: str, source: str, resp, duration_ms: int):
 
 
 def _parse(resp) -> dict:
-    raw = resp.choices[0].message.content or "{}"
+    raw = (resp.choices[0].message.content or "{}").strip()
+    # Models sometimes wrap JSON in ```json ... ``` fences despite instructions.
+    if raw.startswith("```"):
+        raw = raw.strip("`")
+        if raw.lower().startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+    # Or prefix with prose — grab the first {...} block as a fallback.
+    if not raw.startswith("{"):
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start != -1 and end > start:
+            raw = raw[start : end + 1]
     return json.loads(raw)
 
 
@@ -87,6 +99,7 @@ def estimate_from_text(user_id: str, text: str) -> dict:
                 "trace_user_id": user_id,
                 "tags": ["nutrition"],
             },
+            response_format={"type": "json_object"},
         )
         _record(user_id, "nutrition_text", resp, int((time.monotonic() - start) * 1000))
         return _enrich(_parse(resp))
@@ -134,6 +147,7 @@ def estimate_from_label(user_id: str, image_url: str) -> dict:
                 "trace_user_id": user_id,
                 "tags": ["nutrition", "label"],
             },
+            response_format={"type": "json_object"},
         )
         _record(user_id, "nutrition_label", resp, int((time.monotonic() - start) * 1000))
         parsed = _parse(resp)
@@ -170,6 +184,7 @@ def estimate_from_image(user_id: str, image_url: str, hint: str = "") -> dict:
                 "trace_user_id": user_id,
                 "tags": ["nutrition"],
             },
+            response_format={"type": "json_object"},
         )
         _record(user_id, "nutrition_photo", resp, int((time.monotonic() - start) * 1000))
         return _enrich(_parse(resp))

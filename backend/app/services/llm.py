@@ -23,7 +23,8 @@ def _configure_langfuse() -> None:
 
 
 def complete(messages: list[dict], tools: list[dict] | None = None,
-             metadata: dict | None = None, model: str | None = None):
+             metadata: dict | None = None, model: str | None = None,
+             response_format: dict | None = None):
     """Single non-streamed completion via LiteLLM. Model + key from settings."""
     _configure_langfuse()
     s = get_settings()
@@ -33,4 +34,5 @@ def complete(messages: list[dict], tools: list[dict] | None = None,
         tools=tools or None,
         api_key=s.openai_api_key or None,
         metadata=metadata or None,
+        response_format=response_format,
     )
