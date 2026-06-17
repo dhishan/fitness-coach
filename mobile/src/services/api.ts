@@ -27,6 +27,10 @@ import type {
   HealthKitBatch,
   HealthKitSyncResult,
   ProgressPoint,
+  Recipe,
+  RecipeCreate,
+  RecipeLogRequest,
+  RecipeUpdate,
   SignedUpload,
   StartChatResponse,
   TemplateCreate,
@@ -227,6 +231,17 @@ export const nutritionApi = {
       api
         .post<FoodLog>(`/nutrition/favorites/${id}/log`, null, { params: { date } })
         .then((r) => r.data),
+  },
+  recipes: {
+    list: () => api.get<Recipe[]>('/nutrition/recipes').then((r) => r.data),
+    get: (id: string) => api.get<Recipe>(`/nutrition/recipes/${id}`).then((r) => r.data),
+    create: (body: RecipeCreate) =>
+      api.post<Recipe>('/nutrition/recipes', body).then((r) => r.data),
+    update: (id: string, body: RecipeUpdate) =>
+      api.put<Recipe>(`/nutrition/recipes/${id}`, body).then((r) => r.data),
+    remove: (id: string) => api.delete(`/nutrition/recipes/${id}`),
+    log: (id: string, body: RecipeLogRequest) =>
+      api.post<FoodLog>(`/nutrition/recipes/${id}/log`, body).then((r) => r.data),
   },
   goals: {
     get: () => api.get<Goals | null>('/nutrition/goals').then((r) => r.data),

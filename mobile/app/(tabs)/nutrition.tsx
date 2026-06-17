@@ -19,6 +19,7 @@ import * as ImageManipulator from 'expo-image-manipulator'
 import * as FileSystem from 'expo-file-system/legacy'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   DayLogs,
@@ -747,6 +748,7 @@ function NutritionScreenInner() {
   const [estimating, setEstimating] = useState(false)
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [showFavorites, setShowFavorites] = useState(false)
+  const [showRecipes, setShowRecipes] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [goalsModalOpen, setGoalsModalOpen] = useState(false)
   const [menuLog, setMenuLog] = useState<FoodLog | null>(null)
@@ -755,6 +757,7 @@ function NutritionScreenInner() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const qc = useQueryClient()
+  const router = useRouter()
   const isToday = date === today
 
   const { data: dayLogs, isLoading: loadingLogs } = useQuery<DayLogs>({
@@ -1165,6 +1168,16 @@ function NutritionScreenInner() {
                   <Text style={s.composerBtnText}>Barcode</Text>
                 </Pressable>
               </View>
+              <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
+                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setShowRecipes(true)}>
+                  <Ionicons name="restaurant-outline" size={22} color={colors.gray700} />
+                  <Text style={s.composerBtnText}>Recipe</Text>
+                </Pressable>
+                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => router.push('/recipes' as never)}>
+                  <Ionicons name="book-outline" size={22} color={colors.gray700} />
+                  <Text style={s.composerBtnText}>Manage recipes</Text>
+                </Pressable>
+              </View>
             </>
           )}
 
@@ -1325,6 +1338,18 @@ function NutritionScreenInner() {
         <FavoritesModal
           onClose={() => setShowFavorites(false)}
           onLog={(id) => { void handleLogFavorite(id) }}
+        />
+      )}
+
+      {showRecipes && (
+        <RecipePickerModal
+          date={date}
+          onClose={() => setShowRecipes(false)}
+          onLogged={() => {
+            setShowRecipes(false)
+            void qc.invalidateQueries({ queryKey: ['day-logs', date] })
+            void qc.invalidateQueries({ queryKey: ['dashboard'] })
+          }}
         />
       )}
 
@@ -1582,6 +1607,78 @@ const s = StyleSheet.create({
   sourceChipTextRecent: { color: colors.gray500 },
   noMatchBox: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   noMatchText: { fontSize: 12, color: colors.gray400 },
+  // Recipe picker modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+  modalClose: { color: colors.gray500, fontSize: 14 },
+  recipePickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  recipePickRowActive: { backgroundColor: '#F0F7FF' },
+  recipePickName: { fontSize: 14, fontWeight: '600', color: colors.text },
+  recipePickMeta: { fontSize: 12, color: colors.gray500, marginTop: 2 },
+  recipePickCheck: { color: colors.primary, fontSize: 18, fontWeight: '700' },
+  recipeServingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  recipeServingsLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+  recipeServingsInput: {
+    width: 80,
+    height: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    fontSize: 14,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  recipeScaledMeta: {
+    fontSize: 12,
+    color: colors.gray500,
+    paddingHorizontal: spacing.base,
+    fontVariant: ['tabular-nums'],
+  },
+  recipeLogBtn: {
+    margin: spacing.base,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  recipeLogBtnDisabled: { opacity: 0.4 },
+  recipeLogBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  recipeAddBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
+  },
+  recipeAddBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 })
 
 export default function NutritionScreen() {
@@ -1590,4 +1687,132 @@ export default function NutritionScreen() {
       <NutritionScreenInner />
     </NutritionErrorBoundary>
   )
+}
+
+// ---------------------------------------------------------------------------
+// Recipe picker — pick a saved recipe + servings, log it as a FoodLog
+// ---------------------------------------------------------------------------
+
+function RecipePickerModal({
+  date,
+  onClose,
+  onLogged,
+}: {
+  date: string
+  onClose: () => void
+  onLogged: () => void
+}) {
+  const router = useRouter()
+  const { data: recipes, isLoading } = useQuery({
+    queryKey: ['recipes'],
+    queryFn: () => nutritionApi.recipes.list(),
+  })
+
+  const [picked, setPicked] = useState<string | null>(null)
+  const [servings, setServings] = useState('1')
+  const [saving, setSaving] = useState(false)
+
+  const handleLog = async () => {
+    if (!picked) return
+    const n = parseFloat(servings)
+    if (!Number.isFinite(n) || n <= 0) {
+      Alert.alert('Enter servings', 'How many servings did you eat?')
+      return
+    }
+    setSaving(true)
+    try {
+      await nutritionApi.recipes.log(picked, { date, servings_eaten: n })
+      onLogged()
+    } catch {
+      Alert.alert('Error', 'Could not log recipe.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const selected = recipes?.find((r) => r.id === picked) ?? null
+  const scaledCals = selected ? Math.round(selected.per_serving_macros.calories * (parseFloat(servings) || 0)) : 0
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <View style={s.modalOverlay}>
+        <View style={s.modalCard}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Log a recipe</Text>
+            <Pressable onPress={onClose}><Text style={s.modalClose}>Close</Text></Pressable>
+          </View>
+
+          {isLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
+          ) : !recipes || recipes.length === 0 ? (
+            <View style={{ padding: spacing.lg, alignItems: 'center', gap: spacing.md }}>
+              <Text style={{ color: colors.gray500, textAlign: 'center' }}>
+                No recipes yet. Build one first.
+              </Text>
+              <Pressable
+                style={s.recipeAddBtn}
+                onPress={() => { onClose(); router.push('/recipes/new' as never) }}
+              >
+                <Text style={s.recipeAddBtnText}>+ Create recipe</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <ScrollView style={{ maxHeight: 280 }} keyboardShouldPersistTaps="handled">
+                {recipes.map((r) => {
+                  const isPicked = r.id === picked
+                  return (
+                    <Pressable
+                      key={r.id}
+                      onPress={() => setPicked(r.id)}
+                      style={[s.recipePickRow, isPicked && s.recipePickRowActive]}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.recipePickName}>{r.name}</Text>
+                        <Text style={s.recipePickMeta}>
+                          {r.per_serving_macros.calories} kcal/serving · {r.ingredients.length} ingredients
+                        </Text>
+                      </View>
+                      {isPicked ? <Text style={s.recipePickCheck}>✓</Text> : null}
+                    </Pressable>
+                  )
+                })}
+              </ScrollView>
+
+              <View style={s.recipeServingsRow}>
+                <Text style={s.recipeServingsLabel}>Servings eaten</Text>
+                <TextInput
+                  style={s.recipeServingsInput}
+                  value={servings}
+                  onChangeText={setServings}
+                  keyboardType="decimal-pad"
+                  placeholder="1"
+                />
+              </View>
+              {selected ? (
+                <Text style={s.recipeScaledMeta}>
+                  = {scaledCals} kcal · {fmtNum(selected.per_serving_macros.protein_g * (parseFloat(servings) || 0))}g P ·{' '}
+                  {fmtNum(selected.per_serving_macros.carbs_g * (parseFloat(servings) || 0))}g C ·{' '}
+                  {fmtNum(selected.per_serving_macros.fat_g * (parseFloat(servings) || 0))}g F
+                </Text>
+              ) : null}
+
+              <Pressable
+                style={[s.recipeLogBtn, (!picked || saving) && s.recipeLogBtnDisabled]}
+                onPress={() => void handleLog()}
+                disabled={!picked || saving}
+              >
+                <Text style={s.recipeLogBtnText}>{saving ? 'Logging...' : 'Log to today'}</Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  )
+}
+
+function fmtNum(n: number): string {
+  const r = Math.round(n * 10) / 10
+  return r === Math.floor(r) ? String(r) : r.toFixed(1)
 }

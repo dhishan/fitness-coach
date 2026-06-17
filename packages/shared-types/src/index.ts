@@ -191,6 +191,60 @@ export interface FoodLogUpdate {
 }
 export interface Favorite { id: string; user_id: string; name: string; serving: string; macros: Macros; last_used_at: string | null }
 export interface FavoriteCreate { name: string; serving?: string; macros: Macros }
+
+// ---- Recipes ----
+export interface RecipeIngredient {
+  name: string
+  serving_label: string
+  servings_used: number
+  calories_per_serving: number
+  protein_g_per_serving: number
+  carbs_g_per_serving: number
+  fat_g_per_serving: number
+  fiber_g_per_serving?: number
+  sugar_g_per_serving?: number
+  sodium_mg_per_serving?: number
+  potassium_mg_per_serving?: number
+  calcium_mg_per_serving?: number
+  iron_mg_per_serving?: number
+  vitamin_c_mg_per_serving?: number
+  vitamin_d_mcg_per_serving?: number
+  saturated_fat_g_per_serving?: number
+  cholesterol_mg_per_serving?: number
+  usda_fdc_id?: number | null
+}
+export interface Recipe {
+  id: string
+  user_id: string
+  name: string
+  yields_servings: number
+  ingredients: RecipeIngredient[]
+  notes: string
+  totals_macros: Macros
+  totals_micros: Micros
+  per_serving_macros: Macros
+  per_serving_micros: Micros
+  created_at?: string
+  updated_at?: string
+}
+export interface RecipeCreate {
+  name: string
+  yields_servings: number
+  ingredients: RecipeIngredient[]
+  notes?: string
+}
+export interface RecipeUpdate {
+  name?: string
+  yields_servings?: number
+  ingredients?: RecipeIngredient[]
+  notes?: string
+}
+export interface RecipeLogRequest {
+  date: string
+  servings_eaten: number
+  meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | null
+  logged_at?: string | null
+}
 export interface Goals {
   calories: number; protein_g: number; carbs_g: number; fat_g: number;
   micros_targets?: Micros | null;
