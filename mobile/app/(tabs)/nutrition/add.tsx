@@ -56,7 +56,7 @@ function logToFoodHit(log: FoodLog): FoodHit {
     name: log.name,
     serving: log.serving,
     macros: log.macros,
-    micros: log.micros ?? null,
+    micros: log.micros as Record<string, number> | null,
     usda_fdc_id: log.usda_fdc_id ?? null,
     source: 'recent',
   }
@@ -216,7 +216,7 @@ export default function AddFoodScreen() {
         name: est.name,
         serving: est.serving,
         macros: est.macros,
-        micros: est.micros ?? null,
+        micros: (est.micros ?? null) as Record<string, number> | null,
         source: est.source ?? 'usda',
       })
     } catch (err: unknown) {
@@ -252,7 +252,7 @@ export default function AddFoodScreen() {
       })
       if (put.status < 200 || put.status >= 300) throw new Error(`Upload failed (${put.status})`)
       const est = await nutritionApi.estimatePhoto(signed.public_url)
-      openEdit({ name: est.name, serving: est.serving, macros: est.macros, micros: est.micros ?? null, source: 'usda' })
+      openEdit({ name: est.name, serving: est.serving, macros: est.macros, micros: (est.micros ?? null) as Record<string, number> | null, source: 'usda' })
     } catch {
       Alert.alert('Error', 'Could not process photo. Try again.')
     } finally {
@@ -266,7 +266,7 @@ export default function AddFoodScreen() {
     setEstimating(true)
     try {
       const est = await nutritionApi.estimateText(q)
-      openEdit({ name: est.name, serving: est.serving, macros: est.macros, micros: est.micros ?? null, source: 'usda' })
+      openEdit({ name: est.name, serving: est.serving, macros: est.macros, micros: (est.micros ?? null) as Record<string, number> | null, source: 'usda' })
     } catch {
       Alert.alert('Error', 'Could not estimate. Try rephrasing.')
     } finally {

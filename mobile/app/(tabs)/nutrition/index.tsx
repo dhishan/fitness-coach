@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   ScrollView,
   View,
@@ -26,7 +26,6 @@ import type {
   Estimation,
   Favorite,
   FoodLog,
-  FoodSuggestion,
   Goals,
   GoalSuggestion,
   Macros,
@@ -703,8 +702,6 @@ function FavoritesModal({
 // Main screen
 // ---------------------------------------------------------------------------
 
-type ComposerMode = 'idle' | 'text'
-
 class NutritionErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { error: Error | null }
@@ -743,8 +740,6 @@ class NutritionErrorBoundary extends React.Component<
 function NutritionScreenInner() {
   const today = toLocalISODate()
   const [date, setDate] = useState(today)
-  const [composerMode, setComposerMode] = useState<ComposerMode>('idle')
-  const [textInput, setTextInput] = useState('')
   const [estimating, setEstimating] = useState(false)
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [showFavorites, setShowFavorites] = useState(false)
@@ -753,8 +748,6 @@ function NutritionScreenInner() {
   const [goalsModalOpen, setGoalsModalOpen] = useState(false)
   const [menuLog, setMenuLog] = useState<FoodLog | null>(null)
   const [showBarcode, setShowBarcode] = useState(false)
-  const [suggestQ, setSuggestQ] = useState('')
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const qc = useQueryClient()
   const router = useRouter()
@@ -770,13 +763,6 @@ function NutritionScreenInner() {
     queryFn: () => nutritionApi.goals.get(),
   })
 
-  const { data: foodSuggestions = [] } = useQuery<FoodSuggestion[]>({
-    queryKey: ['food-suggestions', suggestQ],
-    queryFn: () => nutritionApi.suggestFoods(suggestQ, 10),
-    enabled: composerMode === 'text',
-    staleTime: 30_000,
-  })
-
   const totals = dayLogs?.totals ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   const microsTotals = dayLogs?.micros_totals
   const logs = dayLogs?.items ?? []
@@ -787,43 +773,6 @@ function NutritionScreenInner() {
     const g = mealGroup(log)
     if (!grouped[g]) grouped[g] = []
     grouped[g]!.push(log)
-  }
-
-  // ---------------------------------------------------------------------------
-  // Close text composer + reset autocomplete state
-  // ---------------------------------------------------------------------------
-
-  const closeTextComposer = () => {
-    setComposerMode('idle')
-    setTextInput('')
-    setSuggestQ('')
-  }
-
-  // Select a food suggestion — fills preview directly, no AI call
-  const handleSelectSuggestion = (s: FoodSuggestion) => {
-    setPreview({
-      estimation: { name: s.name, serving: s.serving, macros: s.macros, confidence: 1 },
-      source: 'ai_text',
-    })
-    closeTextComposer()
-  }
-
-  // ---------------------------------------------------------------------------
-  // Text estimation
-  // ---------------------------------------------------------------------------
-
-  const handleEstimateText = async () => {
-    if (!textInput.trim()) return
-    setEstimating(true)
-    closeTextComposer()
-    try {
-      const est = await nutritionApi.estimateText(textInput.trim())
-      setPreview({ estimation: est, source: 'ai_text' })
-    } catch {
-      Alert.alert('Error', 'Could not estimate. Try rephrasing.')
-    } finally {
-      setEstimating(false)
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1066,7 +1015,6 @@ function NutritionScreenInner() {
         <Pressable
           onPress={() => {
             setDate(prevDate(date))
-            setComposerMode('idle')
             setPreview(null)
           }}
           style={s.dateBtn}
@@ -1078,7 +1026,6 @@ function NutritionScreenInner() {
           onPress={() => {
             if (!isToday) {
               setDate(nextDate(date))
-              setComposerMode('idle')
               setPreview(null)
             }
           }}
@@ -1146,111 +1093,30 @@ function NutritionScreenInner() {
         <View style={[card, s.cardPad]}>
           <Text style={s.sectionTitle}>Log food</Text>
 
-          {composerMode === 'idle' && (
-            <>
-              <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
-                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setComposerMode('text')}>
-                  <Ionicons name="create-outline" size={22} color={colors.gray700} />
-                  <Text style={s.composerBtnText}>Type a meal</Text>
-                </Pressable>
-                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={handleCamera}>
-                  <Ionicons name="camera-outline" size={22} color={colors.gray700} />
-                  <Text style={s.composerBtnText}>Camera</Text>
-                </Pressable>
-              </View>
-              <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
-                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setShowFavorites(true)}>
-                  <Ionicons name="star-outline" size={22} color={colors.gray700} />
-                  <Text style={s.composerBtnText}>Favorites</Text>
-                </Pressable>
-                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setShowBarcode(true)}>
-                  <Ionicons name="barcode-outline" size={22} color={colors.gray700} />
-                  <Text style={s.composerBtnText}>Barcode</Text>
-                </Pressable>
-              </View>
-              <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
-                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setShowRecipes(true)}>
-                  <Ionicons name="restaurant-outline" size={22} color={colors.gray700} />
-                  <Text style={s.composerBtnText}>Recipe</Text>
-                </Pressable>
-                <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => router.push('/recipes' as never)}>
-                  <Ionicons name="book-outline" size={22} color={colors.gray700} />
-                  <Text style={s.composerBtnText}>Manage recipes</Text>
-                </Pressable>
-              </View>
-            </>
-          )}
+          {/* Primary add button */}
+          <Pressable
+            style={s.addFoodBtn}
+            onPress={() => router.push('/nutrition/add' as never)}
+          >
+            <Ionicons name="add-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={s.addFoodBtnText}>+ Add food</Text>
+          </Pressable>
 
-          {composerMode === 'text' && (
-            <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
-              <TextInput
-                style={[s.input, { height: 64 }]}
-                value={textInput}
-                onChangeText={(val) => {
-                  setTextInput(val)
-                  if (debounceRef.current) clearTimeout(debounceRef.current)
-                  debounceRef.current = setTimeout(() => setSuggestQ(val.trim()), 200)
-                }}
-                placeholder="e.g. two scrambled eggs and toast with butter"
-                placeholderTextColor={colors.gray400}
-                multiline
-                autoFocus
-              />
-
-              {/* Suggestions panel */}
-              {foodSuggestions.length > 0 ? (
-                <FlatList
-                  data={foodSuggestions}
-                  keyExtractor={(item) => `${item.source}:${item.name}`}
-                  scrollEnabled={false}
-                  style={s.suggestionList}
-                  renderItem={({ item }) => (
-                    <Pressable
-                      style={s.suggestionRow}
-                      onPress={() => handleSelectSuggestion(item)}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.suggestionName} numberOfLines={1}>{item.name}</Text>
-                        {item.serving ? (
-                          <Text style={s.suggestionServing}>{item.serving}</Text>
-                        ) : null}
-                      </View>
-                      <View style={s.suggestionRight}>
-                        <Text style={s.suggestionKcal}>{Math.round(item.macros.calories)} kcal</Text>
-                        <View style={[s.sourceChip, item.source === 'favorite' ? s.sourceChipFav : s.sourceChipRecent]}>
-                          <Text style={[s.sourceChipText, item.source === 'favorite' ? s.sourceChipTextFav : s.sourceChipTextRecent]}>
-                            {item.source === 'favorite' ? 'Saved' : 'Recent'}
-                          </Text>
-                        </View>
-                      </View>
-                    </Pressable>
-                  )}
-                  ItemSeparatorComponent={() => <View style={s.separator} />}
-                />
-              ) : textInput.trim().length > 0 ? (
-                <View style={s.noMatchBox}>
-                  <Text style={s.noMatchText}>No matches. Tap Estimate to use AI.</Text>
-                </View>
-              ) : null}
-
-              <View style={s.row}>
-                <Pressable
-                  style={[s.btnPrimary, { flex: 1 }, !textInput.trim() && s.btnDisabled]}
-                  onPress={() => { void handleEstimateText() }}
-                  disabled={!textInput.trim()}
-                >
-                  <Text style={s.btnPrimaryText}>Estimate</Text>
-                </Pressable>
-                <View style={{ width: spacing.sm }} />
-                <Pressable
-                  style={s.btnSecondary}
-                  onPress={closeTextComposer}
-                >
-                  <Text style={s.btnSecondaryText}>Cancel</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
+          {/* Secondary quick-access row */}
+          <View style={[s.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
+            <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={handleCamera}>
+              <Ionicons name="camera-outline" size={22} color={colors.gray700} />
+              <Text style={s.composerBtnText}>Camera</Text>
+            </Pressable>
+            <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setShowBarcode(true)}>
+              <Ionicons name="barcode-outline" size={22} color={colors.gray700} />
+              <Text style={s.composerBtnText}>Barcode</Text>
+            </Pressable>
+            <Pressable style={[s.composerBtn, s.composerBtnIcon]} onPress={() => setShowRecipes(true)}>
+              <Ionicons name="restaurant-outline" size={22} color={colors.gray700} />
+              <Text style={s.composerBtnText}>Recipe</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -1499,6 +1365,16 @@ const s = StyleSheet.create({
   suggestedMicroVal: { fontSize: 12, fontWeight: '500', color: colors.text },
 
   // Composer
+  addFoodBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    marginTop: spacing.sm,
+  },
+  addFoodBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   composerBtn: {
     flex: 1,
     paddingVertical: 10,
