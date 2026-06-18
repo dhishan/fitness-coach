@@ -35,6 +35,23 @@ The iOS app is sideloaded via AltStore. No App Store, no developer account neede
 
 ---
 
+## Install on iPhone (no AltStore — web version)
+
+Don't want to sideload? Add the web app to your home screen and it runs full-screen, no browser chrome, no address bar - feels like a native app.
+
+1. Open **Safari** (this doesn't work in Chrome/Firefox on iOS)
+2. Go to **https://ui.fitness-tracker.blueelephants.org**
+3. Sign in with Google
+4. Tap the **Share** button (the square with the up arrow at the bottom)
+5. Scroll down and tap **Add to Home Screen**
+6. Tap **Add** in the top right
+
+The app icon now lives on your home screen. Tap it - opens full-screen with no Safari UI. Works offline once cached, supports the camera for food photos, syncs the same data as the sideloaded app.
+
+**Android / desktop:** Chrome shows an **Install app** option in the address bar menu - same idea, same result.
+
+---
+
 ## What you can do
 
 **Track workouts**
