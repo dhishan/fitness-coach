@@ -104,6 +104,19 @@ resource "google_cloud_run_v2_service" "backend" {
         value = "https://us.cloud.langfuse.com"
       }
       env {
+        name = "SENTRY_DSN"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.sentry_dsn_backend.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "SENTRY_ENVIRONMENT"
+        value = var.env
+      }
+      env {
         name  = "CF_ACCESS_TEAM_DOMAIN"
         value = var.cf_access_team_domain
       }

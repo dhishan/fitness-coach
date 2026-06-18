@@ -57,3 +57,9 @@ variable "mcp_domain" {
   type    = string
   default = "mcp.fitness-tracker.blueelephants.org"
 }
+
+variable "sentry_dsn_backend" {
+  type      = string
+  sensitive = true
+  default   = ""
+}

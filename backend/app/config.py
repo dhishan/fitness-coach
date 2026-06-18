@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     uploads_bucket: str = ""
     usda_api_key: str = ""
     apple_audience_prefix: str = "org.blueelephants.fitnesstracker"
+    sentry_dsn: str = ""
+    sentry_environment: str = "development"
+    sentry_traces_sample_rate: float = 0.1
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 

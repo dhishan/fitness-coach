@@ -62,3 +62,22 @@ resource "google_secret_manager_secret_iam_member" "langfuse_secret_accessor" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
+
+resource "google_secret_manager_secret" "sentry_dsn_backend" {
+  secret_id = "fitness-tracker-sentry-dsn-${var.env}"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "sentry_dsn_backend" {
+  count       = var.sentry_dsn_backend == "" ? 0 : 1
+  secret      = google_secret_manager_secret.sentry_dsn_backend.id
+  secret_data = var.sentry_dsn_backend
+}
+
+resource "google_secret_manager_secret_iam_member" "sentry_dsn_backend_accessor" {
+  secret_id = google_secret_manager_secret.sentry_dsn_backend.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}

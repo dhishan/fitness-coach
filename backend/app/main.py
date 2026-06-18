@@ -22,6 +22,19 @@ if settings.environment != "development" and settings.jwt_secret_key == "dev-onl
         "Refusing to start with the default 'dev-only-secret'."
     )
 
+if settings.sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        send_default_pii=False,
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+    )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

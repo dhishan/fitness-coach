@@ -58,6 +58,7 @@ jobs:
       - name: Terraform apply
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_sentry_dsn_backend: ${{ secrets.SENTRY_DSN_BACKEND }}
         run: |
           make terraform-init
           make terraform-apply
