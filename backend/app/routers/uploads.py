@@ -36,6 +36,29 @@ def _sign_url(bucket: str, object_name: str, content_type: str) -> str:
     )
 
 
+def sign_get_url(bucket: str, object_name: str, minutes: int = 10) -> str:
+    """Short-lived V4 signed GET URL so external services (OpenAI) can fetch
+    the private object without credentials."""
+    from google.auth import default
+    from google.auth.transport.requests import Request
+    from google.cloud import storage
+
+    credentials, _ = default()
+    credentials.refresh(Request())
+    sa_email = getattr(credentials, "service_account_email", None)
+    if not sa_email:
+        raise RuntimeError("Could not determine service account email for signing")
+    client = storage.Client(credentials=credentials)
+    blob = client.bucket(bucket).blob(object_name)
+    return blob.generate_signed_url(
+        version="v4",
+        expiration=timedelta(minutes=minutes),
+        method="GET",
+        service_account_email=sa_email,
+        access_token=credentials.token,
+    )
+
+
 @router.post("/sign-food-photo")
 async def sign_food_photo(
     content_type: str = "image/jpeg",

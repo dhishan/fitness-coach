@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from urllib.parse import urlparse
 
 from app.config import get_settings
 from app.services import llm, usage_service
@@ -21,6 +22,25 @@ ESTIMATION_SYSTEM = (
     "Never invent precision; round to whole numbers for calories and 1 decimal for grams. "
     "Estimate micros as best-effort; default each micro field to 0 if unknown."
 )
+
+def _signed_get(image_url: str) -> str:
+    """Convert a private storage.googleapis.com object URL to a short-lived
+    signed GET URL so OpenAI can fetch it. Pass other URLs through untouched."""
+    try:
+        u = urlparse(image_url)
+        if u.netloc != "storage.googleapis.com":
+            return image_url
+        # path is /<bucket>/<object...>
+        parts = u.path.lstrip("/").split("/", 1)
+        if len(parts) != 2:
+            return image_url
+        bucket, object_name = parts
+        from app.routers.uploads import sign_get_url
+        return sign_get_url(bucket, object_name, minutes=10)
+    except Exception:
+        logger.exception("failed to sign GET url, passing through")
+        return image_url
+
 
 _MICRO_KEYS = (
     "fiber_g", "sugar_g", "sodium_mg", "potassium_mg", "calcium_mg",
@@ -132,9 +152,10 @@ def estimate_from_label(user_id: str, image_url: str) -> dict:
     s = get_settings()
     start = time.monotonic()
     try:
+        fetch_url = _signed_get(image_url)
         content = [
             {"type": "text", "text": "Read the nutrition facts label and return per-serving values."},
-            {"type": "image_url", "image_url": {"url": image_url}},
+            {"type": "image_url", "image_url": {"url": fetch_url}},
         ]
         resp = llm.complete(
             [
@@ -169,9 +190,10 @@ def estimate_from_image(user_id: str, image_url: str, hint: str = "") -> dict:
     s = get_settings()
     start = time.monotonic()
     try:
+        fetch_url = _signed_get(image_url)
         content = [
             {"type": "text", "text": hint or "Estimate macros for the food shown."},
-            {"type": "image_url", "image_url": {"url": image_url}},
+            {"type": "image_url", "image_url": {"url": fetch_url}},
         ]
         resp = llm.complete(
             [
