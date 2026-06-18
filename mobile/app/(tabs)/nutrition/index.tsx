@@ -33,10 +33,10 @@ import type {
   MealType,
   Micros,
 } from '@fitness/shared-types'
-import { nutritionApi, uploadsApi } from '../../src/services/api'
-import { colors, spacing, radius, card } from '../../src/theme'
-import { toLocalISODate } from '../../src/lib/dates'
-import BarcodeScanner from '../../components/BarcodeScanner'
+import { nutritionApi, uploadsApi } from '../../../src/services/api'
+import { colors, spacing, radius, card } from '../../../src/theme'
+import { toLocalISODate } from '../../../src/lib/dates'
+import BarcodeScanner from '../../../components/BarcodeScanner'
 
 // ---------------------------------------------------------------------------
 // Date helpers
