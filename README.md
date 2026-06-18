@@ -158,6 +158,57 @@ Tokens expire after 24 hours (post security-hardening). Refresh by signing in ag
 
 ---
 
+## Observability (Sentry)
+
+Errors, traces, and business events from all three surfaces stream to a single Sentry org (`dhishan`). Three projects:
+
+- **fitness-tracker-backend** — FastAPI on Cloud Run. DSN injected at runtime via GCP Secret Manager (terraform owns the secret + IAM; CI passes `TF_VAR_sentry_dsn_backend` from the GH secret `SENTRY_DSN_BACKEND`).
+- **fitness-tracker-web** — React on Firebase Hosting. DSN baked into the bundle at build time (`VITE_SENTRY_DSN`); `@sentry/vite-plugin` uploads source maps from CI tagged with the build SHA so stack traces resolve to original TS lines.
+- **fitness-tracker-mobile** — Expo / React Native. DSN in `app.extra.sentry.dsn` (public client identifier, safe to bake). The `@sentry/react-native/expo` plugin patches the native iOS project on `expo prebuild` and uploads dSYM + JS source maps per IPA build (tag `mobile-v*`).
+
+### What's captured automatically
+
+- **Errors** — every uncaught exception (FastAPI 500s, React render errors, RN JS errors, native crashes) lands as an event with stack trace + user attribution + request context.
+- **Logger output** — backend `logger.error(...)` becomes a Sentry event; `logger.info(...)` becomes a breadcrumb attached to the next event.
+- **Tracing** — 100% sample of every backend route, browser page load, mobile screen open. LLM completions wrapped in `op=llm.completion` spans tagged with model + input/output tokens.
+- **Session Replay (web only)** — last ~60s of DOM + clicks + network captured on error (`replaysOnErrorSampleRate=1.0`).
+
+### Business events (captured via `track()` / `Sentry.captureMessage`)
+
+`auth.signed_in`, `workout.finished`, `nutrition.log.created`, `nutrition.log.updated`, `nutrition.estimate.{text,label}`, `recipe.created`, `recipe.logged`, `cardio.log.created`, `body.metric.created`, `chat.message.sent`.
+
+Use Sentry → Insights → Custom Events to filter by name and see per-user trends.
+
+### User attribution
+
+Backend sets the Sentry user scope from `get_current_user` on every authenticated request. Web sets it on sign-in via the Zustand auth store. Mobile sets it on `setAuth` and clears on `logout`. Errors land with `{ id, email }` already attached.
+
+### Verifying the pipe
+
+```bash
+# Backend — fires one info event into fitness-tracker-backend
+curl "https://api.fitness-tracker.blueelephants.org/internal/sentry-test?token=$(echo $JWT_SECRET_KEY | cut -c1-12)"
+
+# Web — open https://ui.fitness-tracker.blueelephants.org in DevTools console:
+Sentry.captureMessage("verification.web", "info")
+
+# Mobile — shake to open dev menu, or run on connected sim:
+# In any screen, briefly throw from a Pressable:  () => { throw new Error("verification.mobile") }
+```
+
+Then check Sentry → Issues; expect each event within ~30s tagged with the right environment + release.
+
+### Secrets reference
+
+GitHub Actions repo secrets (read by `ci-cd.yml` and `release-ipa.yml`):
+
+- `SENTRY_DSN_BACKEND` — passed as `TF_VAR_sentry_dsn_backend` to terraform; written to Secret Manager `fitness-tracker-sentry-dsn-prod`; mounted on Cloud Run as `SENTRY_DSN`.
+- `SENTRY_DSN_WEB` — set as `VITE_SENTRY_DSN` at frontend build time.
+- `SENTRY_AUTH_TOKEN` — org-level Sentry token used by `@sentry/vite-plugin` (web) and `@sentry/react-native/expo` (mobile) for source-map upload.
+- `SENTRY_ORG` (`dhishan`), `SENTRY_PROJECT_BACKEND`, `SENTRY_PROJECT_WEB`, `SENTRY_PROJECT_MOBILE`.
+
+---
+
 ## For developers
 
 Codebase notes and architecture lessons live in `CLAUDE.md`. Sister project: [family-expense-tracker](https://github.com/dhishan/family-expense-tracker) — same AltStore source, same patterns.

@@ -109,3 +109,27 @@ app.mount("/mcp", build_mcp_app())
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/internal/sentry-test")
+def sentry_test(token: str = ""):
+    """Fire a known event into Sentry to verify the pipe is live.
+
+    Requires SENTRY_TEST_TOKEN env var; guards against random hits. The
+    response says only whether an event was captured — the user should
+    look in Sentry to confirm it arrived.
+    """
+    expected = settings.jwt_secret_key  # reuse: not a real secret, just a tag
+    if not settings.sentry_dsn:
+        return {"captured": False, "reason": "SENTRY_DSN not configured"}
+    if token != expected[:12] or len(token) < 8:
+        return {"captured": False, "reason": "unauthorized"}
+    try:
+        import sentry_sdk
+        sentry_sdk.capture_message(
+            "sentry-test.verification",
+            level="info",
+        )
+        return {"captured": True, "look_at": "https://dhishan.sentry.io/issues/?project=fitness-tracker-backend"}
+    except Exception as e:
+        return {"captured": False, "reason": f"{type(e).__name__}: {e}"}
