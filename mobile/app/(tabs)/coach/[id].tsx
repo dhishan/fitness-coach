@@ -21,6 +21,7 @@ import {
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useBottomTabBarHeight } from 'expo-router/build/react-navigation/bottom-tabs/utils/useBottomTabBarHeight'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Markdown from 'react-native-markdown-display'
 import CoachContent from '../../../src/components/CoachSuggestions'
@@ -91,6 +92,7 @@ export default function CoachThread() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const tabBarHeight = useBottomTabBarHeight()
   const queryClient = useQueryClient()
   const isNew = id === 'new'
 
@@ -329,7 +331,7 @@ export default function CoachThread() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
+      keyboardVerticalOffset={tabBarHeight}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -367,7 +369,7 @@ export default function CoachThread() {
       />
 
       {/* Composer */}
-      <View style={[styles.composer, { paddingBottom: insets.bottom || spacing.sm }]}>
+      <View style={[styles.composer, { paddingBottom: spacing.sm }]}>
         <TextInput
           style={styles.input}
           value={input}
