@@ -33,6 +33,7 @@ import type {
   Micros,
 } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi } from '../../../src/services/api'
+import { track } from '../../../src/lib/observability'
 import { colors, spacing, radius, card } from '../../../src/theme'
 import { toLocalISODate } from '../../../src/lib/dates'
 import BarcodeScanner from '../../../components/BarcodeScanner'
@@ -302,6 +303,7 @@ function PreviewModal({
           ...(state.estimation.usda_fdc_id != null ? { usda_fdc_id: state.estimation.usda_fdc_id } : {}),
           ...(state.estimation.micros_source ? { micros_source: state.estimation.micros_source } : {}),
         })
+        track('nutrition.log.created', { source: state.source, calories: macros.calories })
       }
       void qc.invalidateQueries({ queryKey: ['day-logs', date] })
       onSaved()

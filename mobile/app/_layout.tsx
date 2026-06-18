@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react-native'
+import Constants from 'expo-constants'
 import { useEffect } from 'react'
 import { ActivityIndicator, View, Keyboard } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
@@ -6,6 +8,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuth } from '../src/store/auth'
 import { useUnitStore } from '../src/store/units'
 import { colors } from '../src/theme'
+
+const dsn = (Constants.expoConfig?.extra as { sentry?: { dsn?: string } } | undefined)?.sentry?.dsn
+if (dsn) {
+  Sentry.init({
+    dsn,
+    environment: __DEV__ ? 'development' : 'production',
+    release: Constants.expoConfig?.version,
+    sendDefaultPii: false,
+    tracesSampleRate: 1.0,
+    enableAutoSessionTracking: true,
+  })
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,7 +39,7 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const { hasHydrated, token, hydrate } = useAuth()
   const router = useRouter()
   const segments = useSegments()
@@ -87,3 +101,5 @@ export default function RootLayout() {
     </QueryClientProvider>
   )
 }
+
+export default Sentry.wrap(RootLayout)

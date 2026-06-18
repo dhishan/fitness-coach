@@ -80,6 +80,10 @@ jobs:
 
       - name: Expo prebuild (iOS)
         working-directory: mobile
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_MOBILE }}
         run: npx expo prebuild --platform ios --no-install --clean
 
       - name: Disable script-phase sandboxing (Xcode 16 + Node bundler)
@@ -93,6 +97,10 @@ jobs:
 
       - name: Archive
         working-directory: mobile/ios
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_MOBILE }}
         run: |
           xcodebuild \
             -workspace FitnessTracker.xcworkspace \

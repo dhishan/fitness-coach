@@ -27,6 +27,7 @@ import CoachContent from '../../../src/components/CoachSuggestions'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { chatApi } from '../../../src/services/api'
 import { openTurnStream } from '../../../src/services/chatStream'
+import { track } from '../../../src/lib/observability'
 import { colors, spacing, radius } from '../../../src/theme'
 import type { ChatEvent } from '@fitness/shared-types'
 
@@ -232,6 +233,7 @@ export default function CoachThread() {
     if (!message.trim() || sending) return
     setSending(true)
     setInput('')
+    track('chat.message.sent')
 
     const cidToUse = retryConvId ?? activeConvId
 

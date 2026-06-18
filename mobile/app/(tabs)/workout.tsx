@@ -26,6 +26,7 @@ import { buildEntryFromHistory } from '../../src/lib/addExercise'
 import type { EntryWithHistory } from '../../src/lib/addExercise'
 import AddExerciseSheet from '../../src/components/AddExerciseSheet'
 import SessionIntentModal, { type SessionIntent } from '../../src/components/SessionIntentModal'
+import { track } from '../../src/lib/observability'
 import { card, colors, radius, spacing } from '../../src/theme'
 import { startFromPlan } from '../../src/lib/startFromPlan'
 import { displayToKg, formatWeight, kgToDisplay, stepFor, useWeightUnit } from '../../src/store/units'
@@ -739,6 +740,7 @@ export default function WorkoutScreen() {
     setFinishing(true)
     try {
       const result = await workoutsApi.finish(workout.id)
+      track('workout.finished', { entries: entries.length, total_volume: result.total_volume })
       setFinishData(result)
       void qc.invalidateQueries({ queryKey: ['dashboard'] })
       qc.setQueryData(

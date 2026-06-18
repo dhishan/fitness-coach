@@ -8,6 +8,7 @@
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-community/slider": "5.2.0",
     "@react-native-google-signin/google-signin": "^16.1.2",
+    "@sentry/react-native": "~7.11.0",
     "@tanstack/react-query": "^5.56.0",
     "axios": "^1.7.9",
     "buffer": "^6.0.3",

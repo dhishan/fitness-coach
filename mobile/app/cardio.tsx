@@ -21,6 +21,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLocalSearchParams } from 'expo-router'
 import type { CardioLog, CardioLogCreate, CardioLogUpdate, CardioType } from '@fitness/shared-types'
 import { cardioApi } from '../src/services/api'
+import { track } from '../src/lib/observability'
 import { colors, spacing, radius, card, shadow } from '../src/theme'
 import { toLocalISODate } from '../src/lib/dates'
 
@@ -275,7 +276,8 @@ export default function CardioScreen() {
 
   const createMutation = useMutation({
     mutationFn: (payload: CardioLogCreate) => cardioApi.create(payload),
-    onSuccess: () => {
+    onSuccess: (_data, payload) => {
+      track('cardio.log.created', { cardio_type: payload.type, duration_s: payload.duration_s })
       void qc.invalidateQueries({ queryKey: ['cardio'] })
       setShowForm(false)
     },

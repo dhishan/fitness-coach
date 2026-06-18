@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { track } from '../lib/observability'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -255,6 +256,7 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, onClose
       }
 
       await nutritionApi.logs.create(body)
+      track('nutrition.log.created.via_sheet', { calories: body.macros.calories, source: hit.source ?? 'manual' })
       void qc.invalidateQueries({ queryKey: ['day-logs', resolvedDate] })
       void qc.invalidateQueries({ queryKey: ['dashboard'] })
       onLogged()

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native'
 import { create } from 'zustand'
 import * as SecureStore from 'expo-secure-store'
 
@@ -31,6 +32,7 @@ export const useAuth = create<AuthState>()((set) => ({
         SecureStore.getItemAsync(USER_KEY),
       ])
       const user: User | null = userJson ? JSON.parse(userJson) : null
+      if (user) Sentry.setUser({ id: user.id, email: user.email })
       set({ token, user, hasHydrated: true })
     } catch {
       set({ token: null, user: null, hasHydrated: true })
@@ -42,6 +44,7 @@ export const useAuth = create<AuthState>()((set) => ({
       SecureStore.setItemAsync(TOKEN_KEY, token),
       SecureStore.setItemAsync(USER_KEY, JSON.stringify(user)),
     ])
+    Sentry.setUser({ id: user.id, email: user.email })
     set({ token, user })
   },
 
@@ -50,6 +53,7 @@ export const useAuth = create<AuthState>()((set) => ({
       SecureStore.deleteItemAsync(TOKEN_KEY),
       SecureStore.deleteItemAsync(USER_KEY),
     ])
+    Sentry.setUser(null)
     set({ token: null, user: null })
   },
 }))

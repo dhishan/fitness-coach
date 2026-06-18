@@ -81,8 +81,21 @@
         }
       ],
       "@react-native-google-signin/google-signin",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "dhishan",
+          "project": "fitness-tracker-mobile",
+          "url": "https://sentry.io/"
+        }
+      ]
     ],
+    "extra": {
+      "sentry": {
+        "dsn": "https://f16f8b5b8995e20c6a40887f8098264f@o4511581462921216.ingest.us.sentry.io/4511583731253248"
+      }
+    },
     "experiments": {
       "typedRoutes": true
     },
