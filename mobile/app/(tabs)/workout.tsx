@@ -21,7 +21,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Exercise, FinishResponse, SetEntry, Workout, WorkoutEntry, WorkoutTemplate } from '@fitness/shared-types'
 import { exercisesApi, templatesApi, workoutsApi } from '../../src/services/api'
 import { toLocalISODate } from '../../src/lib/dates'
-import { nextSupersetGroup } from '../../src/lib/workoutHelpers'
+import { nextSupersetGroup, reorderEntries } from '../../src/lib/workoutHelpers'
 import { buildEntryFromHistory } from '../../src/lib/addExercise'
 import type { EntryWithHistory } from '../../src/lib/addExercise'
 import AddExerciseSheet from '../../src/components/AddExerciseSheet'
@@ -705,15 +705,7 @@ export default function WorkoutScreen() {
   }
 
   const handleMoveEntry = (i: number, direction: -1 | 1) => {
-    setEntries((prev) => {
-      const j = i + direction
-      if (j < 0 || j >= prev.length) return prev
-      const next = prev.slice()
-      const tmp = next[i]
-      next[i] = next[j]
-      next[j] = tmp
-      return next
-    })
+    setEntries((prev) => reorderEntries(prev, i, direction))
   }
 
   const handleRemoveEntry = (i: number) => {
@@ -910,7 +902,7 @@ export default function WorkoutScreen() {
     <KeyboardAvoidingView
       style={s.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={100}
+      keyboardVerticalOffset={0}
     >
       {/* Top bar */}
       <View style={s.topBar}>
@@ -1248,7 +1240,7 @@ const s = StyleSheet.create({
 
   // List
   list: { flex: 1 },
-  listContent: { padding: spacing.base, paddingBottom: spacing.xl },
+  listContent: { padding: spacing.base, paddingBottom: 220 },
   emptyText: { textAlign: 'center', color: colors.gray400, fontSize: 14, paddingVertical: spacing.xl },
 
   // Entry card

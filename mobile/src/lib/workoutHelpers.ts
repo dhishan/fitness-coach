@@ -42,3 +42,14 @@ export function nextSupersetGroup(entries: WorkoutEntry[]): string {
   while (used.has(i)) i++
   return String(i)
 }
+
+export function reorderEntries<T>(entries: T[], from: number, direction: -1 | 1): T[] {
+  const to = from + direction
+  if (from < 0 || from >= entries.length) return entries
+  if (to < 0 || to >= entries.length) return entries
+  const next = entries.slice()
+  const tmp = next[from]
+  next[from] = next[to]
+  next[to] = tmp
+  return next
+}

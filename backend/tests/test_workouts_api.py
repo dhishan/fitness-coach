@@ -65,3 +65,20 @@ def test_delete(client):
         assert client.delete("/api/v1/workouts/w1", headers=_auth(client)).status_code == 204
     with patch(f"{BASE}.delete_workout", return_value=False):
         assert client.delete("/api/v1/workouts/w1", headers=_auth(client)).status_code == 404
+
+
+def test_update_workout_preserves_entry_order(client):
+    """The PUT body's entries array order is preserved verbatim into the service call."""
+    reordered = {
+        "entries": [
+            {"exercise_id": "sq", "exercise_name": "Squat", "sets": [{"weight": 100, "reps": 5}]},
+            {"exercise_id": "rdl", "exercise_name": "RDL", "sets": [{"weight": 60, "reps": 8}]},
+            {"exercise_id": "bp", "exercise_name": "Bench", "sets": [{"weight": 80, "reps": 6}]},
+        ]
+    }
+    with patch(f"{BASE}.update_workout", return_value={"id": "w1", **reordered}) as m:
+        r = client.put("/api/v1/workouts/w1", json=reordered, headers=_auth(client))
+    assert r.status_code == 200
+    sent_payload = m.call_args.args[2]
+    names = [e["exercise_name"] for e in sent_payload["entries"]]
+    assert names == ["Squat", "RDL", "Bench"], "router must forward entries in the order the client sent"

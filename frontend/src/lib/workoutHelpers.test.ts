@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatLastTime, nextSupersetGroup } from './workoutHelpers'
+import { formatLastTime, nextSupersetGroup, reorderEntries } from './workoutHelpers'
 import type { SetEntry, WorkoutEntry } from '@fitness/shared-types'
 
 // ---------------------------------------------------------------------------
@@ -104,5 +104,63 @@ describe('nextSupersetGroup', () => {
   it('skips non-numeric group ids when finding next number', () => {
     const entries = makeEntries(['1', 'custom-group', null])
     expect(nextSupersetGroup(entries)).toBe('2')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// reorderEntries
+// ---------------------------------------------------------------------------
+
+describe('reorderEntries', () => {
+  it('swaps with previous neighbor (direction -1)', () => {
+    expect(reorderEntries(['a', 'b', 'c', 'd'], 2, -1)).toEqual(['a', 'c', 'b', 'd'])
+  })
+
+  it('swaps with next neighbor (direction +1)', () => {
+    expect(reorderEntries(['a', 'b', 'c', 'd'], 1, 1)).toEqual(['a', 'c', 'b', 'd'])
+  })
+
+  it('no-op when moving up from the first index', () => {
+    const input = ['a', 'b', 'c']
+    expect(reorderEntries(input, 0, -1)).toEqual(input)
+  })
+
+  it('no-op when moving down from the last index', () => {
+    const input = ['a', 'b', 'c']
+    expect(reorderEntries(input, 2, 1)).toEqual(input)
+  })
+
+  it('returns a new array, never mutates input', () => {
+    const input = ['a', 'b', 'c']
+    const out = reorderEntries(input, 0, 1)
+    expect(out).not.toBe(input)
+    expect(input).toEqual(['a', 'b', 'c'])
+  })
+
+  it('preserves entry object identity for non-moved items', () => {
+    const a = { id: 'a' }
+    const b = { id: 'b' }
+    const c = { id: 'c' }
+    const out = reorderEntries([a, b, c], 0, 1)
+    expect(out[2]).toBe(c)
+  })
+
+  it('handles WorkoutEntry shape end-to-end (the real autosave payload)', () => {
+    const entries: WorkoutEntry[] = [
+      { exercise_id: 'rdl', exercise_name: 'RDL', sets: [{ weight: 60, reps: 8 }] },
+      { exercise_id: 'sq', exercise_name: 'Squat', sets: [{ weight: 100, reps: 5 }] },
+      { exercise_id: 'bp', exercise_name: 'Bench', sets: [{ weight: 80, reps: 6 }] },
+    ]
+    const out = reorderEntries(entries, 0, 1)
+    // The PUT body would now send Squat, RDL, Bench in that order
+    expect(out.map((e) => e.exercise_name)).toEqual(['Squat', 'RDL', 'Bench'])
+    // Sets are preserved verbatim
+    expect(out[1].sets[0]).toEqual({ weight: 60, reps: 8 })
+  })
+
+  it('bounds-check: from index out of range returns original', () => {
+    const input = ['a', 'b']
+    expect(reorderEntries(input, 5, 1)).toEqual(input)
+    expect(reorderEntries(input, -1, 1)).toEqual(input)
   })
 })
