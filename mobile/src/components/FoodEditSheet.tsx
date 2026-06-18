@@ -36,6 +36,9 @@ interface Props {
   hit: FoodHit | null
   date: string
   initialMeal?: MealType
+  editLogId?: string | null
+  initialMealType?: MealType
+  initialLoggedAt?: string | null
   onClose: () => void
   onLogged: () => void
 }
@@ -134,7 +137,7 @@ function microsFromHit(hit: FoodHit, servings: number): Partial<Record<keyof Mic
 
 // ---- component ----
 
-export default function FoodEditSheet({ visible, hit, date, initialMeal, onClose, onLogged }: Props) {
+export default function FoodEditSheet({ visible, hit, date, initialMeal, editLogId, initialMealType, initialLoggedAt, onClose, onLogged }: Props) {
   const qc = useQueryClient()
 
   const today = toLocalISODate()
@@ -165,7 +168,7 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, onClose
   // Reset state whenever a new hit is shown
   useEffect(() => {
     if (!hit) return
-    const m = initialMeal ?? defaultMealForHour()
+    const m = initialMealType ?? initialMeal ?? defaultMealForHour()
     const d = date
     setServings(1)
     const macs = macrosFromHit(hit, 1)
@@ -173,16 +176,27 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, onClose
     setProtein(macs.protein)
     setCarbs(macs.carbs)
     setFat(macs.fat)
-    setMacroOverridden(false)
+    setMacroOverridden(!!editLogId)
     setMicrosState(microsFromHit(hit, 1))
     setSelectedDate(d === today ? 'today' : d === yesterday ? 'yesterday' : 'custom')
     setCustomDate(d)
     setMealType(m)
-    setTime(mealDefaultTime(m, d))
-    setTimeOverridden(false)
+    if (initialLoggedAt) {
+      const parsed = new Date(initialLoggedAt)
+      if (!isNaN(parsed.getTime())) {
+        setTime(parsed)
+        setTimeOverridden(true)
+      } else {
+        setTime(mealDefaultTime(m, d))
+        setTimeOverridden(false)
+      }
+    } else {
+      setTime(mealDefaultTime(m, d))
+      setTimeOverridden(false)
+    }
     setMicrosOpen(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hit])
+  }, [hit, editLogId])
 
   const resolvedDate =
     selectedDate === 'today' ? today : selectedDate === 'yesterday' ? yesterday : customDate
@@ -255,8 +269,13 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, onClose
         ...(hit.usda_fdc_id != null ? { usda_fdc_id: hit.usda_fdc_id } : {}),
       }
 
-      await nutritionApi.logs.create(body)
-      track('nutrition.log.created.via_sheet', { calories: body.macros.calories, source: hit.source ?? 'manual' })
+      if (editLogId) {
+        await nutritionApi.logs.update(editLogId, body)
+        track('nutrition.log.updated', { calories: body.macros.calories })
+      } else {
+        await nutritionApi.logs.create(body)
+        track('nutrition.log.created.via_sheet', { calories: body.macros.calories, source: hit.source ?? 'manual' })
+      }
       void qc.invalidateQueries({ queryKey: ['day-logs', resolvedDate] })
       void qc.invalidateQueries({ queryKey: ['dashboard'] })
       onLogged()

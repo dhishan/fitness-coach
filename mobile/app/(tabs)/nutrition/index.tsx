@@ -37,6 +37,7 @@ import { track } from '../../../src/lib/observability'
 import { colors, spacing, radius, card } from '../../../src/theme'
 import { toLocalISODate } from '../../../src/lib/dates'
 import BarcodeScanner from '../../../components/BarcodeScanner'
+import FoodEditSheet from '../../../src/components/FoodEditSheet'
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -749,6 +750,7 @@ function NutritionScreenInner() {
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [goalsModalOpen, setGoalsModalOpen] = useState(false)
   const [menuLog, setMenuLog] = useState<FoodLog | null>(null)
+  const [editLog, setEditLog] = useState<FoodLog | null>(null)
   const [showBarcode, setShowBarcode] = useState(false)
 
   const qc = useQueryClient()
@@ -935,19 +937,7 @@ function NutritionScreenInner() {
     Alert.alert(log.name, '', [
       {
         text: 'Edit',
-        onPress: () =>
-          setPreview({
-            estimation: {
-              name: log.name,
-              serving: log.serving,
-              macros: log.macros,
-              confidence: 1,
-              micros: log.micros ?? undefined,
-              micros_source: log.micros_source,
-            },
-            source: 'ai_text',
-            editId: log.id,
-          }),
+        onPress: () => setEditLog(log),
       },
       {
         text: 'Save as favorite',
@@ -1201,6 +1191,23 @@ function NutritionScreenInner() {
           onCancel={() => setPreview(null)}
         />
       )}
+
+      <FoodEditSheet
+        visible={!!editLog}
+        hit={editLog ? {
+          name: editLog.name,
+          serving: editLog.serving,
+          macros: editLog.macros,
+          micros: (editLog.micros as unknown as Record<string, number>) ?? null,
+          source: 'manual',
+        } : null}
+        date={editLog?.date ?? date}
+        editLogId={editLog?.id ?? null}
+        initialMealType={editLog?.meal_type as MealType | undefined}
+        initialLoggedAt={editLog?.logged_at ?? null}
+        onClose={() => setEditLog(null)}
+        onLogged={() => setEditLog(null)}
+      />
 
       {showFavorites && (
         <FavoritesModal
