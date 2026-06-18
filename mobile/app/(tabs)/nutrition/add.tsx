@@ -37,9 +37,6 @@ function defaultMealForHour(): MealType {
 }
 
 function hitToFoodHit(h: IngredientHit): FoodHit {
-  let source = 'usda'
-  if (h.usda_fdc_id == null) source = 'off'
-  else if (h.data_type?.toLowerCase().includes('ifct')) source = 'ifct'
   return {
     name: h.name,
     serving: h.serving,
@@ -47,7 +44,7 @@ function hitToFoodHit(h: IngredientHit): FoodHit {
     micros: h.micros ?? null,
     usda_fdc_id: h.usda_fdc_id ?? null,
     data_type: h.data_type,
-    source,
+    source: h.source ?? 'usda',
   }
 }
 

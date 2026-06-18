@@ -118,6 +118,7 @@ export interface IngredientHit {
   micros?: Record<string, number>
   usda_fdc_id?: number | null
   data_type?: string
+  source?: 'usda' | 'off' | 'ifct'
 }
 
 export interface NextExerciseSuggestion {
