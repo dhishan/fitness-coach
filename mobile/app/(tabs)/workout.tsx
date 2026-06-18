@@ -224,6 +224,10 @@ function EntryCard({
   inSelectMode,
   isSelected,
   onToggleSelect,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
 }: {
   entry: EntryWithHistory
   onUpdate: (e: WorkoutEntry) => void
@@ -233,6 +237,10 @@ function EntryCard({
   inSelectMode: boolean
   isSelected: boolean
   onToggleSelect: () => void
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
 }) {
   const updateSet = (i: number, updated: SetEntry) => {
     const sets = entry.sets.map((x, idx) => (idx === i ? updated : x))
@@ -269,6 +277,24 @@ function EntryCard({
           </View>
         </View>
         <View style={s.entryHeaderRight}>
+          <TouchableOpacity
+            onPress={onMoveUp}
+            disabled={!canMoveUp}
+            style={[s.reorderBtn, !canMoveUp && s.reorderBtnDisabled]}
+            hitSlop={8}
+            accessibilityLabel="move up"
+          >
+            <Text style={[s.reorderBtnText, !canMoveUp && s.reorderBtnTextDisabled]}>↑</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onMoveDown}
+            disabled={!canMoveDown}
+            style={[s.reorderBtn, !canMoveDown && s.reorderBtnDisabled]}
+            hitSlop={8}
+            accessibilityLabel="move down"
+          >
+            <Text style={[s.reorderBtnText, !canMoveDown && s.reorderBtnTextDisabled]}>↓</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={onAlternatives} style={s.swapBtn}>
             <Text style={s.swapBtnText}>Swap</Text>
           </TouchableOpacity>
@@ -678,6 +704,18 @@ export default function WorkoutScreen() {
     setEntries((prev) => prev.map((e, idx) => (idx === i ? { ...e, ...updated } : e)))
   }
 
+  const handleMoveEntry = (i: number, direction: -1 | 1) => {
+    setEntries((prev) => {
+      const j = i + direction
+      if (j < 0 || j >= prev.length) return prev
+      const next = prev.slice()
+      const tmp = next[i]
+      next[i] = next[j]
+      next[j] = tmp
+      return next
+    })
+  }
+
   const handleRemoveEntry = (i: number) => {
     setEntries((prev) => prev.filter((_, idx) => idx !== i))
     // Surgically drop the removed entry from the cached active workout so the
@@ -808,6 +846,10 @@ export default function WorkoutScreen() {
           inSelectMode={selectMode}
           isSelected={selected.has(item.originalIndex)}
           onToggleSelect={() => toggleSelect(item.originalIndex)}
+          canMoveUp={item.originalIndex > 0}
+          canMoveDown={item.originalIndex < entries.length - 1}
+          onMoveUp={() => handleMoveEntry(item.originalIndex, -1)}
+          onMoveDown={() => handleMoveEntry(item.originalIndex, 1)}
         />
       )
     }
@@ -819,7 +861,7 @@ export default function WorkoutScreen() {
           </View>
         </View>
         <View style={s.supersetBracket}>
-          {item.entries.map(({ entry, originalIndex }) => (
+          {item.entries.map(({ entry, originalIndex }, idx) => (
             <EntryCard
               key={originalIndex}
               entry={entry}
@@ -830,6 +872,10 @@ export default function WorkoutScreen() {
               inSelectMode={selectMode}
               isSelected={selected.has(originalIndex)}
               onToggleSelect={() => toggleSelect(originalIndex)}
+              canMoveUp={idx > 0}
+              canMoveDown={idx < item.entries.length - 1}
+              onMoveUp={() => handleMoveEntry(originalIndex, -1)}
+              onMoveDown={() => handleMoveEntry(originalIndex, 1)}
             />
           ))}
         </View>
@@ -1230,6 +1276,10 @@ const s = StyleSheet.create({
   entryHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   swapBtn: { paddingHorizontal: 8, paddingVertical: 4 },
   swapBtnText: { fontSize: 12, fontWeight: '500', color: colors.primary },
+  reorderBtn: { paddingHorizontal: 6, paddingVertical: 4 },
+  reorderBtnDisabled: { opacity: 0.25 },
+  reorderBtnText: { fontSize: 18, fontWeight: '700', color: colors.gray700, lineHeight: 20 },
+  reorderBtnTextDisabled: { color: colors.gray400 },
   removeEntryBtn: { paddingHorizontal: 4, paddingVertical: 4 },
   removeEntryText: { fontSize: 12, color: colors.gray400 },
   selectBox: {
