@@ -12,7 +12,16 @@ from typing import Any, Optional
 from mcp.server.fastmcp import FastMCP
 
 from app.auth.mcp_auth import McpAuthMiddleware, _current_user_id, get_mcp_user_id
-from app.services import dashboard_service, exercise_service, workout_service
+from app.services import (
+    body_service,
+    cardio_service,
+    dashboard_service,
+    exercise_service,
+    food_service,
+    goals_service,
+    recipe_service,
+    workout_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +169,104 @@ def log_workout(date: str, entries: list[dict]) -> dict[str, Any]:
     workout = workout_service.create_workout(uid, {"date": date, "entries": entries})
     finished = workout_service.finish_workout(workout["id"], uid)
     return finished or workout
+
+
+# ---------------------------------------------------------------------------
+# Mount helper
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Nutrition tools (read-only)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def get_nutrition_logs(date: Optional[str] = None) -> dict[str, Any]:
+    """Return today's (or a given date's) food logs with macro/micro totals.
+
+    date: YYYY-MM-DD. Defaults to today.
+    Returns {logs: [...], totals: {calories, protein_g, carbs_g, fat_g}, by_meal: {...}}.
+    """
+    from datetime import date as _date
+    uid = _uid()
+    d = date or _date.today().isoformat()
+    return food_service.list_by_date(uid, d)
+
+
+@mcp.tool()
+def get_nutrition_summary(reference_date: Optional[str] = None, days: int = 7) -> list[dict]:
+    """Daily nutrition totals over the trailing N days.
+
+    reference_date: YYYY-MM-DD. Defaults to today.
+    days: how many trailing days to include (default 7, max 30).
+    Returns a list of {date, calories, protein_g, carbs_g, fat_g}.
+    """
+    from datetime import date as _date, timedelta
+    uid = _uid()
+    ref_str = reference_date or _date.today().isoformat()
+    ref = _date.fromisoformat(ref_str)
+    days = max(1, min(int(days), 30))
+    out: list[dict] = []
+    for i in range(days - 1, -1, -1):
+        d = (ref - timedelta(days=i)).isoformat()
+        day = food_service.list_by_date(uid, d)
+        totals = (day or {}).get("totals") or {}
+        out.append({"date": d, **totals})
+    return out
+
+
+@mcp.tool()
+def get_nutrition_goals() -> dict | None:
+    """Return the user's nutrition goals (kcal + macros + micros targets), or None."""
+    uid = _uid()
+    return goals_service.get_goals(uid)
+
+
+@mcp.tool()
+def list_recipes() -> list[dict]:
+    """List the user's saved recipes with per-serving macros."""
+    uid = _uid()
+    return recipe_service.list_recipes(uid)
+
+
+@mcp.tool()
+def list_favorites() -> list[dict]:
+    """List the user's favorited foods with per-serving macros."""
+    uid = _uid()
+    return food_service.list_favorites(uid)
+
+
+# ---------------------------------------------------------------------------
+# Body + cardio tools (read-only)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def get_body_metrics(limit: int = 30) -> list[dict]:
+    """Recent body metrics (weight, body fat %, circumferences). Sorted newest first.
+
+    limit: how many entries to return (default 30, max 90).
+    """
+    uid = _uid()
+    limit = max(1, min(int(limit), 90))
+    return body_service.list_metrics(uid, limit)
+
+
+@mcp.tool()
+def get_cardio_logs(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    limit: int = 20,
+) -> list[dict]:
+    """List recent cardio sessions with activity, duration, distance, kcal.
+
+    from_date / to_date: optional YYYY-MM-DD bounds.
+    limit: max number to return (default 20, max 90).
+    """
+    uid = _uid()
+    limit = max(1, min(int(limit), 90))
+    return cardio_service.list_logs(uid, from_date, to_date, limit)
 
 
 # ---------------------------------------------------------------------------

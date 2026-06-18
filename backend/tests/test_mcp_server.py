@@ -14,13 +14,13 @@ from app.auth.mcp_auth import _current_user_id
 
 
 def test_tool_count():
-    """Exactly 8 tools must be registered."""
+    """Exactly 15 tools must be registered (8 workout + 7 nutrition/body/cardio)."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
-    assert len(tools) == 8
+    assert len(tools) == 15
 
 
 def test_tool_names():
-    """All 8 expected tool names are present."""
+    """All 15 expected tool names are present."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
     names = {t.name for t in tools}
     expected = {
@@ -32,6 +32,13 @@ def test_tool_names():
         "get_alternatives",
         "list_exercises",
         "log_workout",
+        "get_nutrition_logs",
+        "get_nutrition_summary",
+        "get_nutrition_goals",
+        "list_recipes",
+        "list_favorites",
+        "get_body_metrics",
+        "get_cardio_logs",
     }
     assert names == expected
 
@@ -101,3 +108,155 @@ def test_build_mcp_app_returns_asgi_callable():
     """build_mcp_app() must return an object callable as ASGI (has __call__)."""
     app = mcp_server.build_mcp_app()
     assert callable(app)
+
+
+# ---------------------------------------------------------------------------
+# Nutrition tools
+# ---------------------------------------------------------------------------
+
+
+def test_get_nutrition_logs_passes_user_and_date():
+    fake = {"logs": [], "totals": {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}}
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "list_by_date", return_value=fake) as m:
+            result = mcp_server.get_nutrition_logs(date="2026-06-15")
+        m.assert_called_once_with("u1", "2026-06-15")
+        assert result == fake
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_nutrition_logs_defaults_to_today():
+    from datetime import date
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "list_by_date", return_value={}) as m:
+            mcp_server.get_nutrition_logs()
+        assert m.call_args[0][1] == date.today().isoformat()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_nutrition_logs_unauthenticated():
+    with pytest.raises(RuntimeError, match="unauthenticated"):
+        mcp_server.get_nutrition_logs()
+
+
+def test_get_nutrition_summary_aggregates_days():
+    fake_day = {"totals": {"calories": 1800, "protein_g": 120, "carbs_g": 200, "fat_g": 60}}
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "list_by_date", return_value=fake_day) as m:
+            result = mcp_server.get_nutrition_summary(reference_date="2026-06-17", days=3)
+        assert len(result) == 3
+        assert m.call_count == 3
+        # Returned chronologically ascending, ending at reference_date
+        assert result[-1]["date"] == "2026-06-17"
+        assert result[0]["date"] == "2026-06-15"
+        assert all(r["calories"] == 1800 for r in result)
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_nutrition_summary_clamps_days():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "list_by_date", return_value={"totals": {}}) as m:
+            mcp_server.get_nutrition_summary(reference_date="2026-06-17", days=100)
+        assert m.call_count == 30
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_nutrition_goals_calls_service():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.goals_service, "get_goals", return_value={"calories": 2000}) as m:
+            result = mcp_server.get_nutrition_goals()
+        m.assert_called_once_with("u1")
+        assert result == {"calories": 2000}
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_list_recipes_passes_user():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.recipe_service, "list_recipes", return_value=[{"id": "r1"}]) as m:
+            result = mcp_server.list_recipes()
+        m.assert_called_once_with("u1")
+        assert result == [{"id": "r1"}]
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_list_favorites_passes_user():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "list_favorites", return_value=[{"id": "f1"}]) as m:
+            result = mcp_server.list_favorites()
+        m.assert_called_once_with("u1")
+        assert result == [{"id": "f1"}]
+    finally:
+        _current_user_id.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# Body + cardio tools
+# ---------------------------------------------------------------------------
+
+
+def test_get_body_metrics_clamps_limit():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.body_service, "list_metrics", return_value=[]) as m:
+            mcp_server.get_body_metrics(limit=500)
+        m.assert_called_once_with("u1", 90)
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_body_metrics_default_limit():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.body_service, "list_metrics", return_value=[]) as m:
+            mcp_server.get_body_metrics()
+        m.assert_called_once_with("u1", 30)
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_cardio_logs_passes_bounds_and_limit():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.cardio_service, "list_logs", return_value=[]) as m:
+            mcp_server.get_cardio_logs(from_date="2026-06-01", to_date="2026-06-17", limit=50)
+        m.assert_called_once_with("u1", "2026-06-01", "2026-06-17", 50)
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_cardio_logs_clamps_limit():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.cardio_service, "list_logs", return_value=[]) as m:
+            mcp_server.get_cardio_logs(limit=500)
+        assert m.call_args[0][3] == 90
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_all_new_tools_require_auth():
+    """Every new read tool must raise when unauthenticated."""
+    for fn in [
+        mcp_server.get_nutrition_logs,
+        mcp_server.get_nutrition_summary,
+        mcp_server.get_nutrition_goals,
+        mcp_server.list_recipes,
+        mcp_server.list_favorites,
+        mcp_server.get_body_metrics,
+        mcp_server.get_cardio_logs,
+    ]:
+        with pytest.raises(RuntimeError, match="unauthenticated"):
+            fn()
