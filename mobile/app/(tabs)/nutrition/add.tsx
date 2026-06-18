@@ -350,6 +350,13 @@ export default function AddFoodScreen() {
       {showNoResults && (
         <View style={as.emptyState}>
           <Text style={as.emptyText}>No matches found.</Text>
+          <Pressable style={[as.aiRow, { marginTop: spacing.md }]} onPress={() => { void handleAIEstimate() }}>
+            <View style={{ flex: 1 }}>
+              <Text style={as.aiTitle}>Use AI to estimate "{query.trim()}"</Text>
+              <Text style={as.aiSub}>Best for home-cooked meals or unlisted foods</Text>
+            </View>
+            <Ionicons name="sparkles-outline" size={20} color="#0d9488" />
+          </Pressable>
         </View>
       )}
 
@@ -364,7 +371,7 @@ export default function AddFoodScreen() {
         )}
         renderItem={({ item }) => <FoodRow hit={item} onPress={() => openEdit(item)} />}
         ListFooterComponent={
-          query.trim().length > 1 ? (
+          query.trim().length > 1 && sections.length > 0 ? (
             <Pressable style={as.aiRow} onPress={() => { void handleAIEstimate() }}>
               <View style={{ flex: 1 }}>
                 <Text style={as.aiTitle}>Use AI to estimate "{query.trim()}"</Text>
