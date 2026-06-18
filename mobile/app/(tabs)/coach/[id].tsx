@@ -329,7 +329,7 @@ export default function CoachThread() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom + 49 : 0}
+      keyboardVerticalOffset={0}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -367,7 +367,7 @@ export default function CoachThread() {
       />
 
       {/* Composer */}
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: insets.bottom || spacing.sm }]}>
         <TextInput
           style={styles.input}
           value={input}
@@ -490,7 +490,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.sm,
-    paddingBottom: Platform.OS === 'ios' ? spacing.lg : spacing.md,
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,

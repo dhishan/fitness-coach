@@ -17,6 +17,7 @@ import {
   Platform,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Exercise, FinishResponse, SetEntry, Workout, WorkoutEntry, WorkoutTemplate } from '@fitness/shared-types'
 import { exercisesApi, templatesApi, workoutsApi } from '../../src/services/api'
@@ -518,6 +519,7 @@ function PlanChooserModal({
 export default function WorkoutScreen() {
   const router = useRouter()
   const qc = useQueryClient()
+  const insets = useSafeAreaInsets()
 
   const { data: activeWorkout, isLoading } = useQuery<Workout | null>({
     queryKey: ['workout', 'active'],
@@ -957,7 +959,10 @@ export default function WorkoutScreen() {
       </View>
 
       {/* Entry list */}
-      <ScrollView style={s.list} contentContainerStyle={s.listContent}>
+      <ScrollView
+        style={s.list}
+        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + spacing.xl }]}
+      >
         {grouped.length === 0 && (
           <Text style={s.emptyText}>No exercises yet. Tap "Add exercise" to begin.</Text>
         )}
@@ -1240,7 +1245,7 @@ const s = StyleSheet.create({
 
   // List
   list: { flex: 1 },
-  listContent: { padding: spacing.base, paddingBottom: 220 },
+  listContent: { padding: spacing.base },
   emptyText: { textAlign: 'center', color: colors.gray400, fontSize: 14, paddingVertical: spacing.xl },
 
   // Entry card
