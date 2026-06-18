@@ -95,6 +95,7 @@ export default function TabLayout() {
         name="coach"
         options={{
           title: 'Coach',
+          headerShown: false,
           tabBarIcon: ({ focused }) => <TabIcon label="Coach" focused={focused} />,
         }}
       />
