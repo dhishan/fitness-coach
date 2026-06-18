@@ -7,7 +7,10 @@ CLASSIFIER_SYSTEM = (
     "Classify the user's request as 'simple' or 'complex'. "
     "simple = a single fact or recent number answered by ONE tool call (e.g. "
     "'how many sessions this week', 'what is my best bench', 'show last workout'). "
-    "complex = analysis, recommendation, plan change, multi-step reasoning, anything ambiguous. "
+    "Follow-up questions that just need to re-fetch one piece of data ('and the squat?', "
+    "'what about last week?', 'show me cardio too') are also simple. "
+    "complex = analysis, recommendation, plan change, multi-step reasoning, anything "
+    "ambiguous, or anything asking 'why' or 'what should I do'. "
     "Reply with exactly one word, lowercase: simple or complex."
 )
 

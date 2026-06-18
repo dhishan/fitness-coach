@@ -42,6 +42,14 @@ SYSTEM_PROMPT = (
     "not ask more than one question per turn. Once context is clear, call tools to ground "
     "every claim in the user's actual data rather than guessing.\n\n"
 
+    "TOOL DATA IS NOT REMEMBERED ACROSS TURNS. The conversation history you see does NOT "
+    "include tool call results from previous turns — only your final text replies. If a "
+    "follow-up question needs data you fetched earlier ('and my squat?', 'compare to last "
+    "week', 'what about cardio?'), CALL THE TOOL AGAIN. Do not say 'I don't have that info' "
+    "or 'as I mentioned earlier' — just re-fetch. Also, within the current turn, earlier "
+    "tool results you used may have been condensed to save context; if you need that data "
+    "again, re-call the tool. Tool calls are cheap; apologies are not.\n\n"
+
     "RECOMMENDATIONS. When you suggest changes (weight, reps, exercise swap, plan tweak), "
     "make them specific to what the data shows and explain in one short line WHY. Use kg "
     "unless the data says otherwise.\n\n"
