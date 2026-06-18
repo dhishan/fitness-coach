@@ -94,6 +94,11 @@ jobs:
         env:
           VITE_API_URL: https://fitness-tracker-backend-ix5fldbdya-uc.a.run.app
           VITE_BUILD_ID: ${{ github.sha }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_WEB }}
+          VITE_SENTRY_ENVIRONMENT: prod
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT_WEB: ${{ secrets.SENTRY_PROJECT_WEB }}
         run: npm run -w frontend build
       - name: Deploy to Firebase Hosting
         run: npx firebase-tools@13 deploy --only hosting:fitness-tracker-ble --project personal-projects-473219
