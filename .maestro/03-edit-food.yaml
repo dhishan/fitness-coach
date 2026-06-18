@@ -1,0 +1,41 @@
+appId: org.blueelephants.fitnesstracker
+---
+# Precondition: at least one food log entry exists for today.
+# Opens Nutrition, taps the first log row to open the edit sheet, asserts the
+# FoodEditSheet is open, then closes it.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Nutrition"
+    timeout: 15000
+- tapOn:
+    text: "Nutrition"
+- extendedWaitUntil:
+    visible:
+      text: "kcal"
+    timeout: 15000
+# Long-press the first log row to trigger the Edit alert
+- longPressOn:
+    index: 0
+    text: "kcal"
+  optional: true
+# Tap "Edit" from the alert that appears
+- tapOn:
+    text: "Edit"
+  optional: true
+- extendedWaitUntil:
+    anyOf:
+      - visible:
+          text: "Macros"
+      - visible:
+          text: "When"
+    timeout: 10000
+- assertVisible:
+    anyOf:
+      - text: "Macros"
+      - text: "When"
+# Close the sheet
+- swipe:
+    direction: DOWN
+    duration: 400

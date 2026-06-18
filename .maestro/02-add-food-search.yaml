@@ -1,0 +1,40 @@
+appId: org.blueelephants.fitnesstracker
+---
+# Open Nutrition tab, tap + Add food, search for "dal", assert at least one
+# result row appears, then cancel.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Nutrition"
+    timeout: 15000
+- tapOn:
+    text: "Nutrition"
+- extendedWaitUntil:
+    visible:
+      text: "+ Add food"
+    timeout: 15000
+- tapOn:
+    text: "+ Add food"
+- extendedWaitUntil:
+    visible:
+      text: "Add food"
+    timeout: 10000
+- tapOn:
+    id: "searchInput"
+  optional: true
+- inputText: "dal"
+- extendedWaitUntil:
+    visible:
+      text: "Results"
+    timeout: 20000
+- assertVisible:
+    text: "Results"
+# Dismiss the sheet by tapping Cancel or swiping down
+- tapOn:
+    text: "Cancel"
+  optional: true
+- swipe:
+    direction: DOWN
+    duration: 300
+  optional: true

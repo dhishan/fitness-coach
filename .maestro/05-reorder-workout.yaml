@@ -1,0 +1,35 @@
+appId: org.blueelephants.fitnesstracker
+---
+# Precondition: an active (in-progress) workout with at least 2 exercises.
+# Opens Workout tab, reads the first exercise name, taps the move-down button
+# on the first card, and asserts the order changed.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Workout"
+    timeout: 15000
+- tapOn:
+    text: "Workout"
+- extendedWaitUntil:
+    visible:
+      accessibilityLabel: "move down"
+    timeout: 15000
+# Assert at least 2 cards have the move-down button (first card will have move-down)
+- assertVisible:
+    accessibilityLabel: "move down"
+# Capture first card — we check the "move up" button appears on what was card 1
+# (Maestro doesn't have variable capture so we assert structural change)
+# Tap "move down" on the first exercise card
+- tapOn:
+    accessibilityLabel: "move down"
+    index: 0
+# After the swap, the first position now has a "move up" enabled button and the
+# second position now has that exercise. The previously-first card should now
+# have "move up" available (it was at top before).
+- extendedWaitUntil:
+    visible:
+      accessibilityLabel: "move up"
+    timeout: 5000
+- assertVisible:
+    accessibilityLabel: "move up"

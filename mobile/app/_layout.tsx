@@ -3,6 +3,7 @@ import Constants from 'expo-constants'
 import { useEffect } from 'react'
 import { ActivityIndicator, View, Keyboard } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
+import * as Linking from 'expo-linking'
 import * as SplashScreen from 'expo-splash-screen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuth } from '../src/store/auth'
@@ -47,6 +48,41 @@ function RootLayout() {
   useEffect(() => {
     hydrate()
     void useUnitStore.getState().hydrate()
+  }, [])
+
+  // Dev-only: accept a JWT via deep link so Maestro UI tests can log in
+  // without going through Google OAuth.
+  // Example: fitness://dev-login?token=<JWT>
+  // This handler is compiled out in Release builds (guarded by __DEV__).
+  useEffect(() => {
+    if (!__DEV__) return
+    const handleUrl = ({ url }: { url: string }) => {
+      try {
+        const parsed = Linking.parse(url)
+        if (parsed.path === 'dev-login' && parsed.queryParams?.token) {
+          const jwt = String(parsed.queryParams.token)
+          // Decode the payload to extract user info (no signature verification
+          // needed here — this is a dev-only convenience hook).
+          const parts = jwt.split('.')
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]))
+            void useAuth.getState().setAuth(jwt, {
+              id: payload.sub ?? '',
+              email: payload.email ?? '',
+              display_name: payload.display_name ?? payload.email ?? '',
+            })
+          }
+        }
+      } catch {
+        // silently ignore malformed links in dev
+      }
+    }
+    const subscription = Linking.addEventListener('url', handleUrl)
+    // Also handle the initial URL if the app was cold-started from the link
+    void Linking.getInitialURL().then((url) => {
+      if (url) handleUrl({ url })
+    })
+    return () => subscription.remove()
   }, [])
 
   useEffect(() => {

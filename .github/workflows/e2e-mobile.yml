@@ -1,0 +1,54 @@
+# e2e-mobile.yml — Maestro Cloud UI automation
+#
+# This workflow is DISABLED by default (workflow_dispatch only).
+# It runs the .maestro/ flows against Maestro Cloud free tier.
+#
+# To enable on push: add `push: { branches: [main] }` under `on:`.
+#
+# Required secrets:
+#   MAESTRO_API_KEY     — from https://cloud.mobile.dev (free tier available)
+#   GOOGLE_SERVICES_INFO_PLIST — base64-encoded GoogleService-Info.plist for
+#                                signing the debug IPA that Maestro Cloud uploads
+#
+# Optional env vars (set as repo vars, not secrets):
+#   MAESTRO_APP_FILE    — path to .ipa or .app to upload (default: uses last
+#                         uploaded build in your Maestro Cloud workspace)
+#
+# Flow notes:
+#   00-login.yaml needs MAESTRO_LOGIN_TOKEN (a valid JWT from your backend).
+#   Store it as a secret: MAESTRO_LOGIN_TOKEN.
+#   Flows 03 and 05 need pre-seeded data (food log + active workout). Either
+#   seed via API before Maestro runs or skip those flows in CI with:
+#     maestro test .maestro/ --exclude 03-edit-food.yaml --exclude 05-reorder-workout.yaml
+
+name: E2E Mobile (Maestro Cloud)
+
+on:
+  workflow_dispatch:
+    inputs:
+      flow:
+        description: "Single flow to run (e.g. 02-add-food-search.yaml). Leave blank for all flows."
+        required: false
+        default: ""
+
+jobs:
+  maestro-cloud:
+    name: Maestro Cloud
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Maestro Cloud
+        uses: mobile-dev-inc/action-maestro-cloud@v1
+        with:
+          api-key: ${{ secrets.MAESTRO_API_KEY }}
+          # If you build and upload an IPA in a prior step, set app-file here:
+          # app-file: path/to/FitnessTracker.ipa
+          workspace: .maestro
+          env: |
+            MAESTRO_LOGIN_TOKEN=${{ secrets.MAESTRO_LOGIN_TOKEN }}
+          # To run a single flow: pass the flow input as an include-filter
+          # include-flows: ${{ inputs.flow }}

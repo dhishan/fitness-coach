@@ -1,0 +1,10 @@
+appId: org.blueelephants.fitnesstracker
+---
+# Bootstrap auth via the dev-only deep link.
+# Requires MAESTRO_LOGIN_TOKEN env var to be set.
+# This flow must run before any flow that needs a logged-in user.
+- openLink: "fitness://dev-login?token=${MAESTRO_LOGIN_TOKEN}"
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 15000

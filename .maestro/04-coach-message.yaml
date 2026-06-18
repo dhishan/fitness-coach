@@ -1,0 +1,47 @@
+appId: org.blueelephants.fitnesstracker
+---
+# Opens Coach tab, starts a new chat, sends a message, and waits for the
+# assistant to reply with hamstring exercise content.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Coach"
+    timeout: 15000
+- tapOn:
+    text: "Coach"
+- extendedWaitUntil:
+    visible:
+      text: "New chat"
+    timeout: 15000
+- tapOn:
+    text: "New chat"
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - id: "messageInput"
+        - text: "Ask your coach"
+    timeout: 10000
+- tapOn:
+    anyOf:
+      - id: "messageInput"
+      - text: "Ask your coach"
+  optional: true
+- inputText: "what should I do for hamstrings?"
+- tapOn:
+    anyOf:
+      - id: "sendButton"
+      - accessibilityLabel: "Send"
+      - text: "Send"
+# Wait up to 30s for the AI reply to contain hamstring exercise keywords
+- extendedWaitUntil:
+    anyOf:
+      - visible:
+          text: "Romanian"
+      - visible:
+          text: "RDL"
+      - visible:
+          text: "deadlift"
+      - visible:
+          text: "curl"
+    timeout: 30000

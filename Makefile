@@ -94,6 +94,13 @@ mobile-publish-ipa: ## Publish the most-recent built .ipa to a GitHub Release an
 	@cd ../family-expense-tracker && git add frontend/public/altstore.json && git commit -m "release: fitness-tracker v$(VERSION) (AltStore source)" && git push
 	@echo "Pushed. Both phones will see the update in AltStore after Firebase Hosting deploys (~1 min)."
 
+e2e-mobile: ## run all Maestro flows against iOS sim (requires: brew install maestro, JWT in ~/.fitness-test-jwt)
+	export MAESTRO_LOGIN_TOKEN=$$(cat ~/.fitness-test-jwt 2>/dev/null || echo "missing-token"); \
+	maestro test .maestro/
+
+e2e-mobile-flow: ## run a single Maestro flow: make e2e-mobile-flow FLOW=02-add-food-search.yaml
+	maestro test .maestro/$(FLOW)
+
 mobile-release: ## Bump version, tag, push — triggers GH Actions to build + publish IPA. BUMP=patch|minor|major (default patch).
 	@BUMP=$${BUMP:-patch}; \
 	LAST=$$(git tag --list 'mobile-v*' | sort -V | tail -1 | sed 's/^mobile-v//'); \

@@ -212,3 +212,28 @@ GitHub Actions repo secrets (read by `ci-cd.yml` and `release-ipa.yml`):
 ## For developers
 
 Codebase notes and architecture lessons live in `CLAUDE.md`. Sister project: [family-expense-tracker](https://github.com/dhishan/family-expense-tracker) — same AltStore source, same patterns.
+
+### Automated UI tests (Maestro)
+
+Install Maestro once:
+```
+brew install maestro
+```
+
+Get a test JWT (needed to bypass Google Sign-In in flows):
+```
+bash scripts/get-test-jwt.sh
+```
+This saves your token to `~/.fitness-test-jwt`. Tokens expire after 1 hour.
+
+Run all flows against the running iOS sim:
+```
+make e2e-mobile
+```
+
+Run a single flow:
+```
+make e2e-mobile-flow FLOW=02-add-food-search.yaml
+```
+
+Flows: `00-login` (auth), `01-launch`, `02-add-food-search`, `03-edit-food` (needs a food log today), `04-coach-message`, `05-reorder-workout` (needs an active workout).

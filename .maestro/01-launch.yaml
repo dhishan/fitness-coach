@@ -1,0 +1,12 @@
+appId: org.blueelephants.fitnesstracker
+---
+# Verify the app launches and lands on the Home tab or the login screen.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    anyOf:
+      - visible:
+          text: "Home"
+      - visible:
+          text: "Sign in with Google"
+    timeout: 20000
