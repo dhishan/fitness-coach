@@ -103,6 +103,57 @@ MAX_TOOL_ROUNDS = 6
 TEXT_CHUNK = 400  # chars per text event
 
 
+def _trim_tool_exchanges(messages: list[dict], keep_last: int = 1) -> list[dict]:
+    """Drop tool_call + tool messages from earlier agentic rounds so each new
+    LLM call only sees the most recent tool exchange. The system prompt and
+    plain user/assistant turns are preserved verbatim. Older tool exchanges
+    are replaced with a single placeholder line so the model knows tools
+    were consulted but doesn't re-pay for the payload. If it needs the data
+    again it can re-call the tool — usually a small fraction of the input cost.
+    """
+    if keep_last < 0:
+        keep_last = 0
+    # Index assistant-with-tool_calls messages and the tool result blocks that follow.
+    rounds: list[tuple[int, int]] = []
+    i = 0
+    while i < len(messages):
+        m = messages[i]
+        if m.get("role") == "assistant" and m.get("tool_calls"):
+            start = i
+            j = i + 1
+            while j < len(messages) and messages[j].get("role") == "tool":
+                j += 1
+            rounds.append((start, j))
+            i = j
+        else:
+            i += 1
+    if len(rounds) <= keep_last:
+        return messages
+    drop_until = rounds[-keep_last][0] if keep_last > 0 else len(messages)
+    pruned: list[dict] = []
+    summary_inserted = False
+    for idx, m in enumerate(messages):
+        if idx < drop_until and m.get("role") in ("tool",):
+            continue
+        if idx < drop_until and m.get("role") == "assistant" and m.get("tool_calls"):
+            if not summary_inserted:
+                names = []
+                for r_start, r_end in rounds:
+                    if r_start >= drop_until:
+                        break
+                    am = messages[r_start]
+                    for tc in am.get("tool_calls") or []:
+                        names.append((tc.get("function") or {}).get("name"))
+                pruned.append({
+                    "role": "assistant",
+                    "content": f"(earlier tool calls in this turn, results consumed: {', '.join(n for n in names if n)})",
+                })
+                summary_inserted = True
+            continue
+        pruned.append(m)
+    return pruned
+
+
 def _chunk_text(text: str) -> list[dict]:
     return [{"type": "text", "text": text[i:i + TEXT_CHUNK]}
             for i in range(0, len(text), TEXT_CHUNK)] or [{"type": "text", "text": ""}]
@@ -123,6 +174,7 @@ def generate_turn_sync(user_id: str, conv_id: str, turn_id: str,
     try:
         chosen_model = select_model(history)
         for _ in range(MAX_TOOL_ROUNDS):
+            messages = _trim_tool_exchanges(messages, keep_last=1)
             resp = llm.complete(messages, tools=TOOLS, model=chosen_model, metadata={
                 "generation_name": "coach-turn",
                 "session_id": conv_id,
