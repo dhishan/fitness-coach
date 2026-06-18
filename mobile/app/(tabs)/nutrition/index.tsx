@@ -1640,7 +1640,12 @@ function RecipePickerModal({
         <View style={s.modalCard}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Log a recipe</Text>
-            <Pressable onPress={onClose}><Text style={s.modalClose}>Close</Text></Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.base }}>
+              <Pressable onPress={() => { onClose(); router.push('/recipes/new' as never) }}>
+                <Text style={[s.modalClose, { color: colors.primary }]}>+ New</Text>
+              </Pressable>
+              <Pressable onPress={onClose}><Text style={s.modalClose}>Close</Text></Pressable>
+            </View>
           </View>
 
           {isLoading ? (
