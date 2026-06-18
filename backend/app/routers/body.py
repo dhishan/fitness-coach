@@ -19,7 +19,10 @@ async def list_metrics(
 
 @router.post("", status_code=201)
 async def create_metric(body: BodyMetricCreate, user: CurrentUser = Depends(get_current_user)):
-    return await asyncio.to_thread(body_service.create_metric, user.user_id, body.model_dump())
+    doc = await asyncio.to_thread(body_service.create_metric, user.user_id, body.model_dump())
+    from app.observability import track
+    track("body.metric.created", user_id=user.user_id)
+    return doc
 
 
 @router.get("/latest")

@@ -55,6 +55,8 @@ async def start(body: StartRequest, user: CurrentUser = Depends(get_current_user
         chat_store.create_turn, conv_id, user.user_id, "assistant", "", "pending")
 
     _spawn_generation(user.user_id, conv_id, asst_turn["id"], history)
+    from app.observability import track
+    track("chat.message.sent", user_id=user.user_id, conversation_id=conv_id, message_len=len(body.message))
     return {"conversation_id": conv_id, "user_turn_id": user_turn["id"],
             "assistant_turn_id": asst_turn["id"]}
 

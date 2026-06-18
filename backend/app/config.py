@@ -31,7 +31,8 @@ class Settings(BaseSettings):
     apple_audience_prefix: str = "org.blueelephants.fitnesstracker"
     sentry_dsn: str = ""
     sentry_environment: str = "development"
-    sentry_traces_sample_rate: float = 0.1
+    sentry_traces_sample_rate: float = 1.0
+    sentry_profiles_sample_rate: float = 1.0
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 

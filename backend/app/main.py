@@ -23,16 +23,25 @@ if settings.environment != "development" and settings.jwt_secret_key == "dev-onl
     )
 
 if settings.sentry_dsn:
+    import logging as _logging
+
     import sentry_sdk
     from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
     from sentry_sdk.integrations.starlette import StarletteIntegration
 
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
         environment=settings.sentry_environment,
         traces_sample_rate=settings.sentry_traces_sample_rate,
+        profiles_sample_rate=settings.sentry_profiles_sample_rate,
         send_default_pii=False,
-        integrations=[StarletteIntegration(), FastApiIntegration()],
+        attach_stacktrace=True,
+        integrations=[
+            StarletteIntegration(),
+            FastApiIntegration(),
+            LoggingIntegration(level=_logging.INFO, event_level=_logging.ERROR),
+        ],
     )
 
 

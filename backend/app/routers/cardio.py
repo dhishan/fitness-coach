@@ -24,7 +24,10 @@ async def list_logs(
 
 @router.post("", status_code=201)
 async def create_log(body: CardioLogCreate, user: CurrentUser = Depends(get_current_user)):
-    return await asyncio.to_thread(cardio_service.create_log, user.user_id, body.model_dump())
+    doc = await asyncio.to_thread(cardio_service.create_log, user.user_id, body.model_dump())
+    from app.observability import track
+    track("cardio.log.created", user_id=user.user_id, activity=body.activity, duration_min=body.duration_min)
+    return doc
 
 
 @router.get("/{log_id}")

@@ -20,4 +20,10 @@ async def get_current_user(authorization: str | None = Header(default=None)) -> 
         payload = verify_access_token(token)
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    return CurrentUser(user_id=payload["sub"], email=payload["email"])
+    user = CurrentUser(user_id=payload["sub"], email=payload["email"])
+    try:
+        import sentry_sdk
+        sentry_sdk.set_user({"id": user.user_id, "email": user.email})
+    except Exception:
+        pass
+    return user

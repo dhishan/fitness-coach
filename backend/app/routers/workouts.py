@@ -70,6 +70,14 @@ async def finish_workout(workout_id: str, user: CurrentUser = Depends(get_curren
     doc = await asyncio.to_thread(workout_service.finish_workout, workout_id, user.user_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="Workout not found")
+    from app.observability import track
+    track(
+        "workout.finished",
+        user_id=user.user_id,
+        workout_id=workout_id,
+        entries=len(doc.get("entries") or []),
+        total_volume=doc.get("total_volume"),
+    )
     return doc
 
 

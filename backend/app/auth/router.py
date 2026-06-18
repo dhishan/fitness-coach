@@ -50,6 +50,9 @@ async def auth_google(request: Request, body: GoogleAuthRequest):
 
     await asyncio.to_thread(_upsert)
 
+    from app.observability import track
+    track("auth.signed_in", user_id=uid, provider="google")
+
     return {
         "access_token": create_access_token(user_id=uid, email=email),
         "token_type": "bearer",
@@ -109,6 +112,9 @@ async def auth_apple(request: Request, body: AppleAuthRequest):
         )
 
     await asyncio.to_thread(_upsert)
+
+    from app.observability import track
+    track("auth.signed_in", user_id=uid, provider="apple")
 
     return {
         "access_token": create_access_token(user_id=uid, email=email),

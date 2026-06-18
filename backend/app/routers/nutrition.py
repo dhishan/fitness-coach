@@ -57,6 +57,8 @@ async def estimate_text(body: dict, user: CurrentUser = Depends(get_current_user
     result = await asyncio.to_thread(nutrition_ai.estimate_from_text, user.user_id, str(text).strip())
     if "error" in result:
         raise HTTPException(status_code=422, detail=result["error"])
+    from app.observability import track
+    track("nutrition.estimate.text", user_id=user.user_id, name=result.get("name"))
     return result
 
 
@@ -78,6 +80,8 @@ async def estimate_label(body: dict, user: CurrentUser = Depends(get_current_use
     )
     if "error" in result:
         raise HTTPException(status_code=422, detail=result["error"])
+    from app.observability import track
+    track("nutrition.estimate.label", user_id=user.user_id, name=result.get("name"))
     return result
 
 
@@ -139,7 +143,17 @@ async def estimate_photo(body: dict, user: CurrentUser = Depends(get_current_use
 
 @router.post("/logs", status_code=201)
 async def create_log(body: FoodLogCreate, user: CurrentUser = Depends(get_current_user)):
-    return await asyncio.to_thread(food_service.create_log, user.user_id, body.model_dump())
+    doc = await asyncio.to_thread(food_service.create_log, user.user_id, body.model_dump())
+    from app.observability import track
+    track(
+        "nutrition.log.created",
+        user_id=user.user_id,
+        food_name=body.name,
+        source=getattr(body, "source", None),
+        meal=getattr(body, "meal", None),
+        calories=(body.macros or {}).get("calories") if isinstance(body.macros, dict) else getattr(body.macros, "calories", None),
+    )
+    return doc
 
 
 @router.get("/logs")
@@ -235,7 +249,10 @@ async def list_recipes(user: CurrentUser = Depends(get_current_user)):
 
 @router.post("/recipes", status_code=201)
 async def create_recipe(body: RecipeCreate, user: CurrentUser = Depends(get_current_user)):
-    return await asyncio.to_thread(recipe_service.create_recipe, user.user_id, body.model_dump())
+    doc = await asyncio.to_thread(recipe_service.create_recipe, user.user_id, body.model_dump())
+    from app.observability import track
+    track("recipe.created", user_id=user.user_id, name=body.name, ingredients=len(body.ingredients or []))
+    return doc
 
 
 @router.get("/recipes/{recipe_id}")
@@ -282,4 +299,6 @@ async def log_recipe(
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
+    from app.observability import track
+    track("recipe.logged", user_id=user.user_id, recipe_id=recipe_id, servings=getattr(body, "servings_eaten", None))
     return result
