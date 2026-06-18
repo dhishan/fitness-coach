@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.schemas import FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate, RecipeCreate, RecipeLogRequest, RecipeUpdate
 from app.security.validators import _check_food_image_url, sanitize_hint
-from app.services import food_service, goals_service, nutrition_ai, openfoodfacts, recipe_service, usda
+from app.services import food_service, goals_service, ifct, nutrition_ai, off_search, openfoodfacts, recipe_service, usda
 
 router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
 
@@ -87,9 +87,32 @@ async def search_foods(
     limit: int = Query(default=8, ge=1, le=20),
     user: CurrentUser = Depends(get_current_user),
 ):
-    """USDA-backed search for ingredient picker. Each hit is per-serving
-    Estimation-shape so the recipe builder can drop values straight in."""
-    return await asyncio.to_thread(usda.search_full, q, limit)
+    """Multi-source ingredient search: USDA + OpenFoodFacts + IFCT 2017.
+
+    All three sources run in parallel. Results are interleaved and
+    deduped by lowercase name. Total capped at `limit`.
+    """
+    usda_hits, off_hits, ifct_hits = await asyncio.gather(
+        asyncio.to_thread(usda.search_full, q, limit),
+        asyncio.to_thread(off_search.search_off, q, limit),
+        asyncio.to_thread(ifct.search_ifct, q, limit),
+    )
+
+    # Tag USDA hits (off_search + ifct already set source)
+    for h in usda_hits:
+        h.setdefault("source", "usda")
+
+    # Interleave: one USDA, one OFF, one IFCT, repeat
+    merged: list[dict] = []
+    seen: set[str] = set()
+    for group in [usda_hits, off_hits, ifct_hits]:
+        for hit in group:
+            key = hit.get("name", "").lower()
+            if key and key not in seen:
+                seen.add(key)
+                merged.append(hit)
+
+    return merged[:limit]
 
 
 @router.post("/estimate/photo")
