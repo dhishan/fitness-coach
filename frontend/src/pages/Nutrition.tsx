@@ -2,8 +2,9 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import type { Estimation, FoodLog, FoodSuggestion, Goals, GoalSuggestion, Macros, MealType, Micros } from '@fitness/shared-types'
+import type { Estimation, FoodLog, Goals, GoalSuggestion, Macros, MealType, Micros } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi } from '../services/api'
+import AddFood from './AddFood'
 // nutritionApi.barcode is used inline below
 import { toLocalISODate } from '../lib/dates'
 
@@ -601,7 +602,7 @@ function GoalsSetModal({
 // Main page
 // ---------------------------------------------------------------------------
 
-type Composer = 'idle' | 'text' | 'photo' | 'favorites' | 'barcode' | 'recipe'
+type Composer = 'idle' | 'photo' | 'barcode' | 'recipe'
 
 export default function Nutrition() {
   const today = toLocalISODate()
@@ -609,7 +610,7 @@ export default function Nutrition() {
   const [date, setDate] = useState(today)
   const [composer, setComposer] = useState<Composer>('idle')
   const [preview, setPreview] = useState<PreviewState | null>(null)
-  const [textInput, setTextInput] = useState('')
+  const [addFoodOpen, setAddFoodOpen] = useState(false)
   const [estimating, setEstimating] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [goalsModalOpen, setGoalsModalOpen] = useState(false)
@@ -619,9 +620,6 @@ export default function Nutrition() {
   const [barcodeLoading, setBarcodeLoading] = useState(false)
 
   const photoInputRef = useRef<HTMLInputElement>(null)
-  const [suggestQ, setSuggestQ] = useState('')
-  const [highlightIdx, setHighlightIdx] = useState(-1)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const qc = useQueryClient()
 
   const { data: dayLogs, isLoading: loadingLogs } = useQuery({
@@ -632,19 +630,6 @@ export default function Nutrition() {
   const { data: goals } = useQuery({
     queryKey: ['goals'],
     queryFn: () => nutritionApi.goals.get(),
-  })
-
-  const { data: favorites = [] } = useQuery({
-    queryKey: ['favorites'],
-    queryFn: () => nutritionApi.favorites.list(),
-    enabled: composer === 'favorites',
-  })
-
-  const { data: foodSuggestions = [] } = useQuery<FoodSuggestion[]>({
-    queryKey: ['food-suggestions', suggestQ],
-    queryFn: () => nutritionApi.suggestFoods(suggestQ, 10),
-    enabled: composer === 'text',
-    staleTime: 30_000,
   })
 
   const totals = dayLogs?.totals ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
@@ -659,37 +644,7 @@ export default function Nutrition() {
     grouped[g].push(log)
   }
 
-  // Reset autocomplete state when composer closes
-  const closeComposer = () => {
-    setComposer('idle')
-    setTextInput('')
-    setSuggestQ('')
-    setHighlightIdx(-1)
-  }
-
-  // Select a food suggestion — fills preview directly, no AI call
-  const handleSelectSuggestion = (s: FoodSuggestion) => {
-    setPreview({
-      estimation: { name: s.name, serving: s.serving, macros: s.macros, confidence: 1 },
-      source: s.source === 'favorite' ? 'favorite' : 'manual',
-    })
-    closeComposer()
-  }
-
-  // Text estimation
-  const handleEstimateText = async () => {
-    if (!textInput.trim()) return
-    setEstimating(true)
-    try {
-      const est = await nutritionApi.estimateText(textInput.trim())
-      setPreview({ estimation: est, source: 'ai_text' })
-      closeComposer()
-    } catch {
-      toast.error('Could not estimate. Try rephrasing.')
-    } finally {
-      setEstimating(false)
-    }
-  }
+  const closeComposer = () => setComposer('idle')
 
   // Photo estimation
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -714,19 +669,6 @@ export default function Nutrition() {
       setEstimating(false)
       // reset input so same file can be re-selected
       if (photoInputRef.current) photoInputRef.current.value = ''
-    }
-  }
-
-  // Log from favorite
-  const handleLogFavorite = async (favId: string) => {
-    try {
-      await nutritionApi.favorites.log(favId, date)
-      toast.success('Logged from favorites')
-      void qc.invalidateQueries({ queryKey: ['day-logs', date] })
-      void qc.invalidateQueries({ queryKey: ['favorites'] })
-      closeComposer()
-    } catch {
-      toast.error('Could not log favorite')
     }
   }
 
@@ -918,138 +860,34 @@ export default function Nutrition() {
           </div>
 
           {composer === 'idle' && (
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex flex-col gap-3">
               <button
-                onClick={() => setComposer('text')}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
+                onClick={() => setAddFoodOpen(true)}
+                className="w-full py-3 rounded-xl bg-primary-500 text-white text-sm font-bold hover:bg-primary-600 transition-colors"
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                <span>Type a meal</span>
+                + Add food
               </button>
-              <button
-                onClick={() => photoInputRef.current?.click()}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span>Camera</span>
-              </button>
-              <button
-                onClick={() => setComposer('favorites')}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <span>Favorites</span>
-              </button>
-              <button
-                onClick={() => { setComposer('barcode'); setBarcodeInput(''); setBarcodeError(null) }}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5v14M7 5v14M11 5v10M15 5v14M19 5v14"/></svg>
-                <span>Barcode</span>
-              </button>
-              <button
-                onClick={() => setComposer('recipe')}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 21v-3a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v3"/><circle cx="12" cy="7" r="4"/></svg>
-                <span>Recipe</span>
-              </button>
-            </div>
-          )}
-
-          {composer === 'text' && (
-            <div className="flex flex-col gap-2">
-              <div className="relative">
-                <textarea
-                  autoFocus
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
-                  placeholder="e.g. two scrambled eggs and toast with butter"
-                  rows={2}
-                  value={textInput}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setTextInput(val)
-                    setHighlightIdx(-1)
-                    if (debounceRef.current) clearTimeout(debounceRef.current)
-                    debounceRef.current = setTimeout(() => {
-                      setSuggestQ(val.trim())
-                    }, 200)
-                  }}
-                  onKeyDown={(e) => {
-                    if (foodSuggestions.length > 0) {
-                      if (e.key === 'ArrowDown') {
-                        e.preventDefault()
-                        setHighlightIdx((i) => Math.min(i + 1, foodSuggestions.length - 1))
-                        return
-                      }
-                      if (e.key === 'ArrowUp') {
-                        e.preventDefault()
-                        setHighlightIdx((i) => Math.max(i - 1, 0))
-                        return
-                      }
-                      if (e.key === 'Escape') {
-                        setSuggestQ('')
-                        setHighlightIdx(-1)
-                        return
-                      }
-                      if (e.key === 'Enter' && !e.shiftKey && highlightIdx >= 0) {
-                        e.preventDefault()
-                        handleSelectSuggestion(foodSuggestions[highlightIdx])
-                        return
-                      }
-                    }
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      void handleEstimateText()
-                    }
-                  }}
-                />
-
-                {/* Autocomplete dropdown */}
-                {foodSuggestions.length > 0 ? (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                    {foodSuggestions.map((s, idx) => (
-                      <button
-                        key={`${s.source}:${s.name}`}
-                        onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s) }}
-                        onMouseEnter={() => setHighlightIdx(idx)}
-                        className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 hover:bg-gray-50 ${idx === highlightIdx ? 'bg-gray-50' : ''}`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-gray-800 truncate block">{s.name}</span>
-                          {s.serving && (
-                            <span className="text-xs text-gray-400">{s.serving}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className="text-xs font-medium text-primary-600">{Math.round(s.macros.calories)} kcal</span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${s.source === 'favorite' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
-                            {s.source === 'favorite' ? 'Saved' : 'Recent'}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : textInput.trim().length > 0 ? (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2">
-                    <span className="text-xs text-gray-400">No matches. Press Enter to estimate with AI.</span>
-                  </div>
-                ) : null}
-              </div>
-
               <div className="flex gap-2">
                 <button
-                  onClick={() => void handleEstimateText()}
-                  disabled={!textInput.trim()}
-                  className="flex-1 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-semibold disabled:opacity-50"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
                 >
-                  Estimate
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  <span>Camera</span>
                 </button>
                 <button
-                  onClick={closeComposer}
-                  className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm text-gray-600"
+                  onClick={() => { setComposer('barcode'); setBarcodeInput(''); setBarcodeError(null) }}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
                 >
-                  Cancel
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5v14M7 5v14M11 5v10M15 5v14M19 5v14"/></svg>
+                  <span>Barcode</span>
+                </button>
+                <button
+                  onClick={() => setComposer('recipe')}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium hover:bg-gray-50 flex flex-col items-center gap-1"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 21v-3a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v3"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span>Recipe</span>
                 </button>
               </div>
             </div>
@@ -1101,43 +939,6 @@ export default function Nutrition() {
             />
           )}
 
-          {composer === 'favorites' && (
-            <div className="flex flex-col gap-2">
-              {favorites.length === 0 ? (
-                <p className="text-sm text-gray-400 py-2">
-                  Save your recurring meals as favorites to log them in one tap.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
-                  {[...favorites].sort((a, b) => {
-                    if (!a.last_used_at) return 1
-                    if (!b.last_used_at) return -1
-                    return b.last_used_at.localeCompare(a.last_used_at)
-                  }).map((fav) => (
-                    <button
-                      key={fav.id}
-                      onClick={() => void handleLogFavorite(fav.id)}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 border border-gray-100"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-800">{fav.name}</span>
-                        <span className="text-xs text-primary-600 font-medium">{Math.round(fav.macros.calories)} kcal</span>
-                      </div>
-                      {fav.serving && (
-                        <span className="text-xs text-gray-400">{fav.serving}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button
-                onClick={closeComposer}
-                className="py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
         </div>
       )}
 
@@ -1299,6 +1100,18 @@ export default function Nutrition() {
           onSave={(g) => void handleSaveGoals(g)}
         />
       )}
+
+      <AddFood
+        open={addFoodOpen}
+        date={date}
+        initialMeal={defaultMealType()}
+        onClose={() => setAddFoodOpen(false)}
+        onLogged={() => {
+          setAddFoodOpen(false)
+          void qc.invalidateQueries({ queryKey: ['day-logs', date] })
+          void qc.invalidateQueries({ queryKey: ['dashboard'] })
+        }}
+      />
     </div>
   )
 }
