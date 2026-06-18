@@ -17,7 +17,7 @@ import * as FileSystem from 'expo-file-system/legacy'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { DayLogs, Favorite, FoodLog, MealType } from '@fitness/shared-types'
+import type { DayLogs, Favorite, FoodLog, MealType, Recipe } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi, type IngredientHit } from '../../../src/services/api'
 import type { FoodHit } from '../../../src/components/FoodEditSheet'
 import FoodEditSheet from '../../../src/components/FoodEditSheet'
@@ -61,6 +61,16 @@ function logToFoodHit(log: FoodLog): FoodHit {
 
 function favToFoodHit(fav: Favorite): FoodHit {
   return { name: fav.name, serving: fav.serving, macros: fav.macros, micros: null, source: 'favorite' }
+}
+
+function recipeToFoodHit(r: Recipe): FoodHit {
+  return {
+    name: r.name,
+    serving: `1 serving (of ${r.yields_servings})`,
+    macros: r.per_serving_macros,
+    micros: (r.per_serving_micros as unknown as Record<string, number>) ?? null,
+    source: 'recipe',
+  }
 }
 
 // ---- badge ----
@@ -145,6 +155,11 @@ export default function AddFoodScreen() {
     queryFn: () => nutritionApi.favorites.list(),
   })
 
+  const { data: recipes = [] } = useQuery<Recipe[]>({
+    queryKey: ['recipes'],
+    queryFn: () => nutritionApi.recipes.list(),
+  })
+
   const recentLogs: FoodLog[] = useMemo(() => {
     const items = dayLogs?.items ?? []
     return [...items].reverse().slice(0, query.trim() ? 10 : 5)
@@ -161,6 +176,12 @@ export default function AddFoodScreen() {
     const q = query.toLowerCase()
     return favorites.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 5)
   }, [favorites, query])
+
+  const filteredRecipes = useMemo(() => {
+    if (!query.trim()) return recipes.slice(0, 5)
+    const q = query.toLowerCase()
+    return recipes.filter((r) => r.name.toLowerCase().includes(q)).slice(0, 5)
+  }, [recipes, query])
 
   const handleQueryChange = (val: string) => {
     setQuery(val)
@@ -275,6 +296,7 @@ export default function AddFoodScreen() {
 
   const historyData: FoodHit[] = [
     ...filteredRecent.map(logToFoodHit),
+    ...filteredRecipes.map(recipeToFoodHit),
     ...filteredFavs.map(favToFoodHit),
   ]
   if (historyData.length > 0) {
@@ -291,7 +313,8 @@ export default function AddFoodScreen() {
     !searching &&
     searchResults.length === 0 &&
     filteredRecent.length === 0 &&
-    filteredFavs.length === 0
+    filteredFavs.length === 0 &&
+    filteredRecipes.length === 0
 
   return (
     <View style={as.screen}>
