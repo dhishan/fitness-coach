@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { chatApi } from '../../../src/services/api'
 import { colors, spacing, radius } from '../../../src/theme'
 import type { Conversation } from '@fitness/shared-types'
@@ -59,6 +60,7 @@ function ConversationRow({ item, onPress }: { item: Conversation; onPress: () =>
 
 export default function CoachScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { data: conversations, isLoading } = useQuery({
     queryKey: ['chat-conversations'],
     queryFn: chatApi.conversations,
@@ -67,7 +69,7 @@ export default function CoachScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <Text style={styles.headerTitle}>Conversations</Text>
         <TouchableOpacity
           style={styles.newBtn}
