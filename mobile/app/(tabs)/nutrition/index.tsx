@@ -311,6 +311,9 @@ function PreviewModal({
     }
     // Only send logged_at if user changed time
     const logged_at: string | undefined = timeChanged ? time.toISOString() : undefined
+    // Bake the servings count into the label so a multi-serving entry reads
+    // unambiguously in the day list (e.g. "2× 1 Roti (33g)").
+    const servingLabel = servings !== 1 ? `${round1(servings)}× ${serving}` : serving
     // Scale micros to the chosen servings (they aren't directly editable).
     const scaledMicros: Micros | undefined = baseMicros
       ? (Object.fromEntries(
@@ -324,7 +327,7 @@ function PreviewModal({
         await nutritionApi.logs.create({
           date,
           name,
-          serving,
+          serving: servingLabel,
           macros,
           source: state.source,
           meal_type: mealType,

@@ -208,10 +208,11 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
           ) as unknown as Micros)
         : null
 
+      const baseServing = hit.serving || '1 serving'
       const body: FoodLogCreate = {
         date: resolvedDate,
         name: hit.name,
-        serving: hit.serving || '1 serving',
+        serving: servings !== 1 ? `${round1(servings)}× ${baseServing}` : baseServing,
         macros: {
           calories: Number(calories),
           protein_g: Number(protein),
