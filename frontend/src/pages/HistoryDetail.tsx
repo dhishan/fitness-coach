@@ -50,6 +50,19 @@ export default function HistoryDetail() {
         },
       )
 
+      // The history calendar + home card read from other keys with a stale
+      // window — invalidate every workout list view so the deleted workout
+      // disappears immediately.
+      void queryClient.invalidateQueries({
+        predicate: (q) =>
+          Array.isArray(q.queryKey) &&
+          typeof q.queryKey[0] === 'string' &&
+          (q.queryKey[0] === 'workouts' ||
+            q.queryKey[0] === 'workouts-list' ||
+            q.queryKey[0] === 'workouts-month'),
+      })
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+
       toast.success('Workout deleted')
       navigate('/history', { replace: true })
     } catch {
