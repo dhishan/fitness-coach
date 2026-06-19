@@ -21,6 +21,7 @@ import type { DayLogs, Favorite, FoodLog, MealType, Recipe } from '@fitness/shar
 import { nutritionApi, uploadsApi, type IngredientHit } from '../../../src/services/api'
 import type { FoodHit } from '../../../src/components/FoodEditSheet'
 import FoodEditSheet from '../../../src/components/FoodEditSheet'
+import PhotoNoteModal from '../../../src/components/PhotoNoteModal'
 import { colors, radius, spacing } from '../../../src/theme'
 import { toLocalISODate } from '../../../src/lib/dates'
 import BarcodeScanner from '../../../components/BarcodeScanner'
@@ -142,6 +143,7 @@ export default function AddFoodScreen() {
   const [editSheetVisible, setEditSheetVisible] = useState(false)
   const [showBarcode, setShowBarcode] = useState(false)
   const [estimating, setEstimating] = useState(false)
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cacheRef = useRef<CacheEntry[]>([])
 
@@ -254,11 +256,15 @@ export default function AddFoodScreen() {
     if (!perm.granted) { Alert.alert('Permission required', 'Camera access needed.'); return }
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 })
     if (result.canceled || !result.assets[0]) return
+    // Defer estimation until the user adds an optional note about the meal.
+    setPendingPhotoUri(result.assets[0].uri)
+  }
+
+  const runPhotoEstimate = async (uri: string, note: string) => {
     setEstimating(true)
     try {
-      const asset = result.assets[0]
       const manip = await ImageManipulator.manipulateAsync(
-        asset.uri,
+        uri,
         [{ resize: { width: 1024 } }],
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
       )
@@ -269,7 +275,7 @@ export default function AddFoodScreen() {
         uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
       })
       if (put.status < 200 || put.status >= 300) throw new Error(`Upload failed (${put.status})`)
-      const est = await nutritionApi.estimatePhoto(signed.public_url)
+      const est = await nutritionApi.estimatePhoto(signed.public_url, note || undefined)
       openEdit({ name: est.name, serving: est.serving, macros: est.macros, micros: (est.micros ?? null) as Record<string, number> | null, source: 'usda' })
     } catch {
       Alert.alert('Error', 'Could not process photo. Try again.')
@@ -415,6 +421,17 @@ export default function AddFoodScreen() {
         initialMeal={mealType}
         onClose={() => setEditSheetVisible(false)}
         onLogged={handleLogged}
+      />
+
+      <PhotoNoteModal
+        visible={pendingPhotoUri !== null}
+        imageUri={pendingPhotoUri}
+        onCancel={() => setPendingPhotoUri(null)}
+        onSubmit={(note) => {
+          const uri = pendingPhotoUri
+          setPendingPhotoUri(null)
+          if (uri) void runPhotoEstimate(uri, note)
+        }}
       />
 
       <BarcodeScanner

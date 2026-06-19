@@ -38,6 +38,7 @@ import { colors, spacing, radius, card } from '../../../src/theme'
 import { toLocalISODate } from '../../../src/lib/dates'
 import BarcodeScanner from '../../../components/BarcodeScanner'
 import FoodEditSheet from '../../../src/components/FoodEditSheet'
+import PhotoNoteModal from '../../../src/components/PhotoNoteModal'
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -843,6 +844,7 @@ function NutritionScreenInner() {
   const [date, setDate] = useState(today)
   const [estimating, setEstimating] = useState(false)
   const [preview, setPreview] = useState<PreviewState | null>(null)
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null)
   const [showFavorites, setShowFavorites] = useState(false)
   const [showRecipes, setShowRecipes] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
@@ -928,13 +930,16 @@ function NutritionScreenInner() {
 
     if (result.canceled || !result.assets[0]) return
 
-    const asset = result.assets[0]
-    setEstimating(true)
+    // Defer estimation until the user adds an optional note about the meal.
+    setPendingPhotoUri(result.assets[0].uri)
+  }
 
+  const runPhotoEstimate = async (uri: string, note: string) => {
+    setEstimating(true)
     try {
       // Resize to max 1024px to control AI cost
       const manipulated = await ImageManipulator.manipulateAsync(
-        asset.uri,
+        uri,
         [{ resize: { width: 1024 } }],
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
       )
@@ -953,7 +958,7 @@ function NutritionScreenInner() {
         throw new Error(`Upload failed (${putRes.status})`)
       }
 
-      const est = await nutritionApi.estimatePhoto(signed.public_url)
+      const est = await nutritionApi.estimatePhoto(signed.public_url, note || undefined)
       setPreview({ estimation: est, source: 'ai_photo' })
     } catch (err) {
       console.warn('photo flow failed', err)
@@ -1343,6 +1348,18 @@ function NutritionScreenInner() {
 
       {/* Invisible sentinel for menuLog (unused var) */}
       {menuLog !== null && null}
+
+      {/* Optional note before photo estimation */}
+      <PhotoNoteModal
+        visible={pendingPhotoUri !== null}
+        imageUri={pendingPhotoUri}
+        onCancel={() => setPendingPhotoUri(null)}
+        onSubmit={(note) => {
+          const uri = pendingPhotoUri
+          setPendingPhotoUri(null)
+          if (uri) void runPhotoEstimate(uri, note)
+        }}
+      />
 
       {/* Barcode scanner modal */}
       <BarcodeScanner
