@@ -184,6 +184,7 @@ export interface FoodLogCreate {
   micros_source?: 'ai' | 'usda' | null;
 }
 export interface FoodLogUpdate {
+  date?: string;
   name?: string; serving?: string; macros?: Macros; notes?: string;
   meal_type?: MealType | null;
   logged_at?: string | null;

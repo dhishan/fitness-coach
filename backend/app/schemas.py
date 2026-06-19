@@ -119,6 +119,7 @@ class FoodLogCreate(BaseModel):
 
 
 class FoodLogUpdate(BaseModel):
+    date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     name: str | None = None
     serving: str | None = None
     macros: Macros | None = None

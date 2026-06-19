@@ -278,6 +278,10 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
         track('nutrition.log.created.via_sheet', { calories: body.macros.calories, source: hit.source ?? 'manual' })
       }
       void qc.invalidateQueries({ queryKey: ['day-logs', resolvedDate] })
+      if (date !== resolvedDate) {
+        // editing moved the log off the day we were viewing — refresh that day too
+        void qc.invalidateQueries({ queryKey: ['day-logs', date] })
+      }
       void qc.invalidateQueries({ queryKey: ['dashboard'] })
       onLogged()
     } catch {
