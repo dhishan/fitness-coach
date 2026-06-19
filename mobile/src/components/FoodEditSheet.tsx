@@ -162,6 +162,7 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
   const [time, setTime] = useState<Date>(() => mealDefaultTime(initMeal, today))
   const [timeOverridden, setTimeOverridden] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [microsOpen, setMicrosOpen] = useState(true)
 
@@ -355,7 +356,10 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
               ))}
               <Pressable
                 style={[es.dateChip, selectedDate === 'custom' && es.dateChipActive]}
-                onPress={() => setSelectedDate('custom')}
+                onPress={() => {
+                  setSelectedDate('custom')
+                  if (Platform.OS !== 'ios') setDatePickerOpen(true)
+                }}
               >
                 <Text style={[es.dateChipText, selectedDate === 'custom' && es.dateChipTextActive]}>
                   {selectedDate === 'custom' ? customDate : 'Custom'}
@@ -363,26 +367,69 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
               </Pressable>
             </View>
 
+            {selectedDate === 'custom' && (
+              <View style={es.timeRow}>
+                <Text style={es.timeLabel}>Date</Text>
+                {Platform.OS === 'ios' ? (
+                  <DateTimePicker
+                    value={new Date(customDate + 'T12:00:00')}
+                    mode="date"
+                    display="compact"
+                    maximumDate={new Date(today + 'T12:00:00')}
+                    onChange={(_evt, selected) => {
+                      if (selected) setCustomDate(toLocalISODate(selected))
+                    }}
+                  />
+                ) : (
+                  <>
+                    <Pressable style={es.timePill} onPress={() => setDatePickerOpen(true)}>
+                      <Text style={es.timePillText}>{customDate}</Text>
+                    </Pressable>
+                    {datePickerOpen && (
+                      <DateTimePicker
+                        value={new Date(customDate + 'T12:00:00')}
+                        mode="date"
+                        display="default"
+                        maximumDate={new Date(today + 'T12:00:00')}
+                        onChange={(_evt, selected) => {
+                          setDatePickerOpen(false)
+                          if (selected) setCustomDate(toLocalISODate(selected))
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+
             <View style={es.timeRow}>
               <Text style={es.timeLabel}>Time</Text>
-              <Pressable style={es.timePill} onPress={() => setPickerOpen(true)}>
-                <Text style={es.timePillText}>{fmtTime(time)}</Text>
-              </Pressable>
-              {pickerOpen && (
+              {Platform.OS === 'ios' ? (
                 <DateTimePicker
                   value={time}
                   mode="time"
                   display="compact"
                   onChange={(_evt, selected) => {
-                    if (Platform.OS !== 'ios') setPickerOpen(false)
                     if (selected) { setTime(selected); setTimeOverridden(true) }
                   }}
                 />
-              )}
-              {Platform.OS === 'ios' && pickerOpen && (
-                <Pressable onPress={() => setPickerOpen(false)} style={es.timeDone}>
-                  <Text style={es.timeDoneText}>Done</Text>
-                </Pressable>
+              ) : (
+                <>
+                  <Pressable style={es.timePill} onPress={() => setPickerOpen(true)}>
+                    <Text style={es.timePillText}>{fmtTime(time)}</Text>
+                  </Pressable>
+                  {pickerOpen && (
+                    <DateTimePicker
+                      value={time}
+                      mode="time"
+                      display="default"
+                      onChange={(_evt, selected) => {
+                        setPickerOpen(false)
+                        if (selected) { setTime(selected); setTimeOverridden(true) }
+                      }}
+                    />
+                  )}
+                </>
               )}
             </View>
 
