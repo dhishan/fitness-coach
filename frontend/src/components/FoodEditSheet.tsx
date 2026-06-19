@@ -134,12 +134,14 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
   const [timeOverridden, setTimeOverridden] = useState(false)
   const [saving, setSaving] = useState(false)
   const [microsOpen, setMicrosOpen] = useState(true)
+  const [saveToFav, setSaveToFav] = useState(false)
 
   useEffect(() => {
     if (!hit) return
     const m = initialMeal ?? defaultMealForHour()
     const d = date
     setServings(1)
+    setSaveToFav(false)
     const macs = macrosFromHit(hit, 1)
     setCalories(macs.calories)
     setProtein(macs.protein)
@@ -224,6 +226,27 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
       }
 
       await nutritionApi.logs.create(body)
+
+      // Save the food for future use — store per-serving (base) macros so
+      // re-logging multiplies cleanly. Never let this block the log.
+      if (saveToFav) {
+        try {
+          await nutritionApi.favorites.create({
+            name: hit.name,
+            serving: hit.serving || '1 serving',
+            macros: {
+              calories: Math.round(hit.macros.calories),
+              protein_g: round1(hit.macros.protein_g),
+              carbs_g: round1(hit.macros.carbs_g),
+              fat_g: round1(hit.macros.fat_g),
+            } as Macros,
+          })
+          void qc.invalidateQueries({ queryKey: ['favorites'] })
+        } catch {
+          // non-fatal; the log already saved
+        }
+      }
+
       void qc.invalidateQueries({ queryKey: ['day-logs', resolvedDate] })
       void qc.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success('Logged')
@@ -458,6 +481,27 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
               ))}
             </div>
           )}
+        </div>
+
+        {/* Save for future toggle */}
+        <div className="px-5 pb-1">
+          <button
+            type="button"
+            onClick={() => setSaveToFav((v) => !v)}
+            className="flex items-center gap-2.5 py-2 text-left w-full"
+          >
+            <span
+              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center text-white text-xs font-extrabold ${
+                saveToFav ? 'bg-primary-500 border-primary-500' : 'border-gray-300 bg-white'
+              }`}
+            >
+              {saveToFav ? '✓' : ''}
+            </span>
+            <span className="flex-1">
+              <span className="block text-sm font-semibold text-gray-900">Save this food for next time</span>
+              <span className="block text-xs text-gray-500">Adds it to your favorites (per-serving values)</span>
+            </span>
+          </button>
         </div>
 
         {/* Sticky CTA */}

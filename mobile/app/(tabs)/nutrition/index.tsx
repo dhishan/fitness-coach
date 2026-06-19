@@ -255,14 +255,36 @@ function PreviewModal({
   onSaved: () => void
   onCancel: () => void
 }) {
+  // The estimate's macros/micros are for one serving — keep them as the base
+  // so a servings multiplier can scale everything.
+  const baseMacros = state.estimation.macros
+  const baseMicros = state.estimation.micros ?? null
+
   const [name, setName] = useState(state.estimation.name)
   const [serving, setServing] = useState(state.estimation.serving)
-  const [calories, setCalories] = useState(String(Math.round(state.estimation.macros.calories)))
-  const [protein, setProtein] = useState(String(Math.round(state.estimation.macros.protein_g)))
-  const [carbs, setCarbs] = useState(String(Math.round(state.estimation.macros.carbs_g)))
-  const [fat, setFat] = useState(String(Math.round(state.estimation.macros.fat_g)))
+  const [servings, setServings] = useState(1)
+  const [macroOverridden, setMacroOverridden] = useState(false)
+  const [saveToFav, setSaveToFav] = useState(false)
+  const [calories, setCalories] = useState(String(Math.round(baseMacros.calories)))
+  const [protein, setProtein] = useState(String(Math.round(baseMacros.protein_g)))
+  const [carbs, setCarbs] = useState(String(Math.round(baseMacros.carbs_g)))
+  const [fat, setFat] = useState(String(Math.round(baseMacros.fat_g)))
   const [saving, setSaving] = useState(false)
   const [mealType, setMealType] = useState<MealType>(defaultMealType())
+
+  const SERVING_QUICK = [0.5, 1, 1.5, 2, 3]
+  const round1 = (v: number) => Math.round(v * 10) / 10
+
+  const applyServings = (n: number) => {
+    const next = Math.max(0.25, round1(n))
+    setServings(next)
+    if (!macroOverridden) {
+      setCalories(String(Math.round(baseMacros.calories * next)))
+      setProtein(String(Math.round(baseMacros.protein_g * next)))
+      setCarbs(String(Math.round(baseMacros.carbs_g * next)))
+      setFat(String(Math.round(baseMacros.fat_g * next)))
+    }
+  }
 
   // Time picker (defaults to now; only sent if user changes it)
   const [initialTime] = useState(() => new Date())
@@ -288,6 +310,12 @@ function PreviewModal({
     }
     // Only send logged_at if user changed time
     const logged_at: string | undefined = timeChanged ? time.toISOString() : undefined
+    // Scale micros to the chosen servings (they aren't directly editable).
+    const scaledMicros: Micros | undefined = baseMicros
+      ? (Object.fromEntries(
+          Object.entries(baseMicros).map(([k, v]) => [k, round1((v as number) * servings)]),
+        ) as unknown as Micros)
+      : undefined
     try {
       if (state.editId) {
         await nutritionApi.logs.update(state.editId, { name, serving, macros })
@@ -300,11 +328,31 @@ function PreviewModal({
           source: state.source,
           meal_type: mealType,
           ...(logged_at ? { logged_at } : {}),
-          ...(state.estimation.micros ? { micros: state.estimation.micros } : {}),
+          ...(scaledMicros ? { micros: scaledMicros } : {}),
           ...(state.estimation.usda_fdc_id != null ? { usda_fdc_id: state.estimation.usda_fdc_id } : {}),
           ...(state.estimation.micros_source ? { micros_source: state.estimation.micros_source } : {}),
         })
         track('nutrition.log.created', { source: state.source, calories: macros.calories })
+
+        // Save the food for future use — store the per-serving (base) macros
+        // so re-logging multiplies cleanly. Never let this block the log.
+        if (saveToFav) {
+          try {
+            await nutritionApi.favorites.create({
+              name,
+              serving,
+              macros: {
+                calories: Math.round(baseMacros.calories),
+                protein_g: round1(baseMacros.protein_g),
+                carbs_g: round1(baseMacros.carbs_g),
+                fat_g: round1(baseMacros.fat_g),
+              },
+            })
+            void qc.invalidateQueries({ queryKey: ['favorites'] })
+          } catch {
+            // non-fatal; the log already saved
+          }
+        }
       }
       void qc.invalidateQueries({ queryKey: ['day-logs', date] })
       onSaved()
@@ -383,6 +431,38 @@ function PreviewModal({
             placeholderTextColor={colors.gray400}
           />
 
+          {!state.editId && (
+            <View style={s.servingsBlock}>
+              <Text style={s.servingsLabel}>Servings</Text>
+              <View style={s.servingsQuickRow}>
+                {SERVING_QUICK.map((q) => (
+                  <Pressable
+                    key={q}
+                    onPress={() => applyServings(q)}
+                    style={[s.servingsChip, servings === q && s.servingsChipActive]}
+                  >
+                    <Text style={[s.servingsChipText, servings === q && s.servingsChipTextActive]}>{q}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={s.stepperRow}>
+                <Pressable style={s.stepBtn} onPress={() => applyServings(servings - 0.5)}>
+                  <Text style={s.stepBtnText}>-</Text>
+                </Pressable>
+                <TextInput
+                  style={s.stepInput}
+                  value={String(servings)}
+                  onChangeText={(v) => { const n = parseFloat(v); if (Number.isFinite(n) && n > 0) applyServings(n) }}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                />
+                <Pressable style={s.stepBtn} onPress={() => applyServings(servings + 0.5)}>
+                  <Text style={s.stepBtnText}>+</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
           <View style={s.macroRow}>
             {([
               { label: 'kcal', val: calories, set: setCalories },
@@ -394,7 +474,7 @@ function PreviewModal({
                 <TextInput
                   style={s.macroNumInput}
                   value={val}
-                  onChangeText={set}
+                  onChangeText={(v) => { set(v); setMacroOverridden(true) }}
                   keyboardType="numeric"
                   placeholderTextColor={colors.gray400}
                 />
@@ -403,11 +483,29 @@ function PreviewModal({
             ))}
           </View>
 
-          {/* Micros panel */}
+          {/* Micros panel — scaled to the chosen servings */}
           <MicrosPanel
-            micros={state.estimation.micros}
+            micros={
+              baseMicros && servings !== 1
+                ? (Object.fromEntries(
+                    Object.entries(baseMicros).map(([k, v]) => [k, round1((v as number) * servings)]),
+                  ) as unknown as Micros)
+                : state.estimation.micros
+            }
             source={state.estimation.micros_source}
           />
+
+          {!state.editId && (
+            <Pressable style={s.saveFavRow} onPress={() => setSaveToFav((v) => !v)}>
+              <View style={[s.checkbox, saveToFav && s.checkboxOn]}>
+                {saveToFav && <Text style={s.checkboxTick}>✓</Text>}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.saveFavTitle}>Save this food for next time</Text>
+                <Text style={s.saveFavSub}>Adds it to your favorites (per-serving values)</Text>
+              </View>
+            </Pressable>
+          )}
 
           <View style={s.btnRow}>
             <Pressable
@@ -1265,6 +1363,27 @@ const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.base, gap: spacing.md, paddingBottom: 48 },
   cardPad: { padding: spacing.base },
+
+  // Servings control (preview modal)
+  servingsBlock: { gap: spacing.sm },
+  servingsLabel: { fontSize: 12, fontWeight: '700', color: colors.gray600 },
+  servingsQuickRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  servingsChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  servingsChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  servingsChipText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+  servingsChipTextActive: { color: '#fff' },
+  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, alignSelf: 'flex-start' },
+  stepBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' },
+  stepBtnText: { fontSize: 20, fontWeight: '700', color: colors.text },
+  stepInput: { width: 60, height: 38, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, textAlign: 'center', fontSize: 16, fontWeight: '600', color: colors.text, backgroundColor: colors.surface },
+
+  // Save-to-favorites toggle (preview modal)
+  saveFavRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, marginTop: spacing.xs },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: colors.gray300, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  checkboxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkboxTick: { color: '#fff', fontSize: 14, fontWeight: '800', lineHeight: 16 },
+  saveFavTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+  saveFavSub: { fontSize: 12, color: colors.gray500, marginTop: 1 },
 
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
