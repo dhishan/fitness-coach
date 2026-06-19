@@ -129,6 +129,7 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<IngredientHit[]>([])
   const [loading, setLoading] = useState(false)
+  const [estimating, setEstimating] = useState(false)
   const [searched, setSearched] = useState(false)
 
   const run = async () => {
@@ -145,6 +146,36 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
       setLoading(false)
     }
   }
+
+  const runAI = async () => {
+    const query = q.trim()
+    if (!query) return
+    setEstimating(true)
+    try {
+      const est = await nutritionApi.estimateText(query)
+      onPick(hitToPatch(est))
+    } catch {
+      Alert.alert('Error', 'Could not estimate. Try rephrasing.')
+    } finally {
+      setEstimating(false)
+    }
+  }
+
+  const AIRow = (
+    <Pressable style={s.aiRow} onPress={() => void runAI()} disabled={estimating}>
+      <View style={{ flex: 1 }}>
+        <Text style={s.aiTitle}>
+          {estimating ? 'Estimating…' : `Use AI to estimate "${q.trim()}"`}
+        </Text>
+        <Text style={s.aiSub}>Best for home-cooked dishes or unlisted foods</Text>
+      </View>
+      {estimating ? (
+        <ActivityIndicator color="#0d9488" />
+      ) : (
+        <Ionicons name="sparkles-outline" size={20} color="#0d9488" />
+      )}
+    </Pressable>
+  )
 
   return (
     <View style={{ gap: spacing.sm }}>
@@ -166,7 +197,10 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
       {loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
       ) : hits.length === 0 && searched ? (
-        <Text style={s.empty}>No matches. Try a different term.</Text>
+        <View style={{ gap: spacing.sm }}>
+          <Text style={s.empty}>No matches in our food databases.</Text>
+          {q.trim().length > 1 ? AIRow : null}
+        </View>
       ) : (
         <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
           {hits.map((h, i) => (
@@ -180,6 +214,7 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
               <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
             </Pressable>
           ))}
+          {searched && q.trim().length > 1 ? AIRow : null}
         </ScrollView>
       )}
     </View>
@@ -407,6 +442,18 @@ const s = StyleSheet.create({
   hitName: { fontSize: 14, fontWeight: '600', color: colors.text },
   hitMeta: { fontSize: 12, color: colors.gray500, marginTop: 2, fontVariant: ['tabular-nums'] },
   empty: { color: colors.gray400, fontSize: 14, textAlign: 'center', marginTop: spacing.md },
+  aiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderRadius: radius.md,
+    backgroundColor: '#f0fdfa',
+    borderWidth: 1,
+    borderColor: '#ccfbf1',
+    gap: spacing.sm,
+  },
+  aiTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  aiSub: { fontSize: 12, color: colors.gray500, marginTop: 2 },
   help: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
   bigBtn: {
     flexDirection: 'row',

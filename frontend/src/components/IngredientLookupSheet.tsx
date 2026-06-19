@@ -115,6 +115,7 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<IngredientHit[]>([])
   const [loading, setLoading] = useState(false)
+  const [estimating, setEstimating] = useState(false)
   const [searched, setSearched] = useState(false)
 
   const run = async () => {
@@ -131,6 +132,38 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
       setLoading(false)
     }
   }
+
+  const runAI = async () => {
+    const query = q.trim()
+    if (!query) return
+    setEstimating(true)
+    try {
+      const est = await nutritionApi.estimateText(query)
+      onPick(hitToPatch(est))
+    } catch {
+      // surfaced inline by leaving the row; user can retry
+    } finally {
+      setEstimating(false)
+    }
+  }
+
+  const aiRow = q.trim().length > 1 && (
+    <button
+      onClick={() => void runAI()}
+      disabled={estimating}
+      className="w-full text-left flex items-center gap-3 p-3 rounded-md bg-teal-50 border border-teal-100 hover:bg-teal-100/70 disabled:opacity-60"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-bold text-gray-900">
+          {estimating ? 'Estimating…' : `Use AI to estimate "${q.trim()}"`}
+        </div>
+        <div className="text-xs text-gray-500">Best for home-cooked dishes or unlisted foods</div>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2">
+        <path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4L12 3z" />
+      </svg>
+    </button>
+  )
 
   return (
     <div className="space-y-3">
@@ -156,27 +189,33 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
       {loading ? (
         <p className="text-sm text-gray-400 text-center py-4">Searching…</p>
       ) : hits.length === 0 && searched ? (
-        <p className="text-sm text-gray-400 text-center py-4">No matches. Try a different term.</p>
+        <div className="space-y-3">
+          <p className="text-sm text-gray-400 text-center pt-2">No matches in our food databases.</p>
+          {aiRow}
+        </div>
       ) : (
-        <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
-          {hits.map((h, i) => (
-            <button
-              key={i}
-              onClick={() => onPick(hitToPatch(h))}
-              className="w-full text-left py-2.5 px-1 flex items-center gap-3 hover:bg-gray-50 rounded"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-gray-900 truncate">{h.name}</div>
-                <div className="text-xs text-gray-500 tabular-nums">
-                  {h.serving} · {Math.round(h.macros.calories)} kcal ·{' '}
-                  {round1(h.macros.protein_g)}g P
+        <div className="space-y-3">
+          <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+            {hits.map((h, i) => (
+              <button
+                key={i}
+                onClick={() => onPick(hitToPatch(h))}
+                className="w-full text-left py-2.5 px-1 flex items-center gap-3 hover:bg-gray-50 rounded"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 truncate">{h.name}</div>
+                  <div className="text-xs text-gray-500 tabular-nums">
+                    {h.serving} · {Math.round(h.macros.calories)} kcal ·{' '}
+                    {round1(h.macros.protein_g)}g P
+                  </div>
                 </div>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          ))}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            ))}
+          </div>
+          {searched && aiRow}
         </div>
       )}
     </div>
