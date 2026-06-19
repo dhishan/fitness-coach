@@ -25,8 +25,16 @@ async def list_logs(
 @router.post("", status_code=201)
 async def create_log(body: CardioLogCreate, user: CurrentUser = Depends(get_current_user)):
     doc = await asyncio.to_thread(cardio_service.create_log, user.user_id, body.model_dump())
-    from app.observability import track
-    track("cardio.log.created", user_id=user.user_id, activity=body.activity, duration_min=body.duration_min)
+    try:
+        from app.observability import track
+        track(
+            "cardio.log.created",
+            user_id=user.user_id,
+            cardio_type=body.type,
+            duration_s=body.duration_s,
+        )
+    except Exception:
+        pass
     return doc
 
 
