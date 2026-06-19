@@ -172,14 +172,16 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
 
   const applyServings = (next: number) => {
     setServings(next)
-    if (!macroOverridden && hit) {
-      const macs = macrosFromHit(hit, next)
-      setCalories(macs.calories)
-      setProtein(macs.protein)
-      setCarbs(macs.carbs)
-      setFat(macs.fat)
-      setMicrosState(microsFromHit(hit, next))
-    }
+    if (!hit) return
+    // Changing servings is an explicit rescale — always recompute from the
+    // per-serving base and clear any prior manual override.
+    const macs = macrosFromHit(hit, next)
+    setCalories(macs.calories)
+    setProtein(macs.protein)
+    setCarbs(macs.carbs)
+    setFat(macs.fat)
+    setMicrosState(microsFromHit(hit, next))
+    setMacroOverridden(false)
   }
 
   const handleServingsStep = (delta: number) => {

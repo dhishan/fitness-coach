@@ -279,12 +279,12 @@ function PreviewModal({
   const applyServings = (n: number) => {
     const next = Math.max(0.25, round1(n))
     setServings(next)
-    if (!macroOverridden) {
-      setCalories(String(Math.round(baseMacros.calories * next)))
-      setProtein(String(Math.round(baseMacros.protein_g * next)))
-      setCarbs(String(Math.round(baseMacros.carbs_g * next)))
-      setFat(String(Math.round(baseMacros.fat_g * next)))
-    }
+    // Explicit rescale — always recompute from base and clear any override.
+    setCalories(String(Math.round(baseMacros.calories * next)))
+    setProtein(String(Math.round(baseMacros.protein_g * next)))
+    setCarbs(String(Math.round(baseMacros.carbs_g * next)))
+    setFat(String(Math.round(baseMacros.fat_g * next)))
+    setMacroOverridden(false)
   }
 
   // Time picker (defaults to now; only sent if user changes it)
@@ -303,12 +303,22 @@ function PreviewModal({
 
   const handleSave = async () => {
     setSaving(true)
-    const macros: Macros = {
-      calories: Number(calories),
-      protein_g: Number(protein),
-      carbs_g: Number(carbs),
-      fat_g: Number(fat),
-    }
+    // Authoritative macros: unless the user manually edited a macro field,
+    // derive from the per-serving base × servings at save time. This makes
+    // the stored value impossible to desync from the servings control.
+    const macros: Macros = macroOverridden
+      ? {
+          calories: Number(calories),
+          protein_g: Number(protein),
+          carbs_g: Number(carbs),
+          fat_g: Number(fat),
+        }
+      : {
+          calories: Math.round(baseMacros.calories * servings),
+          protein_g: round1(baseMacros.protein_g * servings),
+          carbs_g: round1(baseMacros.carbs_g * servings),
+          fat_g: round1(baseMacros.fat_g * servings),
+        }
     // Only send logged_at if user changed time
     const logged_at: string | undefined = timeChanged ? time.toISOString() : undefined
     // Bake the servings count into the label so a multi-serving entry reads
