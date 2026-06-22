@@ -131,6 +131,11 @@ class FoodLogUpdate(BaseModel):
     micros_source: Optional[Literal["ai", "usda"]] = None
 
 
+class DayStatusUpdate(BaseModel):
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    incomplete: bool
+
+
 class FavoriteCreate(BaseModel):
     name: str
     serving: str = ""

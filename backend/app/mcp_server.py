@@ -200,7 +200,12 @@ def get_nutrition_summary(reference_date: Optional[str] = None, days: int = 7) -
 
     reference_date: YYYY-MM-DD. Defaults to today.
     days: how many trailing days to include (default 7, max 30).
-    Returns a list of {date, calories, protein_g, carbs_g, fat_g}.
+    Returns a list of {date, calories, protein_g, carbs_g, fat_g, incomplete}.
+
+    IMPORTANT: days with "incomplete": true were marked by the user as
+    untracked (e.g. eating out) — their totals are NOT a real record of
+    intake. EXCLUDE incomplete days from averages and never conclude the
+    user ate little on those days.
     """
     from datetime import date as _date, timedelta
     uid = _uid()
@@ -212,7 +217,7 @@ def get_nutrition_summary(reference_date: Optional[str] = None, days: int = 7) -
         d = (ref - timedelta(days=i)).isoformat()
         day = food_service.list_by_date(uid, d)
         totals = (day or {}).get("totals") or {}
-        out.append({"date": d, **totals})
+        out.append({"date": d, **totals, "incomplete": bool((day or {}).get("incomplete"))})
     return out
 
 

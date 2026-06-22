@@ -75,7 +75,52 @@ def list_by_date(user_id: str, date: str) -> dict:
         .stream()
     )
     items = [_doc(s) for s in snaps]
-    return {"items": items, "totals": _sum_macros(items), "micros_totals": _sum_micros(items)}
+    return {
+        "items": items,
+        "totals": _sum_macros(items),
+        "micros_totals": _sum_micros(items),
+        "incomplete": get_day_incomplete(user_id, date),
+    }
+
+
+# ---- Day status (mark a day as untracked / "eating out") ----
+
+def _day_status_id(user_id: str, date: str) -> str:
+    return f"{user_id}_{date}"
+
+
+def get_day_incomplete(user_id: str, date: str) -> bool:
+    """Whether the user flagged this date as untracked (ate out, no data).
+
+    Defaults to False. Never raises — a missing/broken status doc just
+    means the day is treated as fully tracked.
+    """
+    try:
+        snap = (
+            get_db()
+            .collection("nutrition_day_status")
+            .document(_day_status_id(user_id, date))
+            .get()
+        )
+        if not snap.exists:
+            return False
+        return bool((snap.to_dict() or {}).get("incomplete", False))
+    except Exception:
+        logger.exception("get_day_incomplete failed")
+        return False
+
+
+def set_day_incomplete(user_id: str, date: str, incomplete: bool) -> dict:
+    doc = {
+        "user_id": user_id,
+        "date": date,
+        "incomplete": bool(incomplete),
+        "updated_at": datetime.now(timezone.utc),
+    }
+    get_db().collection("nutrition_day_status").document(
+        _day_status_id(user_id, date)
+    ).set(doc)
+    return {**doc, "id": _day_status_id(user_id, date)}
 
 
 def get_log(user_id: str, log_id: str) -> dict | None:

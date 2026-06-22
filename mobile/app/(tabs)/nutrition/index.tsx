@@ -883,6 +883,26 @@ function NutritionScreenInner() {
   const totals = dayLogs?.totals ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   const microsTotals = dayLogs?.micros_totals
   const logs = dayLogs?.items ?? []
+  const incomplete = dayLogs?.incomplete ?? false
+
+  const toggleDayIncomplete = async () => {
+    const next = !incomplete
+    // Optimistic: flip the cached flag immediately, reconcile on settle.
+    qc.setQueryData<DayLogs>(['day-logs', date], (old) =>
+      old ? { ...old, incomplete: next } : old,
+    )
+    try {
+      await nutritionApi.dayStatus.set(date, next)
+    } catch {
+      qc.setQueryData<DayLogs>(['day-logs', date], (old) =>
+        old ? { ...old, incomplete: !next } : old,
+      )
+      Alert.alert('Error', 'Could not update day status. Try again.')
+    } finally {
+      void qc.invalidateQueries({ queryKey: ['day-logs', date] })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
+    }
+  }
 
   // Group by meal_type first, then time heuristic
   const grouped: Partial<Record<typeof MEAL_ORDER[number], FoodLog[]>> = {}
@@ -1148,10 +1168,19 @@ function NutritionScreenInner() {
       <View style={[card, s.cardPad]}>
         <View style={s.row}>
           <Text style={s.sectionTitle}>Today's nutrition</Text>
-          <Text style={s.kcalTotal}>{Math.round(totals.calories)} kcal</Text>
+          <Text style={[s.kcalTotal, incomplete && s.kcalTotalMuted]}>
+            {Math.round(totals.calories)} kcal
+          </Text>
         </View>
 
-        {goals ? (
+        {incomplete ? (
+          <View style={s.untrackedBanner}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.gray500} />
+            <Text style={s.untrackedText}>
+              Marked as untracked — this day&apos;s totals are excluded from trends and the coach.
+            </Text>
+          </View>
+        ) : goals ? (
           <>
             <View style={s.calorieBarRow}>
               <View style={s.calorieBarBg}>
@@ -1186,6 +1215,16 @@ function NutritionScreenInner() {
             <Text style={s.empty}>No goals set. Set them to track progress.</Text>
           </>
         )}
+
+        {/* Untracked-day toggle */}
+        <Pressable style={s.untrackedToggle} onPress={() => { void toggleDayIncomplete() }}>
+          <View style={[s.checkboxSm, incomplete && s.checkboxSmOn]}>
+            {incomplete && <Text style={s.checkboxSmTick}>✓</Text>}
+          </View>
+          <Text style={s.untrackedToggleText}>
+            Eating out — mark this day as untracked
+          </Text>
+        </Pressable>
       </View>
 
       {/* Estimating indicator */}
@@ -1428,6 +1467,39 @@ const s = StyleSheet.create({
 
   // Totals
   kcalTotal: { fontSize: 18, fontWeight: '700', color: colors.primary },
+  kcalTotalMuted: { color: colors.gray400, textDecorationLine: 'line-through' },
+  untrackedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.gray50,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  untrackedText: { flex: 1, fontSize: 12, color: colors.gray600, lineHeight: 16 },
+  untrackedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray100,
+  },
+  untrackedToggleText: { flex: 1, fontSize: 13, color: colors.gray600, fontWeight: '500' },
+  checkboxSm: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: colors.gray300,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  checkboxSmOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkboxSmTick: { color: '#fff', fontSize: 12, fontWeight: '800', lineHeight: 14 },
   calorieBarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   calorieBarBg: { flex: 1, height: 10, borderRadius: radius.full, backgroundColor: colors.gray100, overflow: 'hidden' },
   calorieBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },

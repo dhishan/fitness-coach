@@ -250,7 +250,7 @@ export interface Goals {
   calories: number; protein_g: number; carbs_g: number; fat_g: number;
   micros_targets?: Micros | null;
 }
-export interface DayLogs { items: FoodLog[]; totals: Macros; micros_totals?: Micros }
+export interface DayLogs { items: FoodLog[]; totals: Macros; micros_totals?: Micros; incomplete?: boolean }
 export interface Estimation {
   name: string; serving: string; macros: Macros; confidence: number;
   micros?: Micros;

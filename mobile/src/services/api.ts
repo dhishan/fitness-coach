@@ -236,6 +236,12 @@ export const nutritionApi = {
       api.put<FoodLog>(`/nutrition/logs/${id}`, body).then((r) => r.data),
     remove: (id: string) => api.delete(`/nutrition/logs/${id}`),
   },
+  dayStatus: {
+    set: (date: string, incomplete: boolean) =>
+      api
+        .put<{ date: string; incomplete: boolean }>('/nutrition/day-status', { date, incomplete })
+        .then((r) => r.data),
+  },
   favorites: {
     list: () => api.get<Favorite[]>('/nutrition/favorites').then((r) => r.data),
     create: (body: FavoriteCreate) =>

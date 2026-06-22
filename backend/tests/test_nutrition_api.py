@@ -158,6 +158,28 @@ def test_delete_log_404(client):
     assert r.status_code == 404
 
 
+def test_set_day_status_incomplete(client):
+    ret = {"id": "u1_2026-06-20", "date": "2026-06-20", "incomplete": True}
+    with patch(f"{FOOD_SVC}.set_day_incomplete", return_value=ret) as m:
+        r = client.put(
+            "/api/v1/nutrition/day-status",
+            json={"date": "2026-06-20", "incomplete": True},
+            headers=_auth(client),
+        )
+    assert r.status_code == 200
+    assert r.json()["incomplete"] is True
+    assert m.call_args.args == ("u1", "2026-06-20", True)
+
+
+def test_set_day_status_bad_date(client):
+    r = client.put(
+        "/api/v1/nutrition/day-status",
+        json={"date": "06-20-2026", "incomplete": True},
+        headers=_auth(client),
+    )
+    assert r.status_code == 422
+
+
 # ---- Favorites ----
 
 def test_list_favorites(client):

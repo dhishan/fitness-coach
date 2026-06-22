@@ -3,7 +3,7 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 
 from app.auth.dependencies import CurrentUser, get_current_user
-from app.schemas import FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate, RecipeCreate, RecipeLogRequest, RecipeUpdate
+from app.schemas import DayStatusUpdate, FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate, RecipeCreate, RecipeLogRequest, RecipeUpdate
 from app.security.validators import _check_food_image_url, sanitize_hint
 from app.services import food_service, goals_service, ifct, nutrition_ai, off_search, openfoodfacts, recipe_service, usda
 
@@ -162,6 +162,16 @@ async def list_logs(
     user: CurrentUser = Depends(get_current_user),
 ):
     return await asyncio.to_thread(food_service.list_by_date, user.user_id, date)
+
+
+@router.put("/day-status")
+async def set_day_status(
+    body: DayStatusUpdate, user: CurrentUser = Depends(get_current_user)
+):
+    """Mark a date as untracked ("eating out") so totals aren't read as low intake."""
+    return await asyncio.to_thread(
+        food_service.set_day_incomplete, user.user_id, body.date, body.incomplete
+    )
 
 
 @router.put("/logs/{log_id}")

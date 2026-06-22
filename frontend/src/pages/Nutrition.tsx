@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import type { Estimation, FoodLog, Goals, GoalSuggestion, Macros, MealType, Micros } from '@fitness/shared-types'
+import type { DayLogs, Estimation, FoodLog, Goals, GoalSuggestion, Macros, MealType, Micros } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi } from '../services/api'
 import AddFood from './AddFood'
 // nutritionApi.barcode is used inline below
@@ -635,6 +635,25 @@ export default function Nutrition() {
   const totals = dayLogs?.totals ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   const microsTotals = dayLogs?.micros_totals
   const logs = dayLogs?.items ?? []
+  const incomplete = dayLogs?.incomplete ?? false
+
+  const toggleDayIncomplete = async () => {
+    const next = !incomplete
+    qc.setQueryData<DayLogs>(['day-logs', date], (old) =>
+      old ? { ...old, incomplete: next } : old,
+    )
+    try {
+      await nutritionApi.dayStatus.set(date, next)
+    } catch {
+      qc.setQueryData<DayLogs>(['day-logs', date], (old) =>
+        old ? { ...old, incomplete: !next } : old,
+      )
+      toast.error('Could not update day status. Try again.')
+    } finally {
+      void qc.invalidateQueries({ queryKey: ['day-logs', date] })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
+    }
+  }
 
   // Group logs by meal type first, then time heuristic
   const grouped: Record<string, FoodLog[]> = {}
@@ -787,10 +806,23 @@ export default function Nutrition() {
       <div className="card p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-900">Today's nutrition</span>
-          <span className="text-lg font-bold text-primary-600">{Math.round(totals.calories)} kcal</span>
+          <span
+            className={`text-lg font-bold ${
+              incomplete ? 'text-gray-400 line-through' : 'text-primary-600'
+            }`}
+          >
+            {Math.round(totals.calories)} kcal
+          </span>
         </div>
 
-        {goals ? (
+        {incomplete ? (
+          <div className="flex items-start gap-2 bg-gray-50 rounded-lg p-2.5">
+            <span className="text-gray-500">ⓘ</span>
+            <span className="text-xs text-gray-600 leading-snug">
+              Marked as untracked — this day&apos;s totals are excluded from trends and the coach.
+            </span>
+          </div>
+        ) : goals ? (
           <>
             <div className="flex items-center gap-1">
               <div className="h-2.5 rounded-full bg-gray-100 flex-1 overflow-hidden">
@@ -826,6 +858,24 @@ export default function Nutrition() {
             <p className="text-xs text-gray-400">No goals set. Set them to track progress.</p>
           </div>
         )}
+
+        {/* Untracked-day toggle */}
+        <button
+          type="button"
+          onClick={() => void toggleDayIncomplete()}
+          className="flex items-center gap-2.5 mt-1 pt-3 border-t border-gray-100 text-left"
+        >
+          <span
+            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center text-white text-xs font-extrabold ${
+              incomplete ? 'bg-primary-500 border-primary-500' : 'border-gray-300 bg-white'
+            }`}
+          >
+            {incomplete ? '✓' : ''}
+          </span>
+          <span className="text-sm text-gray-600 font-medium">
+            Eating out — mark this day as untracked
+          </span>
+        </button>
       </div>
 
       {/* Preview card (estimation result) */}
