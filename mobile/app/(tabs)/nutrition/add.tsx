@@ -300,11 +300,25 @@ export default function AddFoodScreen() {
 
   const sections: Section[] = []
 
-  const historyData: FoodHit[] = [
-    ...filteredRecent.map(logToFoodHit),
-    ...filteredRecipes.map(recipeToFoodHit),
-    ...filteredFavs.map(favToFoodHit),
-  ]
+  // Dedup across history sources by normalized name. A logged recipe shows
+  // up both as a recent log and as the recipe itself — prefer the richer
+  // saved object (recipe → favorite → recent) so it appears once.
+  const historyData: FoodHit[] = (() => {
+    const seen = new Set<string>()
+    const out: FoodHit[] = []
+    const add = (hits: FoodHit[]) => {
+      for (const h of hits) {
+        const key = h.name.trim().toLowerCase()
+        if (key && seen.has(key)) continue
+        if (key) seen.add(key)
+        out.push(h)
+      }
+    }
+    add(filteredRecipes.map(recipeToFoodHit))
+    add(filteredFavs.map(favToFoodHit))
+    add(filteredRecent.map(logToFoodHit))
+    return out
+  })()
   if (historyData.length > 0) {
     sections.push({ title: 'From your history', data: historyData })
   }
