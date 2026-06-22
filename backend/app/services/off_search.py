@@ -10,9 +10,15 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_SEARCH_URL = "https://world.openfoodfacts.org/cgi/search.pl"
+# The legacy cgi/search.pl endpoint now returns 503 for server/datacenter
+# IPs, so OFF text search effectively returned nothing. Use the modern
+# Search-a-licious API, which is fast (~0.5s) and ranks generic whole foods
+# (e.g. "banana" -> "Banana, 89 kcal") above branded products by default.
+_SEARCH_URL = "https://search.openfoodfacts.org/search"
 _FIELDS = "product_name,brands,serving_size,nutriments,code"
-_TIMEOUT = 6
+_TIMEOUT = 8
+# OFF asks every client to identify itself; anonymous requests get throttled.
+_HEADERS = {"User-Agent": "FitnessTracker/1.0 (nutrition search; blueelephants.org)"}
 
 
 def _parse_grams(serving_size: str) -> float:
@@ -52,9 +58,17 @@ def _map_hit(product: dict) -> Optional[dict]:
     def scaled(key: str) -> float:
         return round((n.get(key) or 0.0) * f, 1)
 
-    name = (product.get("product_name") or "Unknown").strip()
-    brand = (product.get("brands") or "").strip()
-    if brand:
+    # Search-a-licious returns product_name/brands as either a string or a
+    # list (legacy cgi returned comma-strings). Normalize both.
+    def _as_text(v) -> str:
+        if isinstance(v, list):
+            return ", ".join(str(x) for x in v if x).strip()
+        return str(v or "").strip()
+
+    name = _as_text(product.get("product_name")) or "Unknown"
+    brand = _as_text(product.get("brands"))
+    # brands often repeats the name (e.g. "Banana (Banana)") — only append when distinct
+    if brand and brand.lower() not in name.lower():
         name = f"{name} ({brand})"
 
     return {
@@ -92,18 +106,20 @@ def search_off(query: str, limit: int = 8) -> list[dict]:
         resp = requests.get(
             _SEARCH_URL,
             params={
-                "search_terms": query,
-                "search_simple": 1,
-                "action": "process",
-                "json": 1,
-                "page_size": min(limit * 2, 40),
+                "q": query,
+                # request extra: produce entries often lack per-100g macros and
+                # get dropped by _map_hit, so over-fetch to still fill `limit`.
+                "page_size": min(limit * 4, 40),
                 "fields": _FIELDS,
             },
+            headers=_HEADERS,
             timeout=_TIMEOUT,
         )
         if resp.status_code != 200:
             return []
-        products = (resp.json().get("products") or [])
+        body = resp.json()
+        # Search-a-licious returns matches under "hits"; tolerate "products" too.
+        products = body.get("hits") or body.get("products") or []
     except Exception:
         logger.exception("off search failed for %r", query)
         return []

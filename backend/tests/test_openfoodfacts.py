@@ -143,7 +143,9 @@ def test_barcode_endpoint_200(client):
 
 
 def test_barcode_endpoint_404_when_none(client):
-    with patch(f"{OFF_SVC}.lookup_barcode", return_value=None):
+    # Both sources miss: OFF returns None, then the USDA fallback also returns None.
+    with patch(f"{OFF_SVC}.lookup_barcode", return_value=None), \
+         patch("app.routers.nutrition.usda.lookup_by_barcode", return_value=None):
         r = client.get("/api/v1/nutrition/barcode/0000000000000", headers=_auth(client))
     assert r.status_code == 404
 

@@ -106,6 +106,58 @@ def test_search_respects_limit(mock_db):
     assert len(result) == 3
 
 
+def test_search_ranks_whole_foods_before_branded(mock_db):
+    """A branded hit returned first by USDA should rank below Foundation/SR Legacy."""
+    from app.services import usda
+    foods = [
+        _make_food(1, "BANANA CANDY", data_type="Branded", score=999.0),
+        _make_food(2, "Bananas, raw", data_type="SR Legacy", score=10.0),
+        _make_food(3, "Banana, fresh", data_type="Foundation", score=5.0),
+    ]
+    with patch("app.services.usda.get_settings") as mock_settings, \
+         patch("app.services.usda.requests.get", return_value=_mock_search_response(foods)):
+        mock_settings.return_value.usda_api_key = "testkey"
+        result = usda.search("banana", limit=3)
+    # Foundation first, then SR Legacy, Branded last — despite branded's high score
+    assert [h["data_type"] for h in result] == ["Foundation", "SR Legacy", "Branded"]
+
+
+def test_get_nutrients_energy_falls_back_to_atwater(mock_db):
+    """Foundation foods omit nutrient 1008; energy must fall back to Atwater (2047)."""
+    from app.services import usda
+    cache_snap = MagicMock()
+    cache_snap.exists = False
+    mock_db.collection.return_value.document.return_value.get.return_value = cache_snap
+
+    nutrients = [
+        _nutrient(1003, 22.5),   # protein_g
+        _nutrient(1004, 1.9),    # fat_g
+        _nutrient(2047, 106.0),  # Energy (Atwater General) kcal — no 1008 present
+    ]
+    food_resp = _mock_food_response(2646170, "Chicken, breast, raw", nutrients)
+    with patch("app.services.usda.get_settings") as mock_settings, \
+         patch("app.services.usda.requests.get", return_value=food_resp):
+        mock_settings.return_value.usda_api_key = "testkey"
+        result = usda.get_nutrients(2646170)
+    assert result["macros"]["calories"] == 106.0
+
+
+def test_get_nutrients_energy_converts_kj_when_only_kj(mock_db):
+    """If only kJ (1062) is present, convert to kcal."""
+    from app.services import usda
+    cache_snap = MagicMock()
+    cache_snap.exists = False
+    mock_db.collection.return_value.document.return_value.get.return_value = cache_snap
+
+    nutrients = [_nutrient(1003, 5.0), _nutrient(1062, 418.4)]  # 418.4 kJ -> 100 kcal
+    food_resp = _mock_food_response(999, "Some Food", nutrients)
+    with patch("app.services.usda.get_settings") as mock_settings, \
+         patch("app.services.usda.requests.get", return_value=food_resp):
+        mock_settings.return_value.usda_api_key = "testkey"
+        result = usda.get_nutrients(999)
+    assert result["macros"]["calories"] == pytest.approx(100.0, abs=0.1)
+
+
 # ---- get_nutrients ----
 
 def test_get_nutrients_reads_cache_when_present(mock_db):

@@ -131,6 +131,35 @@ def test_ifct_limit_respected():
     assert len(results) <= 2
 
 
+# --- OFF search HTTP contract (search-a-licious "hits" shape) ---
+
+def test_search_off_reads_hits_shape():
+    """search_off must read the search-a-licious 'hits' array, not 'products'."""
+    class _Resp:
+        status_code = 200
+        def json(self):
+            return {"hits": [_product({"product_name": "Banana"})], "count": 1}
+
+    with patch("app.services.off_search.requests.get", return_value=_Resp()) as m:
+        out = search_off("banana", limit=5)
+    assert len(out) == 1
+    assert out[0]["name"].startswith("Banana")
+    # hits the modern endpoint, with a query param and a User-Agent
+    assert "search.openfoodfacts.org" in m.call_args.args[0]
+    assert m.call_args.kwargs["params"]["q"] == "banana"
+    assert "User-Agent" in m.call_args.kwargs["headers"]
+
+
+def test_search_off_non_200_returns_empty():
+    class _Resp:
+        status_code = 503
+        def json(self):  # pragma: no cover - should not be called
+            return {}
+
+    with patch("app.services.off_search.requests.get", return_value=_Resp()):
+        assert search_off("banana") == []
+
+
 # --- Combined search dedup ---
 
 def test_combined_search_dedupes(monkeypatch):

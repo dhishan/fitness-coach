@@ -40,6 +40,7 @@ def test_estimate_from_text_returns_parsed_dict():
     from app.services import nutrition_ai
     resp = _make_resp(_GOOD_CONTENT, 10, 5)
     with patch("app.services.nutrition_ai.llm.complete", return_value=resp) as mock_complete, \
+         patch("app.services.nutrition_ai.usda.enrich_estimation", return_value=None), \
          patch("app.services.nutrition_ai.usage_service.record_usage") as mock_usage:
         result = nutrition_ai.estimate_from_text("user1", "two scrambled eggs")
     assert result["name"] == "Scrambled eggs"
@@ -90,6 +91,7 @@ def test_estimate_from_image_returns_parsed_dict():
     from app.services import nutrition_ai
     resp = _make_resp(_GOOD_CONTENT, 20, 8)
     with patch("app.services.nutrition_ai.llm.complete", return_value=resp) as mock_complete, \
+         patch("app.services.nutrition_ai.usda.enrich_estimation", return_value=None), \
          patch("app.services.nutrition_ai.usage_service.record_usage") as mock_usage:
         result = nutrition_ai.estimate_from_image("user2", "https://example.com/photo.jpg", hint="dinner plate")
     assert result["macros"]["protein_g"] == 12.0

@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 USDA_BASE = "https://api.nal.usda.gov/fdc/v1"
 TIMEOUT_S = 6
 
+# Prefer generic whole-food datasets over branded packaged products.
+_DATA_TYPE_RANK = {"Foundation": 0, "SR Legacy": 1, "Survey (FNDDS)": 2, "Branded": 3}
+
 # USDA nutrient id -> (our_field, kind)
 NUTRIENT_MAP = {
     1003: ("protein_g", "macro"),
@@ -47,7 +50,10 @@ def search(query: str, limit: int = 5) -> list[dict]:
             params={
                 "api_key": key,
                 "query": query,
-                "pageSize": min(limit, 20),
+                # Over-fetch a candidate pool so whole-food entries (which USDA
+                # often ranks below branded) are present to be re-ranked, then
+                # we slice to `limit` after tiering.
+                "pageSize": max(limit, 25),
                 "dataType": "Foundation,SR Legacy,Branded",
             },
             timeout=TIMEOUT_S,
@@ -56,7 +62,7 @@ def search(query: str, limit: int = 5) -> list[dict]:
             return []
         data = r.json()
         out = []
-        for f in (data.get("foods") or [])[:limit]:
+        for f in (data.get("foods") or []):
             out.append({
                 "fdc_id": f.get("fdcId"),
                 "description": f.get("description", ""),
@@ -64,7 +70,11 @@ def search(query: str, limit: int = 5) -> list[dict]:
                 "score": f.get("score", 0),
                 "data_type": f.get("dataType"),
             })
-        return out
+        # Rank generic whole foods ahead of branded products so a plain query
+        # like "banana" surfaces "Bananas, raw" (89 kcal) over branded candy.
+        # Stable sort preserves USDA's relevance order within each tier.
+        out.sort(key=lambda h: _DATA_TYPE_RANK.get(h.get("data_type") or "", 3))
+        return out[:limit]
     except Exception:
         logger.exception("usda search failed for %r", query)
         return []
@@ -106,6 +116,7 @@ def get_nutrients(fdc_id: int) -> dict | None:
             "iron_mg", "vitamin_c_mg", "vitamin_d_mcg", "saturated_fat_g", "cholesterol_mg",
         )
     }
+    energy_alt: dict[int, float] = {}  # Atwater / kJ energy fallbacks for Foundation foods
     for n in data.get("foodNutrients") or []:
         nid = (n.get("nutrient") or {}).get("id") or n.get("nutrientId")
         amount = n.get("amount", 0) or 0
@@ -113,6 +124,18 @@ def get_nutrients(fdc_id: int) -> dict | None:
             field, kind = NUTRIENT_MAP[nid]
             target = macros if kind == "macro" else micros
             target[field] = float(amount)
+        elif nid in (2047, 2048, 1062):
+            energy_alt[nid] = float(amount)
+
+    # Foundation foods often omit nutrient 1008 (Energy kcal); fall back to
+    # Atwater kcal (2047/2048) or convert kJ (1062 -> kcal) so calories != 0.
+    if not macros["calories"]:
+        if energy_alt.get(2047):
+            macros["calories"] = energy_alt[2047]
+        elif energy_alt.get(2048):
+            macros["calories"] = energy_alt[2048]
+        elif energy_alt.get(1062):
+            macros["calories"] = round(energy_alt[1062] / 4.184, 1)
 
     name = data.get("description", "")
     if data.get("brandOwner"):
