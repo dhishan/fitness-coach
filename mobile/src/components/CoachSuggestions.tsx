@@ -6,7 +6,9 @@
  * would tap manually. One Add per card, one tap.
  */
 import React, { useState } from 'react'
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 import Markdown from 'react-native-markdown-display'
 import { useQueryClient } from '@tanstack/react-query'
 import { exercisesApi, templatesApi, workoutsApi } from '../services/api'
@@ -90,22 +92,47 @@ function CardShell({
   addLabel,
   onAdd,
   state,
+  onPressTitle,
+  opening,
 }: {
   title: string
   subtitle: string
   addLabel: string
   onAdd: () => void
   state: AddState
+  // When provided, the title becomes tappable and opens the exercise preview.
+  onPressTitle?: () => void
+  opening?: boolean
 }) {
   const disabled = state === 'saving' || state === 'saved'
   const btnText =
     state === 'saving' ? '...' : state === 'saved' ? '✓ Added' : addLabel
+  const titleInner = (
+    <>
+      <View style={styles.titleRow}>
+        <Text style={[styles.cardTitle, onPressTitle && styles.cardTitleLink]} numberOfLines={2}>
+          {title}
+        </Text>
+        {onPressTitle &&
+          (opening ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons name="chevron-forward" size={16} color={colors.gray400} />
+          ))}
+      </View>
+      <Text style={styles.cardSub}>{subtitle}</Text>
+      {onPressTitle && <Text style={styles.cardHint}>Tap to view & add</Text>}
+    </>
+  )
   return (
     <View style={styles.card}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardSub}>{subtitle}</Text>
-      </View>
+      {onPressTitle ? (
+        <Pressable style={{ flex: 1 }} onPress={onPressTitle}>
+          {titleInner}
+        </Pressable>
+      ) : (
+        <View style={{ flex: 1 }}>{titleInner}</View>
+      )}
       <TouchableOpacity
         style={[styles.addBtn, disabled && styles.addBtnDisabled]}
         onPress={onAdd}
@@ -119,6 +146,27 @@ function CardShell({
       </TouchableOpacity>
     </View>
   )
+}
+
+// Resolve an exercise name to its library id and open the preview page.
+// Falls back to an alert when the exercise isn't in the library yet.
+function useOpenPreview() {
+  const router = useRouter()
+  const [opening, setOpening] = useState(false)
+  const open = async (name: string) => {
+    setOpening(true)
+    try {
+      const ex = await resolveExerciseId(name)
+      if (ex) {
+        router.push(`/library/${ex.id}` as never)
+      } else {
+        Alert.alert('Not in your library yet', `Add "${name}" first, then you can preview it.`)
+      }
+    } finally {
+      setOpening(false)
+    }
+  }
+  return { open, opening }
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +193,7 @@ async function resolveExerciseId(name: string): Promise<Exercise | null> {
 function ExerciseCard({ s }: { s: ExerciseSuggestion }) {
   const qc = useQueryClient()
   const [state, setState] = useState<AddState>('idle')
+  const { open, opening } = useOpenPreview()
   const onAdd = async () => {
     setState('saving')
     try {
@@ -176,6 +225,8 @@ function ExerciseCard({ s }: { s: ExerciseSuggestion }) {
       addLabel="+ Add to library"
       onAdd={() => void onAdd()}
       state={state}
+      onPressTitle={() => void open(s.data.name)}
+      opening={opening}
     />
   )
 }
@@ -234,6 +285,7 @@ function PlanCard({ s }: { s: PlanSuggestion }) {
 function AddToWorkoutCard({ s }: { s: AddToWorkoutSuggestion }) {
   const qc = useQueryClient()
   const [state, setState] = useState<AddState>('idle')
+  const { open, opening } = useOpenPreview()
   const onAdd = async () => {
     setState('saving')
     try {
@@ -279,6 +331,8 @@ function AddToWorkoutCard({ s }: { s: AddToWorkoutSuggestion }) {
       addLabel="+ Add to workout"
       onAdd={() => void onAdd()}
       state={state}
+      onPressTitle={() => void open(s.data.exercise_name)}
+      opening={opening}
     />
   )
 }
@@ -326,8 +380,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginVertical: spacing.sm,
   },
-  cardTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+  cardTitleLink: { color: colors.primary },
   cardSub: { fontSize: 12, color: colors.gray500, marginTop: 2 },
+  cardHint: { fontSize: 11, color: colors.gray400, marginTop: 4 },
   addBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,

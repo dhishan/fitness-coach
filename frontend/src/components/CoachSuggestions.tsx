@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { exercisesApi, templatesApi, workoutsApi } from '../services/api'
 import type { Equipment, Exercise, MovementPattern, Muscle } from '@fitness/shared-types'
@@ -97,6 +98,8 @@ function CardShell({
   onAdd,
   state,
   errorMsg,
+  onPressTitle,
+  opening,
 }: {
   title: string
   subtitle: string
@@ -104,15 +107,30 @@ function CardShell({
   onAdd: () => void
   state: AddState
   errorMsg: string
+  // When provided, the title becomes a link that opens the exercise preview.
+  onPressTitle?: () => void
+  opening?: boolean
 }) {
   const disabled = state === 'saving' || state === 'saved'
   const btnText =
     state === 'saving' ? '...' : state === 'saved' ? '✓ Added' : addLabel
   return (
     <div className="my-2 flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
-      <div className="flex-1">
-        <div className="text-sm font-semibold text-gray-900">{title}</div>
+      <div className="flex-1 min-w-0">
+        {onPressTitle ? (
+          <button
+            onClick={onPressTitle}
+            className="group flex items-center gap-1 text-left"
+            title="View & add"
+          >
+            <span className="text-sm font-semibold text-blue-600 group-hover:underline">{title}</span>
+            <span className="text-blue-400">{opening ? '…' : '›'}</span>
+          </button>
+        ) : (
+          <div className="text-sm font-semibold text-gray-900">{title}</div>
+        )}
         <div className="mt-0.5 whitespace-pre-line text-xs text-gray-500">{subtitle}</div>
+        {onPressTitle ? <div className="mt-1 text-[11px] text-gray-400">Tap to view & add</div> : null}
         {state === 'error' && errorMsg ? (
           <div className="mt-1 text-xs text-red-600">{errorMsg}</div>
         ) : null}
@@ -130,6 +148,23 @@ function CardShell({
   )
 }
 
+// Resolve an exercise name to its library id and open the detail page.
+function useOpenPreview() {
+  const navigate = useNavigate()
+  const [opening, setOpening] = useState(false)
+  const open = async (name: string) => {
+    setOpening(true)
+    try {
+      const ex = await resolveExerciseId(name)
+      if (ex) navigate(`/library/${ex.id}`)
+      else window.alert(`"${name}" isn't in your library yet. Add it first, then you can preview it.`)
+    } finally {
+      setOpening(false)
+    }
+  }
+  return { open, opening }
+}
+
 // ---------------------------------------------------------------------------
 // Cards
 // ---------------------------------------------------------------------------
@@ -138,6 +173,7 @@ function ExerciseCard({ s }: { s: ExerciseSuggestion }) {
   const qc = useQueryClient()
   const [state, setState] = useState<AddState>('idle')
   const [err, setErr] = useState('')
+  const { open, opening } = useOpenPreview()
   const onAdd = async () => {
     setState('saving'); setErr('')
     try {
@@ -167,6 +203,8 @@ function ExerciseCard({ s }: { s: ExerciseSuggestion }) {
       onAdd={() => void onAdd()}
       state={state}
       errorMsg={err}
+      onPressTitle={() => void open(s.data.name)}
+      opening={opening}
     />
   )
 }
@@ -220,6 +258,7 @@ function AddToWorkoutCard({ s }: { s: AddToWorkoutSuggestion }) {
   const qc = useQueryClient()
   const [state, setState] = useState<AddState>('idle')
   const [err, setErr] = useState('')
+  const { open, opening } = useOpenPreview()
   const onAdd = async () => {
     setState('saving'); setErr('')
     try {
@@ -261,6 +300,8 @@ function AddToWorkoutCard({ s }: { s: AddToWorkoutSuggestion }) {
       onAdd={() => void onAdd()}
       state={state}
       errorMsg={err}
+      onPressTitle={() => void open(s.data.exercise_name)}
+      opening={opening}
     />
   )
 }
