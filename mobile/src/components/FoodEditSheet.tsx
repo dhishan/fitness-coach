@@ -23,6 +23,7 @@ import { toLocalISODate } from '../lib/dates'
 
 export interface FoodHit {
   name: string
+  description?: string | null
   serving: string
   macros: { calories: number; protein_g: number; carbs_g: number; fat_g: number }
   micros?: Record<string, number> | null
@@ -260,6 +261,7 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
       const body: FoodLogCreate = {
         date: resolvedDate,
         name: hit.name,
+        ...(hit.description ? { description: hit.description } : {}),
         serving: servings !== 1 ? `${round1(servings)}× ${baseServing}` : baseServing,
         macros: {
           calories: Number(calories),
@@ -327,6 +329,11 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
                 </View>
               )}
             </View>
+
+            {/* AI description of what was estimated */}
+            {hit.description ? (
+              <Text style={es.description}>{hit.description}</Text>
+            ) : null}
 
             {/* Live totals band */}
             <View style={es.totalsBand}>
@@ -590,6 +597,7 @@ const es = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.md },
   foodName: { fontSize: 17, fontWeight: '700', color: colors.text, flexShrink: 1 },
   servingLabel: { fontSize: 13, color: colors.gray500, marginTop: 2 },
+  description: { fontSize: 13, color: colors.gray600, lineHeight: 18, marginBottom: spacing.sm, fontStyle: 'italic' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, alignSelf: 'flex-start' },
   badgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
 

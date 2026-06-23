@@ -114,6 +114,7 @@ export default function AddFood({ open, date, initialMeal, onClose, onLogged }: 
       const est = await nutritionApi.estimateText(q.trim())
       openEditWithHit({
         name: est.name,
+        description: est.description ?? null,
         serving: est.serving,
         macros: est.macros,
         micros: est.micros as Record<string, number> | undefined,
@@ -138,6 +139,7 @@ export default function AddFood({ open, date, initialMeal, onClose, onLogged }: 
       const est = await nutritionApi.estimateLabel(signed.public_url)
       openEditWithHit({
         name: est.name,
+        description: est.description ?? null,
         serving: est.serving,
         macros: est.macros,
         micros: est.micros as Record<string, number> | undefined,

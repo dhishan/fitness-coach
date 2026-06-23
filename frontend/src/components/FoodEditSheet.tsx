@@ -7,6 +7,7 @@ import { toLocalISODate } from '../lib/dates'
 
 export interface FoodHit {
   name: string
+  description?: string | null
   serving: string
   macros: { calories: number; protein_g: number; carbs_g: number; fat_g: number }
   micros?: Record<string, number> | null
@@ -214,6 +215,7 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
       const body: FoodLogCreate = {
         date: resolvedDate,
         name: hit.name,
+        ...(hit.description ? { description: hit.description } : {}),
         serving: servings !== 1 ? `${round1(servings)}× ${baseServing}` : baseServing,
         macros: {
           calories: Number(calories),
@@ -284,6 +286,9 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
           <div className="flex items-start gap-3 mb-4">
             <div className="flex-1 min-w-0">
               <p className="text-base font-bold text-gray-900 leading-snug">{hit.name}</p>
+              {hit.description ? (
+                <p className="text-xs text-gray-600 italic mt-0.5">{hit.description}</p>
+              ) : null}
               <p className="text-xs text-gray-500 mt-0.5">{hit.serving || '1 serving'}</p>
             </div>
             {badge && (

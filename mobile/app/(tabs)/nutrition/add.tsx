@@ -52,6 +52,7 @@ function hitToFoodHit(h: IngredientHit): FoodHit {
 function logToFoodHit(log: FoodLog): FoodHit {
   return {
     name: log.name,
+    description: log.description ?? null,
     serving: log.serving,
     macros: log.macros,
     micros: log.micros as Record<string, number> | null,
@@ -102,6 +103,9 @@ function FoodRow({ hit, onPress }: { hit: FoodHit; onPress: () => void }) {
     <Pressable style={as.foodRow} onPress={onPress}>
       <View style={{ flex: 1 }}>
         <Text style={as.rowName} numberOfLines={2}>{hit.name}</Text>
+        {hit.description ? (
+          <Text style={as.rowDesc} numberOfLines={1}>{hit.description}</Text>
+        ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
           <Text style={as.rowMeta}>
             {hit.serving} - {Math.round(hit.macros.calories)} kcal
@@ -170,7 +174,12 @@ export default function AddFoodScreen() {
   const filteredRecent = useMemo(() => {
     if (!query.trim()) return recentLogs
     const q = query.toLowerCase()
-    return recentLogs.filter((l) => l.name.toLowerCase().includes(q))
+    // Match the AI description too, so "flatbread" finds a logged "Phulka".
+    return recentLogs.filter(
+      (l) =>
+        l.name.toLowerCase().includes(q) ||
+        (l.description ?? '').toLowerCase().includes(q),
+    )
   }, [recentLogs, query])
 
   const filteredFavs = useMemo(() => {
@@ -276,7 +285,7 @@ export default function AddFoodScreen() {
       })
       if (put.status < 200 || put.status >= 300) throw new Error(`Upload failed (${put.status})`)
       const est = await nutritionApi.estimatePhoto(signed.public_url, note || undefined)
-      openEdit({ name: est.name, serving: est.serving, macros: est.macros, micros: (est.micros ?? null) as Record<string, number> | null, source: 'usda' })
+      openEdit({ name: est.name, description: est.description ?? null, serving: est.serving, macros: est.macros, micros: (est.micros ?? null) as Record<string, number> | null, source: 'usda' })
     } catch {
       Alert.alert('Error', 'Could not process photo. Try again.')
     } finally {
@@ -290,7 +299,7 @@ export default function AddFoodScreen() {
     setEstimating(true)
     try {
       const est = await nutritionApi.estimateText(q)
-      openEdit({ name: est.name, serving: est.serving, macros: est.macros, micros: (est.micros ?? null) as Record<string, number> | null, source: 'usda' })
+      openEdit({ name: est.name, description: est.description ?? null, serving: est.serving, macros: est.macros, micros: (est.micros ?? null) as Record<string, number> | null, source: 'usda' })
     } catch {
       Alert.alert('Error', 'Could not estimate. Try rephrasing.')
     } finally {
@@ -511,6 +520,7 @@ const as = StyleSheet.create({
     gap: spacing.sm,
   },
   rowName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  rowDesc: { fontSize: 12, color: colors.gray500, fontStyle: 'italic', marginTop: 1 },
   rowMeta: { fontSize: 12, color: colors.gray500 },
   rowRight: { alignItems: 'flex-end', minWidth: 48 },
   rowKcal: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },

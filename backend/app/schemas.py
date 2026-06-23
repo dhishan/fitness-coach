@@ -107,6 +107,7 @@ MealType = Literal["breakfast", "lunch", "dinner", "snack"]
 class FoodLogCreate(BaseModel):
     date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     name: str = Field(min_length=1, max_length=120)
+    description: str = Field(default="", max_length=300)
     serving: str = ""
     macros: Macros
     source: Literal["ai_text", "ai_photo", "favorite", "manual", "barcode"] = "manual"
@@ -121,6 +122,7 @@ class FoodLogCreate(BaseModel):
 class FoodLogUpdate(BaseModel):
     date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     name: str | None = None
+    description: str | None = None
     serving: str | None = None
     macros: Macros | None = None
     notes: str | None = None

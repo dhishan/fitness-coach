@@ -167,7 +167,7 @@ export interface Micros {
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export type FoodLogSource = 'ai_text' | 'ai_photo' | 'favorite' | 'manual'
 export interface FoodLog {
-  id: string; user_id: string; date: string; name: string; serving: string;
+  id: string; user_id: string; date: string; name: string; description?: string; serving: string;
   macros: Macros; source: FoodLogSource; notes: string; created_at: string;
   meal_type?: MealType | null;
   logged_at?: string | null;
@@ -176,7 +176,7 @@ export interface FoodLog {
   micros_source?: 'ai' | 'usda' | null;
 }
 export interface FoodLogCreate {
-  date: string; name: string; serving?: string; macros: Macros; source?: FoodLogSource; notes?: string;
+  date: string; name: string; description?: string; serving?: string; macros: Macros; source?: FoodLogSource; notes?: string;
   meal_type?: MealType | null;
   logged_at?: string | null;
   micros?: Micros | null;
@@ -185,7 +185,7 @@ export interface FoodLogCreate {
 }
 export interface FoodLogUpdate {
   date?: string;
-  name?: string; serving?: string; macros?: Macros; notes?: string;
+  name?: string; description?: string; serving?: string; macros?: Macros; notes?: string;
   meal_type?: MealType | null;
   logged_at?: string | null;
   micros?: Micros | null;
@@ -252,10 +252,11 @@ export interface Goals {
 }
 export interface DayLogs { items: FoodLog[]; totals: Macros; micros_totals?: Micros; incomplete?: boolean }
 export interface Estimation {
-  name: string; serving: string; macros: Macros; confidence: number;
+  name: string; description?: string; serving: string; macros: Macros; confidence: number;
   micros?: Micros;
   usda_fdc_id?: number | null;
   micros_source?: 'ai' | 'usda' | null;
+  is_label?: boolean;
 }
 export interface FoodSuggestion {
   name: string

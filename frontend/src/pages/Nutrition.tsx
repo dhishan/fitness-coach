@@ -273,6 +273,7 @@ function PreviewCard({
         await nutritionApi.logs.create({
           date,
           name,
+          ...(state.estimation.description ? { description: state.estimation.description } : {}),
           serving,
           macros,
           source: logSource,
@@ -303,6 +304,9 @@ function PreviewCard({
           {confidence}% confident
         </span>
       </div>
+      {state.estimation.description ? (
+        <p className="text-xs text-gray-600 italic">{state.estimation.description}</p>
+      ) : null}
 
       {/* Meal type chips + time picker */}
       {!state.editId && (
@@ -1020,6 +1024,9 @@ export default function Nutrition() {
                 <div key={log.id} className="flex items-start justify-between gap-2 py-1 border-b border-gray-50 last:border-0">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{log.name}</p>
+                    {log.description ? (
+                      <p className="text-xs text-gray-500 italic truncate mt-0.5">{log.description}</p>
+                    ) : null}
                     <p className="text-xs text-gray-400 mt-0.5">
                       {log.serving && <span>{log.serving} - </span>}
                       {Math.round(log.macros.calories)} kcal | P {Math.round(log.macros.protein_g)}g C {Math.round(log.macros.carbs_g)}g F {Math.round(log.macros.fat_g)}g

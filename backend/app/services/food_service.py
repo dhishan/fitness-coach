@@ -50,6 +50,7 @@ def create_log(user_id: str, payload: dict) -> dict:
         "user_id": user_id,
         "date": payload["date"],
         "name": payload["name"],
+        "description": payload.get("description", ""),
         "serving": payload.get("serving", ""),
         "macros": payload["macros"],
         "source": payload.get("source", "manual"),

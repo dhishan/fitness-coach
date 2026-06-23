@@ -11,12 +11,14 @@ logger = logging.getLogger(__name__)
 
 ESTIMATION_SYSTEM = (
     "You estimate calories and macros for foods. Return JSON only matching this schema: "
-    '{"name": string, "serving": string, '
+    '{"name": string, "description": string, "serving": string, '
     '"macros": {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}, '
     '"micros": {"fiber_g": number, "sugar_g": number, "sodium_mg": number, "potassium_mg": number, '
     '"calcium_mg": number, "iron_mg": number, "vitamin_c_mg": number, "vitamin_d_mcg": number, '
     '"saturated_fat_g": number, "cholesterol_mg": number}, '
     '"confidence": number between 0 and 1}. '
+    "description: one short sentence describing what you estimated and any assumptions "
+    "(ingredients, cooking method, portion), e.g. 'Pan-fried chicken breast, ~150g, no added oil'. "
     "Be conservative. If unsure of portion, assume the most common serving size and mention "
     "the assumption in the name (e.g. 'Chicken bowl (1 standard serving ~350g)'). "
     "Never invent precision; round to whole numbers for calories and 1 decimal for grams. "
@@ -131,12 +133,13 @@ def estimate_from_text(user_id: str, text: str) -> dict:
 LABEL_SYSTEM = (
     "You read a photo of a packaged-food NUTRITION FACTS label and extract the "
     "per-serving values literally. Return JSON only matching this schema: "
-    '{"name": string, "serving": string, '
+    '{"name": string, "description": string, "serving": string, '
     '"macros": {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}, '
     '"micros": {"fiber_g": number, "sugar_g": number, "sodium_mg": number, "potassium_mg": number, '
     '"calcium_mg": number, "iron_mg": number, "vitamin_c_mg": number, "vitamin_d_mcg": number, '
     '"saturated_fat_g": number, "cholesterol_mg": number}, '
     '"confidence": number between 0 and 1}. '
+    "description: one short sentence naming the product and serving read from the label. "
     "Read PER SERVING values exactly as printed. Do NOT scale, do NOT average, "
     "do NOT estimate portion. If the product name/brand is visible elsewhere on the package, "
     "set name to '<Product> (<Brand>)'. Set serving to the label's serving size including the "
@@ -190,12 +193,14 @@ VISION_SYSTEM = (
     "You analyze a food photo and return JSON only. FIRST decide whether the image is a "
     "packaged-food NUTRITION FACTS label or a photo of prepared/served food. "
     "Schema: "
-    '{"is_label": boolean, "name": string, "serving": string, '
+    '{"is_label": boolean, "name": string, "description": string, "serving": string, '
     '"macros": {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}, '
     '"micros": {"fiber_g": number, "sugar_g": number, "sodium_mg": number, "potassium_mg": number, '
     '"calcium_mg": number, "iron_mg": number, "vitamin_c_mg": number, "vitamin_d_mcg": number, '
     '"saturated_fat_g": number, "cholesterol_mg": number}, '
     '"confidence": number between 0 and 1}. '
+    "description: one short sentence on what you saw and any assumptions, e.g. "
+    "'Two rotis with a bowl of dal, home-style' or 'Packaged label read verbatim'. "
     "If it IS a Nutrition Facts label: set is_label=true and read the PER-SERVING values EXACTLY "
     "as printed — do NOT estimate or rescale. Set serving to the label's serving size including "
     "the gram weight if shown (e.g. '1 piece (35g)'). If the product/brand is visible, set name to "

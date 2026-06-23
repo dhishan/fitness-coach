@@ -337,6 +337,7 @@ function PreviewModal({
         await nutritionApi.logs.create({
           date,
           name,
+          ...(state.estimation.description ? { description: state.estimation.description } : {}),
           serving: servingLabel,
           macros,
           source: state.source,
@@ -390,6 +391,11 @@ function PreviewModal({
               <Text style={s.confidenceText}>{confidence}% confident</Text>
             </View>
           </View>
+
+          {/* What the AI estimated */}
+          {state.estimation.description ? (
+            <Text style={s.aiDescription}>{state.estimation.description}</Text>
+          ) : null}
 
           {/* Meal type chips + time (only when creating) */}
           {!state.editId && (
@@ -1289,6 +1295,9 @@ function NutritionScreenInner() {
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={s.logName} numberOfLines={1}>{log.name}</Text>
+                    {log.description ? (
+                      <Text style={s.logDesc} numberOfLines={1}>{log.description}</Text>
+                    ) : null}
                     <Text style={s.logMeta}>
                       {log.serving ? `${log.serving} - ` : ''}
                       {Math.round(log.macros.calories)} kcal | P {Math.round(log.macros.protein_g)}g C {Math.round(log.macros.carbs_g)}g F {Math.round(log.macros.fat_g)}g
@@ -1351,6 +1360,7 @@ function NutritionScreenInner() {
         visible={!!editLog}
         hit={editLog ? {
           name: editLog.name,
+          description: editLog.description ?? null,
           serving: editLog.serving,
           macros: editLog.macros,
           micros: (editLog.micros as unknown as Record<string, number>) ?? null,
@@ -1654,6 +1664,8 @@ const s = StyleSheet.create({
   logRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, gap: spacing.sm },
   logRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.gray50 },
   logName: { fontSize: 14, fontWeight: '500', color: colors.text },
+  logDesc: { fontSize: 12, color: colors.gray500, fontStyle: 'italic', marginTop: 1 },
+  aiDescription: { fontSize: 13, color: colors.gray600, fontStyle: 'italic', lineHeight: 18, marginBottom: spacing.sm },
   logMeta: { fontSize: 12, color: colors.gray400, marginTop: 2 },
   logMenuDot: { fontSize: 18, color: colors.gray400, lineHeight: 22 },
 
