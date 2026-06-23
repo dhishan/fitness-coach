@@ -198,6 +198,7 @@ function EntryCard({
   isSelected: boolean
   onToggleSelect: () => void
 }) {
+  const navigate = useNavigate()
   const updateSet = (i: number, s: SetEntry) => {
     const sets = entry.sets.map((x, idx) => (idx === i ? s : x))
     onUpdate({ ...entry, sets })
@@ -231,7 +232,20 @@ function EntryCard({
             />
           )}
           <div className="min-w-0">
-            <p className="font-semibold text-sm text-gray-900 truncate">{entry.exercise_name}</p>
+            {entry.exercise_id ? (
+              <button
+                onClick={() => navigate(`/library/${entry.exercise_id}`)}
+                className="flex items-center gap-1 text-left group"
+                title="View exercise"
+              >
+                <span className="font-semibold text-sm text-blue-600 truncate group-hover:underline">
+                  {entry.exercise_name}
+                </span>
+                <span className="text-blue-400 flex-shrink-0">›</span>
+              </button>
+            ) : (
+              <p className="font-semibold text-sm text-gray-900 truncate">{entry.exercise_name}</p>
+            )}
             {entry.lastTime && (
               <p className="text-xs text-gray-400 mt-0.5">{entry.lastTime}</p>
             )}

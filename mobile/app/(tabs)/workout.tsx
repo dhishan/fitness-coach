@@ -204,9 +204,10 @@ function SetRow({
       <TouchableOpacity
         onPress={onRemove}
         style={s.removeSetBtn}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessibilityLabel="remove set"
       >
-        <Text style={s.removeSetText}>x</Text>
+        <Text style={s.removeSetText}>✕</Text>
       </TouchableOpacity>
     </View>
   )
@@ -243,6 +244,7 @@ function EntryCard({
   onMoveUp: () => void
   onMoveDown: () => void
 }) {
+  const router = useRouter()
   const updateSet = (i: number, updated: SetEntry) => {
     const sets = entry.sets.map((x, idx) => (idx === i ? updated : x))
     onUpdate({ ...entry, sets })
@@ -270,12 +272,21 @@ function EntryCard({
               accessibilityLabel="select entry"
             />
           )}
-          <View style={s.entryNameBlock}>
-            <Text style={s.entryName} numberOfLines={1}>{entry.exercise_name}</Text>
+          <Pressable
+            style={s.entryNameBlock}
+            onPress={() => entry.exercise_id && router.push(`/library/${entry.exercise_id}` as never)}
+            disabled={!entry.exercise_id}
+          >
+            <View style={s.entryNameRow}>
+              <Text style={[s.entryName, entry.exercise_id && s.entryNameLink]} numberOfLines={1}>
+                {entry.exercise_name}
+              </Text>
+              {entry.exercise_id ? <Text style={s.entryNameChevron}>›</Text> : null}
+            </View>
             {entry.lastTime ? (
               <Text style={s.lastTime}>{entry.lastTime}</Text>
             ) : null}
-          </View>
+          </Pressable>
         </View>
         <View style={s.entryHeaderRight}>
           <TouchableOpacity
@@ -1268,7 +1279,10 @@ const s = StyleSheet.create({
   },
   entryHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 },
   entryNameBlock: { flex: 1, minWidth: 0 },
-  entryName: { fontSize: 14, fontWeight: '600', color: colors.text },
+  entryNameRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  entryName: { flexShrink: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+  entryNameLink: { color: colors.primary },
+  entryNameChevron: { fontSize: 16, color: colors.primary, fontWeight: '600' },
   lastTime: { fontSize: 12, color: colors.gray400, marginTop: 2 },
   entryHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   swapBtn: { paddingHorizontal: 8, paddingVertical: 4 },
@@ -1382,8 +1396,14 @@ const s = StyleSheet.create({
     color: colors.textSecondary,
     paddingHorizontal: 0,
   },
-  removeSetBtn: { marginLeft: 'auto' },
-  removeSetText: { fontSize: 16, color: colors.gray300 },
+  removeSetBtn: {
+    marginLeft: 'auto',
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeSetText: { fontSize: 15, color: colors.gray400, fontWeight: '600' },
 
   // Superset
   supersetGroup: { marginBottom: 8 },
