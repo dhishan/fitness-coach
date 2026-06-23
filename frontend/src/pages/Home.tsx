@@ -174,6 +174,22 @@ function PlansSection({ templates, onStart }: { templates: WorkoutTemplate[]; on
   const navigate = useNavigate()
   return (
     <div className="card p-4">
+      {/* Big browse buttons */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <button
+          onClick={() => navigate('/library')}
+          className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 py-4 text-sm font-bold text-blue-600 hover:bg-blue-100"
+        >
+          <span className="text-lg">🏋️</span> Browse Exercises
+        </button>
+        <button
+          onClick={() => navigate('/plans')}
+          className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 py-4 text-sm font-bold text-blue-600 hover:bg-blue-100"
+        >
+          <span className="text-lg">📋</span> Browse Plans
+        </button>
+      </div>
+
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-gray-900">Your plans</span>
         <button

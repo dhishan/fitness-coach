@@ -13,6 +13,7 @@ import LibraryDetail from './pages/LibraryDetail'
 import Coach from './pages/Coach'
 import Nutrition from './pages/Nutrition'
 import PlanEditor from './pages/PlanEditor'
+import Plans from './pages/Plans'
 import Body from './pages/Body'
 import Cardio from './pages/Cardio'
 import Recipes from './pages/Recipes'
@@ -130,6 +131,7 @@ function AuthedLayout() {
           <Route path="/recipes/:id" element={<RecipeEditor />} />
           <Route path="/coach" element={<Coach />} />
           <Route path="/coach/:id" element={<Coach />} />
+          <Route path="/plans" element={<Plans />} />
           <Route path="/plans/new" element={<PlanEditor />} />
           <Route path="/plans/:id" element={<PlanEditor />} />
           <Route path="/body" element={<Body />} />

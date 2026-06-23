@@ -123,6 +123,7 @@ function RootLayout() {
           name="settings"
           options={{ presentation: 'modal', title: 'Settings' }}
         />
+        <Stack.Screen name="plans/index" options={{ title: 'Plans' }} />
         <Stack.Screen name="plans/new" options={{ title: 'New plan' }} />
         <Stack.Screen name="plans/[id]" options={{ title: 'Edit plan' }} />
         <Stack.Screen name="library/[id]" options={{ title: 'Exercise' }} />

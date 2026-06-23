@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { LineChart } from 'react-native-chart-kit'
 import type { BodyMetric, CardioLog, DashboardSummary, Exercise, ProgressPoint, Workout, WorkoutTemplate } from '@fitness/shared-types'
@@ -275,17 +276,25 @@ function PlansSection({
 
   return (
     <View style={[card, s.cardPad]}>
-      <View style={s.row}>
-        <Text style={s.sectionTitle}>Your plans</Text>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Pressable onPress={() => router.push('/(tabs)/library')}>
-            <Text style={s.newPlanBtn}>Browse exercises</Text>
-          </Pressable>
-          <Pressable onPress={() => router.push('/plans/new')}>
-            <Text style={s.newPlanBtn}>+ New plan</Text>
-          </Pressable>
-        </View>
+      {/* Big browse buttons */}
+      <View style={s.browseRow}>
+        <Pressable style={s.browseBtn} onPress={() => router.push('/(tabs)/library')}>
+          <Ionicons name="barbell-outline" size={24} color={colors.primary} />
+          <Text style={s.browseBtnText}>Browse Exercises</Text>
+        </Pressable>
+        <Pressable style={s.browseBtn} onPress={() => router.push('/plans' as never)}>
+          <Ionicons name="list-outline" size={24} color={colors.primary} />
+          <Text style={s.browseBtnText}>Browse Plans</Text>
+        </Pressable>
       </View>
+
+      <View style={[s.row, { marginTop: spacing.base }]}>
+        <Text style={s.sectionTitle}>Your plans</Text>
+        <Pressable onPress={() => router.push('/plans/new')}>
+          <Text style={s.newPlanBtn}>+ New plan</Text>
+        </Pressable>
+      </View>
+
       {templates.length === 0 ? (
         <Text style={s.empty}>No plans yet. Create one to start sessions faster.</Text>
       ) : (
@@ -799,6 +808,20 @@ const s = StyleSheet.create({
 
   // Plans
   newPlanBtn: { fontSize: 12, color: colors.primary, fontWeight: '500' },
+  browseRow: { flexDirection: 'row', gap: spacing.sm },
+  browseBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.base,
+    borderRadius: radius.md,
+    backgroundColor: '#EBF3FF',
+    borderWidth: 1,
+    borderColor: '#B6D4FE',
+  },
+  browseBtnText: { fontSize: 14, fontWeight: '700', color: colors.primary },
   planRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   planName: { fontSize: 14, fontWeight: '500', color: colors.text },
   planMeta: { fontSize: 12, color: colors.gray400, marginTop: 2 },
