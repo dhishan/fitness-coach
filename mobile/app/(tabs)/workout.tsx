@@ -1042,10 +1042,7 @@ export default function WorkoutScreen() {
       <AddExerciseSheet
         visible={showAdd}
         onClose={() => setShowAdd(false)}
-        onAdd={(ex) => {
-          setShowAdd(false)
-          router.push(`/library/${ex.id}`)
-        }}
+        onAdd={(ex, hist) => { void handleAddExercise(ex, hist) }}
       />
 
       {/* Alternatives sheet */}
