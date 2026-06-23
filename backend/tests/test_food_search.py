@@ -131,6 +131,25 @@ def test_ifct_limit_respected():
     assert len(results) <= 2
 
 
+def test_ifct_alias_chole_finds_chana_masala():
+    """'chole' must surface Chana Masala (chickpea curry), not only Chole Bhature."""
+    names = [r["name"].lower() for r in search_ifct("chole")]
+    assert "chana masala" in names
+
+
+def test_ifct_alias_saag_paneer_finds_palak_paneer():
+    names = [r["name"].lower() for r in search_ifct("saag paneer")]
+    assert "palak paneer" in names
+
+
+def test_ifct_name_match_ranks_above_alias_match():
+    """A dish whose name contains the query ranks before alias-only matches."""
+    results = search_ifct("curd")
+    assert results, "expected curd matches"
+    # 'Plain Curd / Dahi' (name contains 'curd') should lead 'Curd Rice'
+    assert results[0]["name"].lower().startswith("plain curd")
+
+
 # --- OFF search HTTP contract (search-a-licious "hits" shape) ---
 
 def test_search_off_reads_hits_shape():

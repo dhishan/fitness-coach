@@ -1,89 +1,2364 @@
 [
-  {"name": "Dal Makhani", "serving": "1 cup (240 g)", "macros": {"calories": 290, "protein_g": 12.0, "carbs_g": 28.0, "fat_g": 14.0}, "micros": {"fiber_g": 8.0, "sugar_g": 3.0, "sodium_mg": 450, "potassium_mg": 380, "calcium_mg": 110, "iron_mg": 3.5, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 7.0, "cholesterol_mg": 20}, "source": "ifct"},
-  {"name": "Chana Masala", "serving": "1 cup (200 g)", "macros": {"calories": 270, "protein_g": 13.0, "carbs_g": 35.0, "fat_g": 8.0}, "micros": {"fiber_g": 10.0, "sugar_g": 4.0, "sodium_mg": 520, "potassium_mg": 420, "calcium_mg": 80, "iron_mg": 4.0, "vitamin_c_mg": 8, "vitamin_d_mcg": 0, "saturated_fat_g": 1.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Rajma", "serving": "1 cup (200 g)", "macros": {"calories": 260, "protein_g": 14.0, "carbs_g": 36.0, "fat_g": 6.0}, "micros": {"fiber_g": 11.0, "sugar_g": 3.0, "sodium_mg": 480, "potassium_mg": 510, "calcium_mg": 70, "iron_mg": 4.5, "vitamin_c_mg": 4, "vitamin_d_mcg": 0, "saturated_fat_g": 1.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Palak Paneer", "serving": "1 cup (200 g)", "macros": {"calories": 280, "protein_g": 11.0, "carbs_g": 12.0, "fat_g": 20.0}, "micros": {"fiber_g": 3.0, "sugar_g": 2.0, "sodium_mg": 500, "potassium_mg": 360, "calcium_mg": 290, "iron_mg": 3.2, "vitamin_c_mg": 20, "vitamin_d_mcg": 0.2, "saturated_fat_g": 10.0, "cholesterol_mg": 40}, "source": "ifct"},
-  {"name": "Butter Chicken", "serving": "1 cup (200 g)", "macros": {"calories": 320, "protein_g": 26.0, "carbs_g": 12.0, "fat_g": 18.0}, "micros": {"fiber_g": 1.5, "sugar_g": 5.0, "sodium_mg": 600, "potassium_mg": 380, "calcium_mg": 60, "iron_mg": 1.8, "vitamin_c_mg": 6, "vitamin_d_mcg": 0.1, "saturated_fat_g": 8.0, "cholesterol_mg": 80}, "source": "ifct"},
-  {"name": "Chicken Biryani", "serving": "1 cup (200 g)", "macros": {"calories": 360, "protein_g": 22.0, "carbs_g": 38.0, "fat_g": 12.0}, "micros": {"fiber_g": 1.5, "sugar_g": 2.0, "sodium_mg": 550, "potassium_mg": 290, "calcium_mg": 50, "iron_mg": 2.0, "vitamin_c_mg": 3, "vitamin_d_mcg": 0.1, "saturated_fat_g": 4.0, "cholesterol_mg": 65}, "source": "ifct"},
-  {"name": "Vegetable Biryani", "serving": "1 cup (200 g)", "macros": {"calories": 280, "protein_g": 6.0, "carbs_g": 48.0, "fat_g": 7.0}, "micros": {"fiber_g": 3.0, "sugar_g": 3.0, "sodium_mg": 480, "potassium_mg": 220, "calcium_mg": 45, "iron_mg": 1.5, "vitamin_c_mg": 8, "vitamin_d_mcg": 0, "saturated_fat_g": 2.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Idli", "serving": "2 pieces (80 g)", "macros": {"calories": 116, "protein_g": 3.4, "carbs_g": 22.0, "fat_g": 1.2}, "micros": {"fiber_g": 0.8, "sugar_g": 0.5, "sodium_mg": 160, "potassium_mg": 90, "calcium_mg": 14, "iron_mg": 0.6, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 0.2, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Plain Dosa", "serving": "1 piece (75 g)", "macros": {"calories": 133, "protein_g": 3.2, "carbs_g": 22.0, "fat_g": 3.5}, "micros": {"fiber_g": 1.0, "sugar_g": 0.5, "sodium_mg": 200, "potassium_mg": 80, "calcium_mg": 12, "iron_mg": 0.7, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 0.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Masala Dosa", "serving": "1 piece (150 g)", "macros": {"calories": 230, "protein_g": 5.0, "carbs_g": 36.0, "fat_g": 7.0}, "micros": {"fiber_g": 2.5, "sugar_g": 1.5, "sodium_mg": 360, "potassium_mg": 250, "calcium_mg": 30, "iron_mg": 1.2, "vitamin_c_mg": 8, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Medu Vada", "serving": "2 pieces (80 g)", "macros": {"calories": 200, "protein_g": 7.0, "carbs_g": 22.0, "fat_g": 9.0}, "micros": {"fiber_g": 2.5, "sugar_g": 0.5, "sodium_mg": 280, "potassium_mg": 160, "calcium_mg": 25, "iron_mg": 1.5, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Sambar", "serving": "1 cup (200 g)", "macros": {"calories": 100, "protein_g": 5.0, "carbs_g": 16.0, "fat_g": 2.0}, "micros": {"fiber_g": 4.0, "sugar_g": 4.0, "sodium_mg": 420, "potassium_mg": 310, "calcium_mg": 55, "iron_mg": 2.0, "vitamin_c_mg": 22, "vitamin_d_mcg": 0, "saturated_fat_g": 0.3, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Roti / Chapati", "serving": "1 piece (35 g)", "macros": {"calories": 101, "protein_g": 3.1, "carbs_g": 18.0, "fat_g": 2.2}, "micros": {"fiber_g": 1.8, "sugar_g": 0.3, "sodium_mg": 110, "potassium_mg": 80, "calcium_mg": 14, "iron_mg": 1.2, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 0.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Naan", "serving": "1 piece (90 g)", "macros": {"calories": 262, "protein_g": 8.0, "carbs_g": 45.0, "fat_g": 5.0}, "micros": {"fiber_g": 1.5, "sugar_g": 2.0, "sodium_mg": 380, "potassium_mg": 100, "calcium_mg": 60, "iron_mg": 2.5, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 5}, "source": "ifct"},
-  {"name": "Aloo Paratha", "serving": "1 piece (100 g)", "macros": {"calories": 260, "protein_g": 5.5, "carbs_g": 38.0, "fat_g": 9.0}, "micros": {"fiber_g": 2.5, "sugar_g": 1.0, "sodium_mg": 290, "potassium_mg": 280, "calcium_mg": 30, "iron_mg": 1.8, "vitamin_c_mg": 6, "vitamin_d_mcg": 0, "saturated_fat_g": 3.0, "cholesterol_mg": 5}, "source": "ifct"},
-  {"name": "Paneer Tikka", "serving": "6 pieces (150 g)", "macros": {"calories": 300, "protein_g": 18.0, "carbs_g": 8.0, "fat_g": 22.0}, "micros": {"fiber_g": 1.0, "sugar_g": 3.0, "sodium_mg": 480, "potassium_mg": 150, "calcium_mg": 350, "iron_mg": 1.0, "vitamin_c_mg": 5, "vitamin_d_mcg": 0.2, "saturated_fat_g": 12.0, "cholesterol_mg": 50}, "source": "ifct"},
-  {"name": "Aloo Gobi", "serving": "1 cup (180 g)", "macros": {"calories": 175, "protein_g": 4.5, "carbs_g": 22.0, "fat_g": 7.5}, "micros": {"fiber_g": 4.0, "sugar_g": 3.5, "sodium_mg": 380, "potassium_mg": 480, "calcium_mg": 40, "iron_mg": 1.4, "vitamin_c_mg": 40, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Bhindi Masala", "serving": "1 cup (180 g)", "macros": {"calories": 160, "protein_g": 4.0, "carbs_g": 16.0, "fat_g": 9.0}, "micros": {"fiber_g": 6.0, "sugar_g": 3.0, "sodium_mg": 350, "potassium_mg": 400, "calcium_mg": 120, "iron_mg": 1.5, "vitamin_c_mg": 20, "vitamin_d_mcg": 0, "saturated_fat_g": 2.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Samosa", "serving": "1 piece (60 g)", "macros": {"calories": 160, "protein_g": 3.0, "carbs_g": 20.0, "fat_g": 7.5}, "micros": {"fiber_g": 1.5, "sugar_g": 1.0, "sodium_mg": 210, "potassium_mg": 160, "calcium_mg": 15, "iron_mg": 0.8, "vitamin_c_mg": 5, "vitamin_d_mcg": 0, "saturated_fat_g": 2.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Onion Pakora", "serving": "4 pieces (80 g)", "macros": {"calories": 200, "protein_g": 4.5, "carbs_g": 22.0, "fat_g": 10.0}, "micros": {"fiber_g": 2.0, "sugar_g": 2.0, "sodium_mg": 250, "potassium_mg": 120, "calcium_mg": 30, "iron_mg": 1.0, "vitamin_c_mg": 5, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Gulab Jamun", "serving": "2 pieces (80 g)", "macros": {"calories": 280, "protein_g": 4.5, "carbs_g": 44.0, "fat_g": 9.0}, "micros": {"fiber_g": 0.3, "sugar_g": 38.0, "sodium_mg": 80, "potassium_mg": 90, "calcium_mg": 80, "iron_mg": 0.4, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.1, "saturated_fat_g": 5.0, "cholesterol_mg": 20}, "source": "ifct"},
-  {"name": "Kheer", "serving": "1 cup (200 g)", "macros": {"calories": 260, "protein_g": 6.5, "carbs_g": 40.0, "fat_g": 8.0}, "micros": {"fiber_g": 0.5, "sugar_g": 32.0, "sodium_mg": 80, "potassium_mg": 230, "calcium_mg": 190, "iron_mg": 0.6, "vitamin_c_mg": 1, "vitamin_d_mcg": 0.3, "saturated_fat_g": 5.0, "cholesterol_mg": 25}, "source": "ifct"},
-  {"name": "Sweet Lassi", "serving": "1 glass (250 ml)", "macros": {"calories": 200, "protein_g": 6.0, "carbs_g": 32.0, "fat_g": 5.0}, "micros": {"fiber_g": 0, "sugar_g": 28.0, "sodium_mg": 80, "potassium_mg": 240, "calcium_mg": 210, "iron_mg": 0.1, "vitamin_c_mg": 1, "vitamin_d_mcg": 0.3, "saturated_fat_g": 3.5, "cholesterol_mg": 20}, "source": "ifct"},
-  {"name": "Salted Lassi", "serving": "1 glass (250 ml)", "macros": {"calories": 130, "protein_g": 6.5, "carbs_g": 14.0, "fat_g": 5.0}, "micros": {"fiber_g": 0, "sugar_g": 9.0, "sodium_mg": 380, "potassium_mg": 240, "calcium_mg": 210, "iron_mg": 0.1, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.3, "saturated_fat_g": 3.5, "cholesterol_mg": 20}, "source": "ifct"},
-  {"name": "Masala Chai", "serving": "1 cup (200 ml)", "macros": {"calories": 80, "protein_g": 2.5, "carbs_g": 12.0, "fat_g": 2.5}, "micros": {"fiber_g": 0, "sugar_g": 10.0, "sodium_mg": 30, "potassium_mg": 110, "calcium_mg": 80, "iron_mg": 0.3, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.1, "saturated_fat_g": 1.5, "cholesterol_mg": 8}, "source": "ifct"},
-  {"name": "Raita", "serving": "0.5 cup (120 g)", "macros": {"calories": 75, "protein_g": 3.5, "carbs_g": 8.0, "fat_g": 2.5}, "micros": {"fiber_g": 0.5, "sugar_g": 5.0, "sodium_mg": 180, "potassium_mg": 160, "calcium_mg": 120, "iron_mg": 0.2, "vitamin_c_mg": 3, "vitamin_d_mcg": 0.1, "saturated_fat_g": 1.5, "cholesterol_mg": 10}, "source": "ifct"},
-  {"name": "Plain Curd / Dahi", "serving": "1 cup (200 g)", "macros": {"calories": 120, "protein_g": 8.0, "carbs_g": 10.0, "fat_g": 4.5}, "micros": {"fiber_g": 0, "sugar_g": 9.0, "sodium_mg": 80, "potassium_mg": 300, "calcium_mg": 280, "iron_mg": 0.1, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.3, "saturated_fat_g": 3.0, "cholesterol_mg": 18}, "source": "ifct"},
-  {"name": "Ghee", "serving": "1 tbsp (15 g)", "macros": {"calories": 135, "protein_g": 0, "carbs_g": 0, "fat_g": 15.0}, "micros": {"fiber_g": 0, "sugar_g": 0, "sodium_mg": 0, "potassium_mg": 0, "calcium_mg": 0, "iron_mg": 0, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.4, "saturated_fat_g": 9.5, "cholesterol_mg": 38}, "source": "ifct"},
-  {"name": "Basmati Rice Cooked", "serving": "1 cup (180 g)", "macros": {"calories": 240, "protein_g": 4.5, "carbs_g": 52.0, "fat_g": 0.5}, "micros": {"fiber_g": 0.6, "sugar_g": 0, "sodium_mg": 5, "potassium_mg": 55, "calcium_mg": 14, "iron_mg": 0.6, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 0.1, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Poha", "serving": "1 cup (120 g)", "macros": {"calories": 175, "protein_g": 3.0, "carbs_g": 34.0, "fat_g": 3.5}, "micros": {"fiber_g": 1.5, "sugar_g": 1.0, "sodium_mg": 200, "potassium_mg": 110, "calcium_mg": 12, "iron_mg": 2.0, "vitamin_c_mg": 6, "vitamin_d_mcg": 0, "saturated_fat_g": 0.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Upma", "serving": "1 cup (150 g)", "macros": {"calories": 200, "protein_g": 4.5, "carbs_g": 32.0, "fat_g": 6.0}, "micros": {"fiber_g": 2.5, "sugar_g": 1.0, "sodium_mg": 380, "potassium_mg": 130, "calcium_mg": 20, "iron_mg": 1.5, "vitamin_c_mg": 5, "vitamin_d_mcg": 0, "saturated_fat_g": 1.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Pav Bhaji", "serving": "1 serving with pav (300 g)", "macros": {"calories": 460, "protein_g": 11.0, "carbs_g": 72.0, "fat_g": 14.0}, "micros": {"fiber_g": 7.0, "sugar_g": 8.0, "sodium_mg": 700, "potassium_mg": 550, "calcium_mg": 80, "iron_mg": 3.0, "vitamin_c_mg": 35, "vitamin_d_mcg": 0.1, "saturated_fat_g": 5.0, "cholesterol_mg": 15}, "source": "ifct"},
-  {"name": "Chole Bhature", "serving": "1 serving (300 g)", "macros": {"calories": 570, "protein_g": 16.0, "carbs_g": 80.0, "fat_g": 20.0}, "micros": {"fiber_g": 9.0, "sugar_g": 5.0, "sodium_mg": 680, "potassium_mg": 480, "calcium_mg": 90, "iron_mg": 4.5, "vitamin_c_mg": 8, "vitamin_d_mcg": 0, "saturated_fat_g": 5.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Paneer", "serving": "100 g", "macros": {"calories": 265, "protein_g": 18.0, "carbs_g": 3.4, "fat_g": 20.0}, "micros": {"fiber_g": 0, "sugar_g": 3.0, "sodium_mg": 30, "potassium_mg": 75, "calcium_mg": 480, "iron_mg": 0.3, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.5, "saturated_fat_g": 12.0, "cholesterol_mg": 65}, "source": "ifct"},
-  {"name": "Tandoori Chicken", "serving": "2 pieces (200 g)", "macros": {"calories": 280, "protein_g": 38.0, "carbs_g": 6.0, "fat_g": 11.0}, "micros": {"fiber_g": 0.5, "sugar_g": 2.0, "sodium_mg": 520, "potassium_mg": 380, "calcium_mg": 30, "iron_mg": 2.0, "vitamin_c_mg": 3, "vitamin_d_mcg": 0.1, "saturated_fat_g": 3.0, "cholesterol_mg": 110}, "source": "ifct"},
-  {"name": "Mutton Curry", "serving": "1 cup (200 g)", "macros": {"calories": 320, "protein_g": 28.0, "carbs_g": 8.0, "fat_g": 19.0}, "micros": {"fiber_g": 1.0, "sugar_g": 2.0, "sodium_mg": 580, "potassium_mg": 350, "calcium_mg": 35, "iron_mg": 3.5, "vitamin_c_mg": 4, "vitamin_d_mcg": 0, "saturated_fat_g": 8.0, "cholesterol_mg": 90}, "source": "ifct"},
-  {"name": "Fish Curry", "serving": "1 cup (200 g)", "macros": {"calories": 240, "protein_g": 24.0, "carbs_g": 8.0, "fat_g": 12.0}, "micros": {"fiber_g": 1.0, "sugar_g": 2.5, "sodium_mg": 550, "potassium_mg": 420, "calcium_mg": 60, "iron_mg": 1.5, "vitamin_c_mg": 5, "vitamin_d_mcg": 2.5, "saturated_fat_g": 2.5, "cholesterol_mg": 70}, "source": "ifct"},
-  {"name": "Egg Curry", "serving": "2 eggs with gravy (200 g)", "macros": {"calories": 270, "protein_g": 16.0, "carbs_g": 8.0, "fat_g": 18.0}, "micros": {"fiber_g": 1.0, "sugar_g": 2.0, "sodium_mg": 500, "potassium_mg": 220, "calcium_mg": 70, "iron_mg": 2.5, "vitamin_c_mg": 4, "vitamin_d_mcg": 1.0, "saturated_fat_g": 5.0, "cholesterol_mg": 380}, "source": "ifct"},
-  {"name": "Moong Dal", "serving": "1 cup (200 g)", "macros": {"calories": 180, "protein_g": 12.0, "carbs_g": 28.0, "fat_g": 2.0}, "micros": {"fiber_g": 7.0, "sugar_g": 2.0, "sodium_mg": 350, "potassium_mg": 390, "calcium_mg": 55, "iron_mg": 2.8, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 0.3, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Masoor Dal", "serving": "1 cup (200 g)", "macros": {"calories": 190, "protein_g": 13.0, "carbs_g": 30.0, "fat_g": 2.5}, "micros": {"fiber_g": 8.0, "sugar_g": 2.0, "sodium_mg": 360, "potassium_mg": 410, "calcium_mg": 50, "iron_mg": 3.5, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 0.3, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Toor Dal", "serving": "1 cup (200 g)", "macros": {"calories": 200, "protein_g": 12.5, "carbs_g": 32.0, "fat_g": 2.5}, "micros": {"fiber_g": 7.5, "sugar_g": 2.0, "sodium_mg": 370, "potassium_mg": 400, "calcium_mg": 55, "iron_mg": 3.2, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 0.4, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Uttapam", "serving": "1 piece (100 g)", "macros": {"calories": 155, "protein_g": 4.0, "carbs_g": 26.0, "fat_g": 4.0}, "micros": {"fiber_g": 1.5, "sugar_g": 2.0, "sodium_mg": 270, "potassium_mg": 130, "calcium_mg": 25, "iron_mg": 0.8, "vitamin_c_mg": 5, "vitamin_d_mcg": 0, "saturated_fat_g": 0.7, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Rava Idli", "serving": "2 pieces (80 g)", "macros": {"calories": 140, "protein_g": 4.0, "carbs_g": 22.0, "fat_g": 4.0}, "micros": {"fiber_g": 1.5, "sugar_g": 0.5, "sodium_mg": 240, "potassium_mg": 90, "calcium_mg": 18, "iron_mg": 0.7, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 0.8, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Matar Paneer", "serving": "1 cup (200 g)", "macros": {"calories": 295, "protein_g": 13.0, "carbs_g": 16.0, "fat_g": 20.0}, "micros": {"fiber_g": 4.5, "sugar_g": 3.5, "sodium_mg": 490, "potassium_mg": 280, "calcium_mg": 260, "iron_mg": 2.5, "vitamin_c_mg": 15, "vitamin_d_mcg": 0.2, "saturated_fat_g": 10.0, "cholesterol_mg": 40}, "source": "ifct"},
-  {"name": "Shahi Paneer", "serving": "1 cup (200 g)", "macros": {"calories": 350, "protein_g": 12.0, "carbs_g": 14.0, "fat_g": 27.0}, "micros": {"fiber_g": 1.5, "sugar_g": 6.0, "sodium_mg": 520, "potassium_mg": 180, "calcium_mg": 300, "iron_mg": 1.0, "vitamin_c_mg": 4, "vitamin_d_mcg": 0.3, "saturated_fat_g": 14.0, "cholesterol_mg": 55}, "source": "ifct"},
-  {"name": "Kadhi Pakora", "serving": "1 cup (200 g)", "macros": {"calories": 195, "protein_g": 7.0, "carbs_g": 22.0, "fat_g": 8.5}, "micros": {"fiber_g": 2.0, "sugar_g": 3.0, "sodium_mg": 450, "potassium_mg": 160, "calcium_mg": 130, "iron_mg": 1.2, "vitamin_c_mg": 2, "vitamin_d_mcg": 0.1, "saturated_fat_g": 2.5, "cholesterol_mg": 8}, "source": "ifct"},
-  {"name": "Baingan Bharta", "serving": "1 cup (180 g)", "macros": {"calories": 160, "protein_g": 4.0, "carbs_g": 14.0, "fat_g": 9.5}, "micros": {"fiber_g": 5.0, "sugar_g": 6.0, "sodium_mg": 380, "potassium_mg": 380, "calcium_mg": 35, "iron_mg": 1.2, "vitamin_c_mg": 10, "vitamin_d_mcg": 0, "saturated_fat_g": 2.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Pulao", "serving": "1 cup (180 g)", "macros": {"calories": 270, "protein_g": 5.5, "carbs_g": 46.0, "fat_g": 6.5}, "micros": {"fiber_g": 2.0, "sugar_g": 2.0, "sodium_mg": 420, "potassium_mg": 160, "calcium_mg": 30, "iron_mg": 1.2, "vitamin_c_mg": 4, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Halwa (Suji)", "serving": "0.5 cup (100 g)", "macros": {"calories": 290, "protein_g": 4.5, "carbs_g": 42.0, "fat_g": 11.0}, "micros": {"fiber_g": 1.0, "sugar_g": 25.0, "sodium_mg": 60, "potassium_mg": 80, "calcium_mg": 25, "iron_mg": 1.5, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.1, "saturated_fat_g": 6.0, "cholesterol_mg": 20}, "source": "ifct"},
-  {"name": "Jalebi", "serving": "4 pieces (80 g)", "macros": {"calories": 300, "protein_g": 2.5, "carbs_g": 60.0, "fat_g": 5.5}, "micros": {"fiber_g": 0.3, "sugar_g": 52.0, "sodium_mg": 40, "potassium_mg": 30, "calcium_mg": 10, "iron_mg": 0.5, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 2.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Ladoo (Besan)", "serving": "1 piece (50 g)", "macros": {"calories": 215, "protein_g": 4.5, "carbs_g": 28.0, "fat_g": 9.5}, "micros": {"fiber_g": 1.5, "sugar_g": 22.0, "sodium_mg": 30, "potassium_mg": 100, "calcium_mg": 25, "iron_mg": 1.5, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 4.5, "cholesterol_mg": 15}, "source": "ifct"},
-  {"name": "Barfi (Milk)", "serving": "2 pieces (60 g)", "macros": {"calories": 230, "protein_g": 6.0, "carbs_g": 30.0, "fat_g": 9.5}, "micros": {"fiber_g": 0, "sugar_g": 28.0, "sodium_mg": 50, "potassium_mg": 180, "calcium_mg": 160, "iron_mg": 0.2, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.2, "saturated_fat_g": 6.0, "cholesterol_mg": 30}, "source": "ifct"},
-  {"name": "Dahi Vada", "serving": "2 pieces (150 g)", "macros": {"calories": 220, "protein_g": 9.5, "carbs_g": 28.0, "fat_g": 7.5}, "micros": {"fiber_g": 2.5, "sugar_g": 8.0, "sodium_mg": 380, "potassium_mg": 220, "calcium_mg": 140, "iron_mg": 1.8, "vitamin_c_mg": 2, "vitamin_d_mcg": 0.1, "saturated_fat_g": 2.5, "cholesterol_mg": 10}, "source": "ifct"},
-  {"name": "Dum Aloo", "serving": "1 cup (200 g)", "macros": {"calories": 245, "protein_g": 5.0, "carbs_g": 32.0, "fat_g": 10.5}, "micros": {"fiber_g": 4.0, "sugar_g": 4.0, "sodium_mg": 470, "potassium_mg": 520, "calcium_mg": 35, "iron_mg": 1.5, "vitamin_c_mg": 18, "vitamin_d_mcg": 0, "saturated_fat_g": 3.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Kadala Curry", "serving": "1 cup (200 g)", "macros": {"calories": 255, "protein_g": 12.0, "carbs_g": 34.0, "fat_g": 7.5}, "micros": {"fiber_g": 9.5, "sugar_g": 3.0, "sodium_mg": 440, "potassium_mg": 450, "calcium_mg": 75, "iron_mg": 4.0, "vitamin_c_mg": 4, "vitamin_d_mcg": 0, "saturated_fat_g": 1.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Curd Rice", "serving": "1 cup (200 g)", "macros": {"calories": 190, "protein_g": 5.5, "carbs_g": 34.0, "fat_g": 3.5}, "micros": {"fiber_g": 0.5, "sugar_g": 3.0, "sodium_mg": 300, "potassium_mg": 180, "calcium_mg": 130, "iron_mg": 0.4, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.1, "saturated_fat_g": 2.0, "cholesterol_mg": 10}, "source": "ifct"},
-  {"name": "Khichdi", "serving": "1 cup (200 g)", "macros": {"calories": 220, "protein_g": 9.0, "carbs_g": 38.0, "fat_g": 3.5}, "micros": {"fiber_g": 4.0, "sugar_g": 1.5, "sodium_mg": 350, "potassium_mg": 220, "calcium_mg": 40, "iron_mg": 2.0, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 0.8, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Puri", "serving": "2 pieces (60 g)", "macros": {"calories": 220, "protein_g": 4.5, "carbs_g": 28.0, "fat_g": 10.0}, "micros": {"fiber_g": 1.5, "sugar_g": 0.5, "sodium_mg": 160, "potassium_mg": 70, "calcium_mg": 15, "iron_mg": 1.5, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 2.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Aloo Tikki", "serving": "2 pieces (120 g)", "macros": {"calories": 240, "protein_g": 5.0, "carbs_g": 36.0, "fat_g": 8.5}, "micros": {"fiber_g": 3.5, "sugar_g": 1.5, "sodium_mg": 350, "potassium_mg": 420, "calcium_mg": 20, "iron_mg": 1.2, "vitamin_c_mg": 12, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Coconut Chutney", "serving": "2 tbsp (40 g)", "macros": {"calories": 80, "protein_g": 1.5, "carbs_g": 4.5, "fat_g": 6.0}, "micros": {"fiber_g": 2.0, "sugar_g": 1.5, "sodium_mg": 150, "potassium_mg": 120, "calcium_mg": 8, "iron_mg": 0.5, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 5.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Tomato Rasam", "serving": "1 cup (200 ml)", "macros": {"calories": 55, "protein_g": 1.5, "carbs_g": 8.0, "fat_g": 1.5}, "micros": {"fiber_g": 1.5, "sugar_g": 3.5, "sodium_mg": 350, "potassium_mg": 230, "calcium_mg": 20, "iron_mg": 0.8, "vitamin_c_mg": 14, "vitamin_d_mcg": 0, "saturated_fat_g": 0.3, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Chicken Tikka Masala", "serving": "1 cup (200 g)", "macros": {"calories": 310, "protein_g": 28.0, "carbs_g": 12.0, "fat_g": 16.0}, "micros": {"fiber_g": 1.5, "sugar_g": 5.0, "sodium_mg": 580, "potassium_mg": 360, "calcium_mg": 55, "iron_mg": 1.8, "vitamin_c_mg": 8, "vitamin_d_mcg": 0.1, "saturated_fat_g": 7.0, "cholesterol_mg": 80}, "source": "ifct"},
-  {"name": "Methi Thepla", "serving": "2 pieces (80 g)", "macros": {"calories": 200, "protein_g": 5.5, "carbs_g": 28.0, "fat_g": 7.5}, "micros": {"fiber_g": 3.5, "sugar_g": 1.0, "sodium_mg": 280, "potassium_mg": 150, "calcium_mg": 80, "iron_mg": 2.5, "vitamin_c_mg": 5, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Dhokla", "serving": "4 pieces (100 g)", "macros": {"calories": 155, "protein_g": 7.5, "carbs_g": 24.0, "fat_g": 3.0}, "micros": {"fiber_g": 2.5, "sugar_g": 2.0, "sodium_mg": 320, "potassium_mg": 150, "calcium_mg": 35, "iron_mg": 1.5, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 0.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Kachori", "serving": "1 piece (60 g)", "macros": {"calories": 210, "protein_g": 4.5, "carbs_g": 25.0, "fat_g": 10.0}, "micros": {"fiber_g": 2.5, "sugar_g": 1.0, "sodium_mg": 220, "potassium_mg": 130, "calcium_mg": 20, "iron_mg": 1.2, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 2.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Dahi (Low Fat)", "serving": "1 cup (200 g)", "macros": {"calories": 80, "protein_g": 9.0, "carbs_g": 10.0, "fat_g": 1.0}, "micros": {"fiber_g": 0, "sugar_g": 9.0, "sodium_mg": 75, "potassium_mg": 310, "calcium_mg": 300, "iron_mg": 0.1, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.2, "saturated_fat_g": 0.5, "cholesterol_mg": 5}, "source": "ifct"},
-  {"name": "Mango Lassi", "serving": "1 glass (300 ml)", "macros": {"calories": 250, "protein_g": 5.5, "carbs_g": 42.0, "fat_g": 6.0}, "micros": {"fiber_g": 1.0, "sugar_g": 36.0, "sodium_mg": 80, "potassium_mg": 310, "calcium_mg": 180, "iron_mg": 0.3, "vitamin_c_mg": 18, "vitamin_d_mcg": 0.2, "saturated_fat_g": 3.5, "cholesterol_mg": 18}, "source": "ifct"},
-  {"name": "Pongal", "serving": "1 cup (200 g)", "macros": {"calories": 280, "protein_g": 7.5, "carbs_g": 44.0, "fat_g": 7.5}, "micros": {"fiber_g": 3.0, "sugar_g": 1.0, "sodium_mg": 390, "potassium_mg": 180, "calcium_mg": 30, "iron_mg": 1.5, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 3.0, "cholesterol_mg": 5}, "source": "ifct"},
-  {"name": "Lemon Rice", "serving": "1 cup (180 g)", "macros": {"calories": 250, "protein_g": 4.5, "carbs_g": 44.0, "fat_g": 6.5}, "micros": {"fiber_g": 1.5, "sugar_g": 0.5, "sodium_mg": 350, "potassium_mg": 100, "calcium_mg": 15, "iron_mg": 1.0, "vitamin_c_mg": 8, "vitamin_d_mcg": 0, "saturated_fat_g": 1.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Biryani Rice (plain)", "serving": "1 cup (180 g)", "macros": {"calories": 255, "protein_g": 4.5, "carbs_g": 50.0, "fat_g": 3.5}, "micros": {"fiber_g": 0.7, "sugar_g": 0.5, "sodium_mg": 200, "potassium_mg": 70, "calcium_mg": 15, "iron_mg": 0.8, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 1.0, "cholesterol_mg": 5}, "source": "ifct"},
-  {"name": "Daal Baati", "serving": "1 serving (250 g)", "macros": {"calories": 480, "protein_g": 16.0, "carbs_g": 65.0, "fat_g": 17.0}, "micros": {"fiber_g": 9.0, "sugar_g": 3.0, "sodium_mg": 520, "potassium_mg": 380, "calcium_mg": 80, "iron_mg": 4.0, "vitamin_c_mg": 3, "vitamin_d_mcg": 0, "saturated_fat_g": 7.0, "cholesterol_mg": 15}, "source": "ifct"},
-  {"name": "Seekh Kebab", "serving": "2 pieces (100 g)", "macros": {"calories": 210, "protein_g": 20.0, "carbs_g": 6.0, "fat_g": 11.0}, "micros": {"fiber_g": 0.5, "sugar_g": 1.0, "sodium_mg": 420, "potassium_mg": 260, "calcium_mg": 25, "iron_mg": 2.5, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 4.0, "cholesterol_mg": 65}, "source": "ifct"},
-  {"name": "Murukku", "serving": "6 pieces (30 g)", "macros": {"calories": 145, "protein_g": 2.5, "carbs_g": 18.0, "fat_g": 7.0}, "micros": {"fiber_g": 0.8, "sugar_g": 0.3, "sodium_mg": 180, "potassium_mg": 60, "calcium_mg": 12, "iron_mg": 0.6, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Rabri", "serving": "0.5 cup (120 g)", "macros": {"calories": 240, "protein_g": 7.0, "carbs_g": 28.0, "fat_g": 11.0}, "micros": {"fiber_g": 0, "sugar_g": 25.0, "sodium_mg": 60, "potassium_mg": 220, "calcium_mg": 230, "iron_mg": 0.2, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.3, "saturated_fat_g": 7.0, "cholesterol_mg": 40}, "source": "ifct"},
-  {"name": "Chaat (Aloo)", "serving": "1 plate (150 g)", "macros": {"calories": 220, "protein_g": 5.0, "carbs_g": 38.0, "fat_g": 5.5}, "micros": {"fiber_g": 4.5, "sugar_g": 5.0, "sodium_mg": 490, "potassium_mg": 420, "calcium_mg": 35, "iron_mg": 1.5, "vitamin_c_mg": 12, "vitamin_d_mcg": 0, "saturated_fat_g": 1.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Kulfi", "serving": "1 piece (80 g)", "macros": {"calories": 165, "protein_g": 4.5, "carbs_g": 20.0, "fat_g": 7.5}, "micros": {"fiber_g": 0, "sugar_g": 17.0, "sodium_mg": 50, "potassium_mg": 160, "calcium_mg": 150, "iron_mg": 0.2, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.2, "saturated_fat_g": 5.0, "cholesterol_mg": 28}, "source": "ifct"},
-  {"name": "Shrikhand", "serving": "0.5 cup (100 g)", "macros": {"calories": 200, "protein_g": 7.5, "carbs_g": 28.0, "fat_g": 6.5}, "micros": {"fiber_g": 0, "sugar_g": 25.0, "sodium_mg": 55, "potassium_mg": 190, "calcium_mg": 200, "iron_mg": 0.1, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.2, "saturated_fat_g": 4.0, "cholesterol_mg": 22}, "source": "ifct"},
-  {"name": "Rasmalai", "serving": "2 pieces (120 g)", "macros": {"calories": 230, "protein_g": 8.0, "carbs_g": 30.0, "fat_g": 9.0}, "micros": {"fiber_g": 0, "sugar_g": 27.0, "sodium_mg": 60, "potassium_mg": 180, "calcium_mg": 200, "iron_mg": 0.2, "vitamin_c_mg": 0, "vitamin_d_mcg": 0.3, "saturated_fat_g": 6.0, "cholesterol_mg": 30}, "source": "ifct"},
-  {"name": "Momos (Veg)", "serving": "6 pieces (120 g)", "macros": {"calories": 210, "protein_g": 7.0, "carbs_g": 35.0, "fat_g": 4.5}, "micros": {"fiber_g": 3.0, "sugar_g": 3.0, "sodium_mg": 420, "potassium_mg": 180, "calcium_mg": 30, "iron_mg": 1.2, "vitamin_c_mg": 10, "vitamin_d_mcg": 0, "saturated_fat_g": 0.8, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Momos (Chicken)", "serving": "6 pieces (120 g)", "macros": {"calories": 240, "protein_g": 16.0, "carbs_g": 28.0, "fat_g": 6.5}, "micros": {"fiber_g": 1.5, "sugar_g": 2.0, "sodium_mg": 480, "potassium_mg": 200, "calcium_mg": 25, "iron_mg": 1.5, "vitamin_c_mg": 2, "vitamin_d_mcg": 0, "saturated_fat_g": 1.5, "cholesterol_mg": 40}, "source": "ifct"},
-  {"name": "Besan Chilla", "serving": "2 pieces (120 g)", "macros": {"calories": 195, "protein_g": 9.0, "carbs_g": 26.0, "fat_g": 5.5}, "micros": {"fiber_g": 4.5, "sugar_g": 3.0, "sodium_mg": 310, "potassium_mg": 240, "calcium_mg": 45, "iron_mg": 2.5, "vitamin_c_mg": 15, "vitamin_d_mcg": 0, "saturated_fat_g": 1.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Prawn Masala", "serving": "1 cup (180 g)", "macros": {"calories": 220, "protein_g": 26.0, "carbs_g": 8.0, "fat_g": 9.0}, "micros": {"fiber_g": 1.0, "sugar_g": 3.0, "sodium_mg": 600, "potassium_mg": 310, "calcium_mg": 80, "iron_mg": 2.0, "vitamin_c_mg": 6, "vitamin_d_mcg": 0.3, "saturated_fat_g": 2.0, "cholesterol_mg": 160}, "source": "ifct"},
-  {"name": "Lamb Rogan Josh", "serving": "1 cup (200 g)", "macros": {"calories": 310, "protein_g": 28.0, "carbs_g": 7.0, "fat_g": 18.0}, "micros": {"fiber_g": 1.5, "sugar_g": 2.5, "sodium_mg": 560, "potassium_mg": 370, "calcium_mg": 35, "iron_mg": 3.0, "vitamin_c_mg": 5, "vitamin_d_mcg": 0, "saturated_fat_g": 7.5, "cholesterol_mg": 85}, "source": "ifct"},
-  {"name": "Whole Milk (Buffalo)", "serving": "1 cup (240 ml)", "macros": {"calories": 240, "protein_g": 8.0, "carbs_g": 12.0, "fat_g": 17.0}, "micros": {"fiber_g": 0, "sugar_g": 12.0, "sodium_mg": 95, "potassium_mg": 310, "calcium_mg": 300, "iron_mg": 0.1, "vitamin_c_mg": 2, "vitamin_d_mcg": 0.5, "saturated_fat_g": 11.0, "cholesterol_mg": 52}, "source": "ifct"},
-  {"name": "Whole Milk (Cow)", "serving": "1 cup (240 ml)", "macros": {"calories": 148, "protein_g": 8.0, "carbs_g": 12.0, "fat_g": 8.0}, "micros": {"fiber_g": 0, "sugar_g": 12.0, "sodium_mg": 105, "potassium_mg": 350, "calcium_mg": 290, "iron_mg": 0.1, "vitamin_c_mg": 2, "vitamin_d_mcg": 0.5, "saturated_fat_g": 5.0, "cholesterol_mg": 30}, "source": "ifct"},
-  {"name": "Coconut Milk", "serving": "0.5 cup (120 ml)", "macros": {"calories": 180, "protein_g": 2.0, "carbs_g": 4.0, "fat_g": 18.0}, "micros": {"fiber_g": 0, "sugar_g": 2.5, "sodium_mg": 15, "potassium_mg": 240, "calcium_mg": 15, "iron_mg": 1.5, "vitamin_c_mg": 1, "vitamin_d_mcg": 0, "saturated_fat_g": 16.0, "cholesterol_mg": 0}, "source": "ifct"},
-  {"name": "Groundnut / Peanut (Roasted)", "serving": "2 tbsp (30 g)", "macros": {"calories": 175, "protein_g": 7.5, "carbs_g": 5.5, "fat_g": 14.0}, "micros": {"fiber_g": 1.5, "sugar_g": 1.5, "sodium_mg": 80, "potassium_mg": 180, "calcium_mg": 18, "iron_mg": 0.8, "vitamin_c_mg": 0, "vitamin_d_mcg": 0, "saturated_fat_g": 2.5, "cholesterol_mg": 0}, "source": "ifct"}
+  {
+    "name": "Dal Makhani",
+    "serving": "1 cup (240 g)",
+    "macros": {
+      "calories": 290,
+      "protein_g": 12.0,
+      "carbs_g": 28.0,
+      "fat_g": 14.0
+    },
+    "micros": {
+      "fiber_g": 8.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 450,
+      "potassium_mg": 380,
+      "calcium_mg": 110,
+      "iron_mg": 3.5,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 7.0,
+      "cholesterol_mg": 20
+    },
+    "source": "ifct",
+    "aliases": [
+      "black dal",
+      "dal makhni",
+      "kali dal",
+      "maa ki dal",
+      "madras lentils"
+    ]
+  },
+  {
+    "name": "Chana Masala",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 270,
+      "protein_g": 13.0,
+      "carbs_g": 35.0,
+      "fat_g": 8.0
+    },
+    "micros": {
+      "fiber_g": 10.0,
+      "sugar_g": 4.0,
+      "sodium_mg": 520,
+      "potassium_mg": 420,
+      "calcium_mg": 80,
+      "iron_mg": 4.0,
+      "vitamin_c_mg": 8,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "chana",
+      "channa masala",
+      "chhole",
+      "chickpea curry",
+      "chole",
+      "chole masala",
+      "garbanzo curry",
+      "kabuli chana",
+      "pindi chana"
+    ]
+  },
+  {
+    "name": "Rajma",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 260,
+      "protein_g": 14.0,
+      "carbs_g": 36.0,
+      "fat_g": 6.0
+    },
+    "micros": {
+      "fiber_g": 11.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 480,
+      "potassium_mg": 510,
+      "calcium_mg": 70,
+      "iron_mg": 4.5,
+      "vitamin_c_mg": 4,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "kidney bean curry",
+      "rajma chawal",
+      "rajma masala"
+    ]
+  },
+  {
+    "name": "Palak Paneer",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 280,
+      "protein_g": 11.0,
+      "carbs_g": 12.0,
+      "fat_g": 20.0
+    },
+    "micros": {
+      "fiber_g": 3.0,
+      "sugar_g": 2.0,
+      "sodium_mg": 500,
+      "potassium_mg": 360,
+      "calcium_mg": 290,
+      "iron_mg": 3.2,
+      "vitamin_c_mg": 20,
+      "vitamin_d_mcg": 0.2,
+      "saturated_fat_g": 10.0,
+      "cholesterol_mg": 40
+    },
+    "source": "ifct",
+    "aliases": [
+      "palak",
+      "saag paneer",
+      "spinach paneer"
+    ]
+  },
+  {
+    "name": "Butter Chicken",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 320,
+      "protein_g": 26.0,
+      "carbs_g": 12.0,
+      "fat_g": 18.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 5.0,
+      "sodium_mg": 600,
+      "potassium_mg": 380,
+      "calcium_mg": 60,
+      "iron_mg": 1.8,
+      "vitamin_c_mg": 6,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 8.0,
+      "cholesterol_mg": 80
+    },
+    "source": "ifct",
+    "aliases": [
+      "chicken makhani",
+      "murgh makhani"
+    ]
+  },
+  {
+    "name": "Chicken Biryani",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 360,
+      "protein_g": 22.0,
+      "carbs_g": 38.0,
+      "fat_g": 12.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 2.0,
+      "sodium_mg": 550,
+      "potassium_mg": 290,
+      "calcium_mg": 50,
+      "iron_mg": 2.0,
+      "vitamin_c_mg": 3,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 4.0,
+      "cholesterol_mg": 65
+    },
+    "source": "ifct",
+    "aliases": [
+      "murgh biryani"
+    ]
+  },
+  {
+    "name": "Vegetable Biryani",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 280,
+      "protein_g": 6.0,
+      "carbs_g": 48.0,
+      "fat_g": 7.0
+    },
+    "micros": {
+      "fiber_g": 3.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 480,
+      "potassium_mg": 220,
+      "calcium_mg": 45,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 8,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 2.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "sabzi biryani",
+      "veg biryani"
+    ]
+  },
+  {
+    "name": "Idli",
+    "serving": "2 pieces (80 g)",
+    "macros": {
+      "calories": 116,
+      "protein_g": 3.4,
+      "carbs_g": 22.0,
+      "fat_g": 1.2
+    },
+    "micros": {
+      "fiber_g": 0.8,
+      "sugar_g": 0.5,
+      "sodium_mg": 160,
+      "potassium_mg": 90,
+      "calcium_mg": 14,
+      "iron_mg": 0.6,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.2,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "idly"
+    ]
+  },
+  {
+    "name": "Plain Dosa",
+    "serving": "1 piece (75 g)",
+    "macros": {
+      "calories": 133,
+      "protein_g": 3.2,
+      "carbs_g": 22.0,
+      "fat_g": 3.5
+    },
+    "micros": {
+      "fiber_g": 1.0,
+      "sugar_g": 0.5,
+      "sodium_mg": 200,
+      "potassium_mg": 80,
+      "calcium_mg": 12,
+      "iron_mg": 0.7,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "dosa",
+      "dosai",
+      "sada dosa"
+    ]
+  },
+  {
+    "name": "Masala Dosa",
+    "serving": "1 piece (150 g)",
+    "macros": {
+      "calories": 230,
+      "protein_g": 5.0,
+      "carbs_g": 36.0,
+      "fat_g": 7.0
+    },
+    "micros": {
+      "fiber_g": 2.5,
+      "sugar_g": 1.5,
+      "sodium_mg": 360,
+      "potassium_mg": 250,
+      "calcium_mg": 30,
+      "iron_mg": 1.2,
+      "vitamin_c_mg": 8,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "masala dosai"
+    ]
+  },
+  {
+    "name": "Medu Vada",
+    "serving": "2 pieces (80 g)",
+    "macros": {
+      "calories": 200,
+      "protein_g": 7.0,
+      "carbs_g": 22.0,
+      "fat_g": 9.0
+    },
+    "micros": {
+      "fiber_g": 2.5,
+      "sugar_g": 0.5,
+      "sodium_mg": 280,
+      "potassium_mg": 160,
+      "calcium_mg": 25,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "garelu",
+      "uddina vada",
+      "vada",
+      "vadai"
+    ]
+  },
+  {
+    "name": "Sambar",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 100,
+      "protein_g": 5.0,
+      "carbs_g": 16.0,
+      "fat_g": 2.0
+    },
+    "micros": {
+      "fiber_g": 4.0,
+      "sugar_g": 4.0,
+      "sodium_mg": 420,
+      "potassium_mg": 310,
+      "calcium_mg": 55,
+      "iron_mg": 2.0,
+      "vitamin_c_mg": 22,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.3,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "sambar",
+      "sambhar"
+    ]
+  },
+  {
+    "name": "Roti / Chapati",
+    "serving": "1 piece (35 g)",
+    "macros": {
+      "calories": 101,
+      "protein_g": 3.1,
+      "carbs_g": 18.0,
+      "fat_g": 2.2
+    },
+    "micros": {
+      "fiber_g": 1.8,
+      "sugar_g": 0.3,
+      "sodium_mg": 110,
+      "potassium_mg": 80,
+      "calcium_mg": 14,
+      "iron_mg": 1.2,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "chapathi",
+      "chapati",
+      "fulka",
+      "phulka",
+      "roti"
+    ]
+  },
+  {
+    "name": "Naan",
+    "serving": "1 piece (90 g)",
+    "macros": {
+      "calories": 262,
+      "protein_g": 8.0,
+      "carbs_g": 45.0,
+      "fat_g": 5.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 2.0,
+      "sodium_mg": 380,
+      "potassium_mg": 100,
+      "calcium_mg": 60,
+      "iron_mg": 2.5,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 5
+    },
+    "source": "ifct",
+    "aliases": [
+      "nan"
+    ]
+  },
+  {
+    "name": "Aloo Paratha",
+    "serving": "1 piece (100 g)",
+    "macros": {
+      "calories": 260,
+      "protein_g": 5.5,
+      "carbs_g": 38.0,
+      "fat_g": 9.0
+    },
+    "micros": {
+      "fiber_g": 2.5,
+      "sugar_g": 1.0,
+      "sodium_mg": 290,
+      "potassium_mg": 280,
+      "calcium_mg": 30,
+      "iron_mg": 1.8,
+      "vitamin_c_mg": 6,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 3.0,
+      "cholesterol_mg": 5
+    },
+    "source": "ifct",
+    "aliases": [
+      "aloo paratha",
+      "alu paratha",
+      "potato paratha"
+    ]
+  },
+  {
+    "name": "Paneer Tikka",
+    "serving": "6 pieces (150 g)",
+    "macros": {
+      "calories": 300,
+      "protein_g": 18.0,
+      "carbs_g": 8.0,
+      "fat_g": 22.0
+    },
+    "micros": {
+      "fiber_g": 1.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 480,
+      "potassium_mg": 150,
+      "calcium_mg": 350,
+      "iron_mg": 1.0,
+      "vitamin_c_mg": 5,
+      "vitamin_d_mcg": 0.2,
+      "saturated_fat_g": 12.0,
+      "cholesterol_mg": 50
+    },
+    "source": "ifct",
+    "aliases": [
+      "grilled paneer"
+    ]
+  },
+  {
+    "name": "Aloo Gobi",
+    "serving": "1 cup (180 g)",
+    "macros": {
+      "calories": 175,
+      "protein_g": 4.5,
+      "carbs_g": 22.0,
+      "fat_g": 7.5
+    },
+    "micros": {
+      "fiber_g": 4.0,
+      "sugar_g": 3.5,
+      "sodium_mg": 380,
+      "potassium_mg": 480,
+      "calcium_mg": 40,
+      "iron_mg": 1.4,
+      "vitamin_c_mg": 40,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "aloo gobhi",
+      "alu gobi",
+      "potato cauliflower"
+    ]
+  },
+  {
+    "name": "Bhindi Masala",
+    "serving": "1 cup (180 g)",
+    "macros": {
+      "calories": 160,
+      "protein_g": 4.0,
+      "carbs_g": 16.0,
+      "fat_g": 9.0
+    },
+    "micros": {
+      "fiber_g": 6.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 350,
+      "potassium_mg": 400,
+      "calcium_mg": 120,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 20,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 2.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "bhindi",
+      "ladies finger curry",
+      "okra curry",
+      "okra masala"
+    ]
+  },
+  {
+    "name": "Samosa",
+    "serving": "1 piece (60 g)",
+    "macros": {
+      "calories": 160,
+      "protein_g": 3.0,
+      "carbs_g": 20.0,
+      "fat_g": 7.5
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 1.0,
+      "sodium_mg": 210,
+      "potassium_mg": 160,
+      "calcium_mg": 15,
+      "iron_mg": 0.8,
+      "vitamin_c_mg": 5,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 2.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "samosas"
+    ]
+  },
+  {
+    "name": "Onion Pakora",
+    "serving": "4 pieces (80 g)",
+    "macros": {
+      "calories": 200,
+      "protein_g": 4.5,
+      "carbs_g": 22.0,
+      "fat_g": 10.0
+    },
+    "micros": {
+      "fiber_g": 2.0,
+      "sugar_g": 2.0,
+      "sodium_mg": 250,
+      "potassium_mg": 120,
+      "calcium_mg": 30,
+      "iron_mg": 1.0,
+      "vitamin_c_mg": 5,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "kanda bhaji",
+      "onion bhaji",
+      "pakoda",
+      "pyaz pakora"
+    ]
+  },
+  {
+    "name": "Gulab Jamun",
+    "serving": "2 pieces (80 g)",
+    "macros": {
+      "calories": 280,
+      "protein_g": 4.5,
+      "carbs_g": 44.0,
+      "fat_g": 9.0
+    },
+    "micros": {
+      "fiber_g": 0.3,
+      "sugar_g": 38.0,
+      "sodium_mg": 80,
+      "potassium_mg": 90,
+      "calcium_mg": 80,
+      "iron_mg": 0.4,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 5.0,
+      "cholesterol_mg": 20
+    },
+    "source": "ifct",
+    "aliases": [
+      "gulab jamoon"
+    ]
+  },
+  {
+    "name": "Kheer",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 260,
+      "protein_g": 6.5,
+      "carbs_g": 40.0,
+      "fat_g": 8.0
+    },
+    "micros": {
+      "fiber_g": 0.5,
+      "sugar_g": 32.0,
+      "sodium_mg": 80,
+      "potassium_mg": 230,
+      "calcium_mg": 190,
+      "iron_mg": 0.6,
+      "vitamin_c_mg": 1,
+      "vitamin_d_mcg": 0.3,
+      "saturated_fat_g": 5.0,
+      "cholesterol_mg": 25
+    },
+    "source": "ifct",
+    "aliases": [
+      "kheer",
+      "payasam",
+      "rice pudding"
+    ]
+  },
+  {
+    "name": "Sweet Lassi",
+    "serving": "1 glass (250 ml)",
+    "macros": {
+      "calories": 200,
+      "protein_g": 6.0,
+      "carbs_g": 32.0,
+      "fat_g": 5.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 28.0,
+      "sodium_mg": 80,
+      "potassium_mg": 240,
+      "calcium_mg": 210,
+      "iron_mg": 0.1,
+      "vitamin_c_mg": 1,
+      "vitamin_d_mcg": 0.3,
+      "saturated_fat_g": 3.5,
+      "cholesterol_mg": 20
+    },
+    "source": "ifct",
+    "aliases": [
+      "lassi"
+    ]
+  },
+  {
+    "name": "Salted Lassi",
+    "serving": "1 glass (250 ml)",
+    "macros": {
+      "calories": 130,
+      "protein_g": 6.5,
+      "carbs_g": 14.0,
+      "fat_g": 5.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 9.0,
+      "sodium_mg": 380,
+      "potassium_mg": 240,
+      "calcium_mg": 210,
+      "iron_mg": 0.1,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.3,
+      "saturated_fat_g": 3.5,
+      "cholesterol_mg": 20
+    },
+    "source": "ifct"
+  },
+  {
+    "name": "Masala Chai",
+    "serving": "1 cup (200 ml)",
+    "macros": {
+      "calories": 80,
+      "protein_g": 2.5,
+      "carbs_g": 12.0,
+      "fat_g": 2.5
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 10.0,
+      "sodium_mg": 30,
+      "potassium_mg": 110,
+      "calcium_mg": 80,
+      "iron_mg": 0.3,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 8
+    },
+    "source": "ifct",
+    "aliases": [
+      "chai",
+      "indian tea",
+      "masala tea"
+    ]
+  },
+  {
+    "name": "Raita",
+    "serving": "0.5 cup (120 g)",
+    "macros": {
+      "calories": 75,
+      "protein_g": 3.5,
+      "carbs_g": 8.0,
+      "fat_g": 2.5
+    },
+    "micros": {
+      "fiber_g": 0.5,
+      "sugar_g": 5.0,
+      "sodium_mg": 180,
+      "potassium_mg": 160,
+      "calcium_mg": 120,
+      "iron_mg": 0.2,
+      "vitamin_c_mg": 3,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 10
+    },
+    "source": "ifct"
+  },
+  {
+    "name": "Plain Curd / Dahi",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 120,
+      "protein_g": 8.0,
+      "carbs_g": 10.0,
+      "fat_g": 4.5
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 9.0,
+      "sodium_mg": 80,
+      "potassium_mg": 300,
+      "calcium_mg": 280,
+      "iron_mg": 0.1,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.3,
+      "saturated_fat_g": 3.0,
+      "cholesterol_mg": 18
+    },
+    "source": "ifct",
+    "aliases": [
+      "curd",
+      "dahi",
+      "yoghurt",
+      "yogurt"
+    ]
+  },
+  {
+    "name": "Ghee",
+    "serving": "1 tbsp (15 g)",
+    "macros": {
+      "calories": 135,
+      "protein_g": 0,
+      "carbs_g": 0,
+      "fat_g": 15.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 0,
+      "potassium_mg": 0,
+      "calcium_mg": 0,
+      "iron_mg": 0,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.4,
+      "saturated_fat_g": 9.5,
+      "cholesterol_mg": 38
+    },
+    "source": "ifct",
+    "aliases": [
+      "clarified butter"
+    ]
+  },
+  {
+    "name": "Basmati Rice Cooked",
+    "serving": "1 cup (180 g)",
+    "macros": {
+      "calories": 240,
+      "protein_g": 4.5,
+      "carbs_g": 52.0,
+      "fat_g": 0.5
+    },
+    "micros": {
+      "fiber_g": 0.6,
+      "sugar_g": 0,
+      "sodium_mg": 5,
+      "potassium_mg": 55,
+      "calcium_mg": 14,
+      "iron_mg": 0.6,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.1,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "basmati",
+      "rice",
+      "steamed rice",
+      "white rice"
+    ]
+  },
+  {
+    "name": "Poha",
+    "serving": "1 cup (120 g)",
+    "macros": {
+      "calories": 175,
+      "protein_g": 3.0,
+      "carbs_g": 34.0,
+      "fat_g": 3.5
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 1.0,
+      "sodium_mg": 200,
+      "potassium_mg": 110,
+      "calcium_mg": 12,
+      "iron_mg": 2.0,
+      "vitamin_c_mg": 6,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "flattened rice",
+      "pohe"
+    ]
+  },
+  {
+    "name": "Upma",
+    "serving": "1 cup (150 g)",
+    "macros": {
+      "calories": 200,
+      "protein_g": 4.5,
+      "carbs_g": 32.0,
+      "fat_g": 6.0
+    },
+    "micros": {
+      "fiber_g": 2.5,
+      "sugar_g": 1.0,
+      "sodium_mg": 380,
+      "potassium_mg": 130,
+      "calcium_mg": 20,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 5,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct"
+  },
+  {
+    "name": "Pav Bhaji",
+    "serving": "1 serving with pav (300 g)",
+    "macros": {
+      "calories": 460,
+      "protein_g": 11.0,
+      "carbs_g": 72.0,
+      "fat_g": 14.0
+    },
+    "micros": {
+      "fiber_g": 7.0,
+      "sugar_g": 8.0,
+      "sodium_mg": 700,
+      "potassium_mg": 550,
+      "calcium_mg": 80,
+      "iron_mg": 3.0,
+      "vitamin_c_mg": 35,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 5.0,
+      "cholesterol_mg": 15
+    },
+    "source": "ifct",
+    "aliases": [
+      "pao bhaji"
+    ]
+  },
+  {
+    "name": "Chole Bhature",
+    "serving": "1 serving (300 g)",
+    "macros": {
+      "calories": 570,
+      "protein_g": 16.0,
+      "carbs_g": 80.0,
+      "fat_g": 20.0
+    },
+    "micros": {
+      "fiber_g": 9.0,
+      "sugar_g": 5.0,
+      "sodium_mg": 680,
+      "potassium_mg": 480,
+      "calcium_mg": 90,
+      "iron_mg": 4.5,
+      "vitamin_c_mg": 8,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 5.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "bhature",
+      "chana bhatura",
+      "chhole bhature",
+      "chole bhatura"
+    ]
+  },
+  {
+    "name": "Paneer",
+    "serving": "100 g",
+    "macros": {
+      "calories": 265,
+      "protein_g": 18.0,
+      "carbs_g": 3.4,
+      "fat_g": 20.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 3.0,
+      "sodium_mg": 30,
+      "potassium_mg": 75,
+      "calcium_mg": 480,
+      "iron_mg": 0.3,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.5,
+      "saturated_fat_g": 12.0,
+      "cholesterol_mg": 65
+    },
+    "source": "ifct",
+    "aliases": [
+      "cottage cheese",
+      "indian cheese"
+    ]
+  },
+  {
+    "name": "Tandoori Chicken",
+    "serving": "2 pieces (200 g)",
+    "macros": {
+      "calories": 280,
+      "protein_g": 38.0,
+      "carbs_g": 6.0,
+      "fat_g": 11.0
+    },
+    "micros": {
+      "fiber_g": 0.5,
+      "sugar_g": 2.0,
+      "sodium_mg": 520,
+      "potassium_mg": 380,
+      "calcium_mg": 30,
+      "iron_mg": 2.0,
+      "vitamin_c_mg": 3,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 3.0,
+      "cholesterol_mg": 110
+    },
+    "source": "ifct",
+    "aliases": [
+      "tandoori murgh"
+    ]
+  },
+  {
+    "name": "Mutton Curry",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 320,
+      "protein_g": 28.0,
+      "carbs_g": 8.0,
+      "fat_g": 19.0
+    },
+    "micros": {
+      "fiber_g": 1.0,
+      "sugar_g": 2.0,
+      "sodium_mg": 580,
+      "potassium_mg": 350,
+      "calcium_mg": 35,
+      "iron_mg": 3.5,
+      "vitamin_c_mg": 4,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 8.0,
+      "cholesterol_mg": 90
+    },
+    "source": "ifct",
+    "aliases": [
+      "goat curry",
+      "lamb curry",
+      "mutton masala"
+    ]
+  },
+  {
+    "name": "Fish Curry",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 240,
+      "protein_g": 24.0,
+      "carbs_g": 8.0,
+      "fat_g": 12.0
+    },
+    "micros": {
+      "fiber_g": 1.0,
+      "sugar_g": 2.5,
+      "sodium_mg": 550,
+      "potassium_mg": 420,
+      "calcium_mg": 60,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 5,
+      "vitamin_d_mcg": 2.5,
+      "saturated_fat_g": 2.5,
+      "cholesterol_mg": 70
+    },
+    "source": "ifct",
+    "aliases": [
+      "machli curry",
+      "meen curry"
+    ]
+  },
+  {
+    "name": "Egg Curry",
+    "serving": "2 eggs with gravy (200 g)",
+    "macros": {
+      "calories": 270,
+      "protein_g": 16.0,
+      "carbs_g": 8.0,
+      "fat_g": 18.0
+    },
+    "micros": {
+      "fiber_g": 1.0,
+      "sugar_g": 2.0,
+      "sodium_mg": 500,
+      "potassium_mg": 220,
+      "calcium_mg": 70,
+      "iron_mg": 2.5,
+      "vitamin_c_mg": 4,
+      "vitamin_d_mcg": 1.0,
+      "saturated_fat_g": 5.0,
+      "cholesterol_mg": 380
+    },
+    "source": "ifct",
+    "aliases": [
+      "anda curry"
+    ]
+  },
+  {
+    "name": "Moong Dal",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 180,
+      "protein_g": 12.0,
+      "carbs_g": 28.0,
+      "fat_g": 2.0
+    },
+    "micros": {
+      "fiber_g": 7.0,
+      "sugar_g": 2.0,
+      "sodium_mg": 350,
+      "potassium_mg": 390,
+      "calcium_mg": 55,
+      "iron_mg": 2.8,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.3,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "moong",
+      "mung",
+      "mung dal",
+      "yellow dal"
+    ]
+  },
+  {
+    "name": "Masoor Dal",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 190,
+      "protein_g": 13.0,
+      "carbs_g": 30.0,
+      "fat_g": 2.5
+    },
+    "micros": {
+      "fiber_g": 8.0,
+      "sugar_g": 2.0,
+      "sodium_mg": 360,
+      "potassium_mg": 410,
+      "calcium_mg": 50,
+      "iron_mg": 3.5,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.3,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "masoor",
+      "red dal",
+      "red lentil"
+    ]
+  },
+  {
+    "name": "Toor Dal",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 200,
+      "protein_g": 12.5,
+      "carbs_g": 32.0,
+      "fat_g": 2.5
+    },
+    "micros": {
+      "fiber_g": 7.5,
+      "sugar_g": 2.0,
+      "sodium_mg": 370,
+      "potassium_mg": 400,
+      "calcium_mg": 55,
+      "iron_mg": 3.2,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.4,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "arhar dal",
+      "daal",
+      "dal",
+      "pigeon pea dal",
+      "tur dal",
+      "tuvar dal"
+    ]
+  },
+  {
+    "name": "Uttapam",
+    "serving": "1 piece (100 g)",
+    "macros": {
+      "calories": 155,
+      "protein_g": 4.0,
+      "carbs_g": 26.0,
+      "fat_g": 4.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 2.0,
+      "sodium_mg": 270,
+      "potassium_mg": 130,
+      "calcium_mg": 25,
+      "iron_mg": 0.8,
+      "vitamin_c_mg": 5,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.7,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "ooth appam",
+      "uthappam",
+      "uttappam"
+    ]
+  },
+  {
+    "name": "Rava Idli",
+    "serving": "2 pieces (80 g)",
+    "macros": {
+      "calories": 140,
+      "protein_g": 4.0,
+      "carbs_g": 22.0,
+      "fat_g": 4.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 0.5,
+      "sodium_mg": 240,
+      "potassium_mg": 90,
+      "calcium_mg": 18,
+      "iron_mg": 0.7,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.8,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "semolina idli"
+    ]
+  },
+  {
+    "name": "Matar Paneer",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 295,
+      "protein_g": 13.0,
+      "carbs_g": 16.0,
+      "fat_g": 20.0
+    },
+    "micros": {
+      "fiber_g": 4.5,
+      "sugar_g": 3.5,
+      "sodium_mg": 490,
+      "potassium_mg": 280,
+      "calcium_mg": 260,
+      "iron_mg": 2.5,
+      "vitamin_c_mg": 15,
+      "vitamin_d_mcg": 0.2,
+      "saturated_fat_g": 10.0,
+      "cholesterol_mg": 40
+    },
+    "source": "ifct",
+    "aliases": [
+      "matar paneer",
+      "mutter paneer",
+      "peas paneer"
+    ]
+  },
+  {
+    "name": "Shahi Paneer",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 350,
+      "protein_g": 12.0,
+      "carbs_g": 14.0,
+      "fat_g": 27.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 6.0,
+      "sodium_mg": 520,
+      "potassium_mg": 180,
+      "calcium_mg": 300,
+      "iron_mg": 1.0,
+      "vitamin_c_mg": 4,
+      "vitamin_d_mcg": 0.3,
+      "saturated_fat_g": 14.0,
+      "cholesterol_mg": 55
+    },
+    "source": "ifct",
+    "aliases": [
+      "royal paneer"
+    ]
+  },
+  {
+    "name": "Kadhi Pakora",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 195,
+      "protein_g": 7.0,
+      "carbs_g": 22.0,
+      "fat_g": 8.5
+    },
+    "micros": {
+      "fiber_g": 2.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 450,
+      "potassium_mg": 160,
+      "calcium_mg": 130,
+      "iron_mg": 1.2,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 2.5,
+      "cholesterol_mg": 8
+    },
+    "source": "ifct",
+    "aliases": [
+      "kadhi",
+      "kadhi pakoda",
+      "kadi"
+    ]
+  },
+  {
+    "name": "Baingan Bharta",
+    "serving": "1 cup (180 g)",
+    "macros": {
+      "calories": 160,
+      "protein_g": 4.0,
+      "carbs_g": 14.0,
+      "fat_g": 9.5
+    },
+    "micros": {
+      "fiber_g": 5.0,
+      "sugar_g": 6.0,
+      "sodium_mg": 380,
+      "potassium_mg": 380,
+      "calcium_mg": 35,
+      "iron_mg": 1.2,
+      "vitamin_c_mg": 10,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 2.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "baigan bharta",
+      "baingan",
+      "brinjal bharta",
+      "eggplant curry"
+    ]
+  },
+  {
+    "name": "Pulao",
+    "serving": "1 cup (180 g)",
+    "macros": {
+      "calories": 270,
+      "protein_g": 5.5,
+      "carbs_g": 46.0,
+      "fat_g": 6.5
+    },
+    "micros": {
+      "fiber_g": 2.0,
+      "sugar_g": 2.0,
+      "sodium_mg": 420,
+      "potassium_mg": 160,
+      "calcium_mg": 30,
+      "iron_mg": 1.2,
+      "vitamin_c_mg": 4,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "pilaf",
+      "pilau",
+      "pulav",
+      "veg pulao"
+    ]
+  },
+  {
+    "name": "Halwa (Suji)",
+    "serving": "0.5 cup (100 g)",
+    "macros": {
+      "calories": 290,
+      "protein_g": 4.5,
+      "carbs_g": 42.0,
+      "fat_g": 11.0
+    },
+    "micros": {
+      "fiber_g": 1.0,
+      "sugar_g": 25.0,
+      "sodium_mg": 60,
+      "potassium_mg": 80,
+      "calcium_mg": 25,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 6.0,
+      "cholesterol_mg": 20
+    },
+    "source": "ifct",
+    "aliases": [
+      "rava halwa",
+      "semolina halwa",
+      "sooji halwa",
+      "suji halwa"
+    ]
+  },
+  {
+    "name": "Jalebi",
+    "serving": "4 pieces (80 g)",
+    "macros": {
+      "calories": 300,
+      "protein_g": 2.5,
+      "carbs_g": 60.0,
+      "fat_g": 5.5
+    },
+    "micros": {
+      "fiber_g": 0.3,
+      "sugar_g": 52.0,
+      "sodium_mg": 40,
+      "potassium_mg": 30,
+      "calcium_mg": 10,
+      "iron_mg": 0.5,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 2.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "jilebi",
+      "jilipi"
+    ]
+  },
+  {
+    "name": "Ladoo (Besan)",
+    "serving": "1 piece (50 g)",
+    "macros": {
+      "calories": 215,
+      "protein_g": 4.5,
+      "carbs_g": 28.0,
+      "fat_g": 9.5
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 22.0,
+      "sodium_mg": 30,
+      "potassium_mg": 100,
+      "calcium_mg": 25,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 4.5,
+      "cholesterol_mg": 15
+    },
+    "source": "ifct",
+    "aliases": [
+      "besan ladoo",
+      "laddu",
+      "ladu"
+    ]
+  },
+  {
+    "name": "Barfi (Milk)",
+    "serving": "2 pieces (60 g)",
+    "macros": {
+      "calories": 230,
+      "protein_g": 6.0,
+      "carbs_g": 30.0,
+      "fat_g": 9.5
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 28.0,
+      "sodium_mg": 50,
+      "potassium_mg": 180,
+      "calcium_mg": 160,
+      "iron_mg": 0.2,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.2,
+      "saturated_fat_g": 6.0,
+      "cholesterol_mg": 30
+    },
+    "source": "ifct",
+    "aliases": [
+      "burfi",
+      "milk barfi"
+    ]
+  },
+  {
+    "name": "Dahi Vada",
+    "serving": "2 pieces (150 g)",
+    "macros": {
+      "calories": 220,
+      "protein_g": 9.5,
+      "carbs_g": 28.0,
+      "fat_g": 7.5
+    },
+    "micros": {
+      "fiber_g": 2.5,
+      "sugar_g": 8.0,
+      "sodium_mg": 380,
+      "potassium_mg": 220,
+      "calcium_mg": 140,
+      "iron_mg": 1.8,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 2.5,
+      "cholesterol_mg": 10
+    },
+    "source": "ifct",
+    "aliases": [
+      "dahi bara",
+      "dahi bhalla",
+      "dahi vada"
+    ]
+  },
+  {
+    "name": "Dum Aloo",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 245,
+      "protein_g": 5.0,
+      "carbs_g": 32.0,
+      "fat_g": 10.5
+    },
+    "micros": {
+      "fiber_g": 4.0,
+      "sugar_g": 4.0,
+      "sodium_mg": 470,
+      "potassium_mg": 520,
+      "calcium_mg": 35,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 18,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 3.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "baby potato curry"
+    ]
+  },
+  {
+    "name": "Kadala Curry",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 255,
+      "protein_g": 12.0,
+      "carbs_g": 34.0,
+      "fat_g": 7.5
+    },
+    "micros": {
+      "fiber_g": 9.5,
+      "sugar_g": 3.0,
+      "sodium_mg": 440,
+      "potassium_mg": 450,
+      "calcium_mg": 75,
+      "iron_mg": 4.0,
+      "vitamin_c_mg": 4,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "black chickpea curry",
+      "kadala",
+      "kala chana"
+    ]
+  },
+  {
+    "name": "Curd Rice",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 190,
+      "protein_g": 5.5,
+      "carbs_g": 34.0,
+      "fat_g": 3.5
+    },
+    "micros": {
+      "fiber_g": 0.5,
+      "sugar_g": 3.0,
+      "sodium_mg": 300,
+      "potassium_mg": 180,
+      "calcium_mg": 130,
+      "iron_mg": 0.4,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 2.0,
+      "cholesterol_mg": 10
+    },
+    "source": "ifct",
+    "aliases": [
+      "curd rice",
+      "dahi rice",
+      "thayir sadam"
+    ]
+  },
+  {
+    "name": "Khichdi",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 220,
+      "protein_g": 9.0,
+      "carbs_g": 38.0,
+      "fat_g": 3.5
+    },
+    "micros": {
+      "fiber_g": 4.0,
+      "sugar_g": 1.5,
+      "sodium_mg": 350,
+      "potassium_mg": 220,
+      "calcium_mg": 40,
+      "iron_mg": 2.0,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.8,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "khichri",
+      "khichuri",
+      "kitchari"
+    ]
+  },
+  {
+    "name": "Puri",
+    "serving": "2 pieces (60 g)",
+    "macros": {
+      "calories": 220,
+      "protein_g": 4.5,
+      "carbs_g": 28.0,
+      "fat_g": 10.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 0.5,
+      "sodium_mg": 160,
+      "potassium_mg": 70,
+      "calcium_mg": 15,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 2.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "poori"
+    ]
+  },
+  {
+    "name": "Aloo Tikki",
+    "serving": "2 pieces (120 g)",
+    "macros": {
+      "calories": 240,
+      "protein_g": 5.0,
+      "carbs_g": 36.0,
+      "fat_g": 8.5
+    },
+    "micros": {
+      "fiber_g": 3.5,
+      "sugar_g": 1.5,
+      "sodium_mg": 350,
+      "potassium_mg": 420,
+      "calcium_mg": 20,
+      "iron_mg": 1.2,
+      "vitamin_c_mg": 12,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "aloo tikki",
+      "alu tikki",
+      "potato patty"
+    ]
+  },
+  {
+    "name": "Coconut Chutney",
+    "serving": "2 tbsp (40 g)",
+    "macros": {
+      "calories": 80,
+      "protein_g": 1.5,
+      "carbs_g": 4.5,
+      "fat_g": 6.0
+    },
+    "micros": {
+      "fiber_g": 2.0,
+      "sugar_g": 1.5,
+      "sodium_mg": 150,
+      "potassium_mg": 120,
+      "calcium_mg": 8,
+      "iron_mg": 0.5,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 5.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "coconut chutney",
+      "nariyal chutney"
+    ]
+  },
+  {
+    "name": "Tomato Rasam",
+    "serving": "1 cup (200 ml)",
+    "macros": {
+      "calories": 55,
+      "protein_g": 1.5,
+      "carbs_g": 8.0,
+      "fat_g": 1.5
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 3.5,
+      "sodium_mg": 350,
+      "potassium_mg": 230,
+      "calcium_mg": 20,
+      "iron_mg": 0.8,
+      "vitamin_c_mg": 14,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.3,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "rasam",
+      "saaru"
+    ]
+  },
+  {
+    "name": "Chicken Tikka Masala",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 310,
+      "protein_g": 28.0,
+      "carbs_g": 12.0,
+      "fat_g": 16.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 5.0,
+      "sodium_mg": 580,
+      "potassium_mg": 360,
+      "calcium_mg": 55,
+      "iron_mg": 1.8,
+      "vitamin_c_mg": 8,
+      "vitamin_d_mcg": 0.1,
+      "saturated_fat_g": 7.0,
+      "cholesterol_mg": 80
+    },
+    "source": "ifct",
+    "aliases": [
+      "tikka masala"
+    ]
+  },
+  {
+    "name": "Methi Thepla",
+    "serving": "2 pieces (80 g)",
+    "macros": {
+      "calories": 200,
+      "protein_g": 5.5,
+      "carbs_g": 28.0,
+      "fat_g": 7.5
+    },
+    "micros": {
+      "fiber_g": 3.5,
+      "sugar_g": 1.0,
+      "sodium_mg": 280,
+      "potassium_mg": 150,
+      "calcium_mg": 80,
+      "iron_mg": 2.5,
+      "vitamin_c_mg": 5,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "thepla"
+    ]
+  },
+  {
+    "name": "Dhokla",
+    "serving": "4 pieces (100 g)",
+    "macros": {
+      "calories": 155,
+      "protein_g": 7.5,
+      "carbs_g": 24.0,
+      "fat_g": 3.0
+    },
+    "micros": {
+      "fiber_g": 2.5,
+      "sugar_g": 2.0,
+      "sodium_mg": 320,
+      "potassium_mg": 150,
+      "calcium_mg": 35,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "khaman",
+      "khaman dhokla"
+    ]
+  },
+  {
+    "name": "Kachori",
+    "serving": "1 piece (60 g)",
+    "macros": {
+      "calories": 210,
+      "protein_g": 4.5,
+      "carbs_g": 25.0,
+      "fat_g": 10.0
+    },
+    "micros": {
+      "fiber_g": 2.5,
+      "sugar_g": 1.0,
+      "sodium_mg": 220,
+      "potassium_mg": 130,
+      "calcium_mg": 20,
+      "iron_mg": 1.2,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 2.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "kachauri",
+      "kachodi"
+    ]
+  },
+  {
+    "name": "Dahi (Low Fat)",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 80,
+      "protein_g": 9.0,
+      "carbs_g": 10.0,
+      "fat_g": 1.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 9.0,
+      "sodium_mg": 75,
+      "potassium_mg": 310,
+      "calcium_mg": 300,
+      "iron_mg": 0.1,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.2,
+      "saturated_fat_g": 0.5,
+      "cholesterol_mg": 5
+    },
+    "source": "ifct"
+  },
+  {
+    "name": "Mango Lassi",
+    "serving": "1 glass (300 ml)",
+    "macros": {
+      "calories": 250,
+      "protein_g": 5.5,
+      "carbs_g": 42.0,
+      "fat_g": 6.0
+    },
+    "micros": {
+      "fiber_g": 1.0,
+      "sugar_g": 36.0,
+      "sodium_mg": 80,
+      "potassium_mg": 310,
+      "calcium_mg": 180,
+      "iron_mg": 0.3,
+      "vitamin_c_mg": 18,
+      "vitamin_d_mcg": 0.2,
+      "saturated_fat_g": 3.5,
+      "cholesterol_mg": 18
+    },
+    "source": "ifct",
+    "aliases": [
+      "aam lassi"
+    ]
+  },
+  {
+    "name": "Pongal",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 280,
+      "protein_g": 7.5,
+      "carbs_g": 44.0,
+      "fat_g": 7.5
+    },
+    "micros": {
+      "fiber_g": 3.0,
+      "sugar_g": 1.0,
+      "sodium_mg": 390,
+      "potassium_mg": 180,
+      "calcium_mg": 30,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 3.0,
+      "cholesterol_mg": 5
+    },
+    "source": "ifct",
+    "aliases": [
+      "khara pongal",
+      "ven pongal"
+    ]
+  },
+  {
+    "name": "Lemon Rice",
+    "serving": "1 cup (180 g)",
+    "macros": {
+      "calories": 250,
+      "protein_g": 4.5,
+      "carbs_g": 44.0,
+      "fat_g": 6.5
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 0.5,
+      "sodium_mg": 350,
+      "potassium_mg": 100,
+      "calcium_mg": 15,
+      "iron_mg": 1.0,
+      "vitamin_c_mg": 8,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "chitranna",
+      "lemon rice",
+      "nimbu rice"
+    ]
+  },
+  {
+    "name": "Biryani Rice (plain)",
+    "serving": "1 cup (180 g)",
+    "macros": {
+      "calories": 255,
+      "protein_g": 4.5,
+      "carbs_g": 50.0,
+      "fat_g": 3.5
+    },
+    "micros": {
+      "fiber_g": 0.7,
+      "sugar_g": 0.5,
+      "sodium_mg": 200,
+      "potassium_mg": 70,
+      "calcium_mg": 15,
+      "iron_mg": 0.8,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.0,
+      "cholesterol_mg": 5
+    },
+    "source": "ifct"
+  },
+  {
+    "name": "Daal Baati",
+    "serving": "1 serving (250 g)",
+    "macros": {
+      "calories": 480,
+      "protein_g": 16.0,
+      "carbs_g": 65.0,
+      "fat_g": 17.0
+    },
+    "micros": {
+      "fiber_g": 9.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 520,
+      "potassium_mg": 380,
+      "calcium_mg": 80,
+      "iron_mg": 4.0,
+      "vitamin_c_mg": 3,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 7.0,
+      "cholesterol_mg": 15
+    },
+    "source": "ifct",
+    "aliases": [
+      "daal baati",
+      "dal baati churma",
+      "dal bati"
+    ]
+  },
+  {
+    "name": "Seekh Kebab",
+    "serving": "2 pieces (100 g)",
+    "macros": {
+      "calories": 210,
+      "protein_g": 20.0,
+      "carbs_g": 6.0,
+      "fat_g": 11.0
+    },
+    "micros": {
+      "fiber_g": 0.5,
+      "sugar_g": 1.0,
+      "sodium_mg": 420,
+      "potassium_mg": 260,
+      "calcium_mg": 25,
+      "iron_mg": 2.5,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 4.0,
+      "cholesterol_mg": 65
+    },
+    "source": "ifct",
+    "aliases": [
+      "seekh kabab",
+      "seekh kebab",
+      "sheek kebab"
+    ]
+  },
+  {
+    "name": "Murukku",
+    "serving": "6 pieces (30 g)",
+    "macros": {
+      "calories": 145,
+      "protein_g": 2.5,
+      "carbs_g": 18.0,
+      "fat_g": 7.0
+    },
+    "micros": {
+      "fiber_g": 0.8,
+      "sugar_g": 0.3,
+      "sodium_mg": 180,
+      "potassium_mg": 60,
+      "calcium_mg": 12,
+      "iron_mg": 0.6,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "chakali",
+      "chakli",
+      "murukku"
+    ]
+  },
+  {
+    "name": "Rabri",
+    "serving": "0.5 cup (120 g)",
+    "macros": {
+      "calories": 240,
+      "protein_g": 7.0,
+      "carbs_g": 28.0,
+      "fat_g": 11.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 25.0,
+      "sodium_mg": 60,
+      "potassium_mg": 220,
+      "calcium_mg": 230,
+      "iron_mg": 0.2,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.3,
+      "saturated_fat_g": 7.0,
+      "cholesterol_mg": 40
+    },
+    "source": "ifct",
+    "aliases": [
+      "rabdi"
+    ]
+  },
+  {
+    "name": "Chaat (Aloo)",
+    "serving": "1 plate (150 g)",
+    "macros": {
+      "calories": 220,
+      "protein_g": 5.0,
+      "carbs_g": 38.0,
+      "fat_g": 5.5
+    },
+    "micros": {
+      "fiber_g": 4.5,
+      "sugar_g": 5.0,
+      "sodium_mg": 490,
+      "potassium_mg": 420,
+      "calcium_mg": 35,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 12,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "aloo chaat",
+      "alu chaat",
+      "chaat"
+    ]
+  },
+  {
+    "name": "Kulfi",
+    "serving": "1 piece (80 g)",
+    "macros": {
+      "calories": 165,
+      "protein_g": 4.5,
+      "carbs_g": 20.0,
+      "fat_g": 7.5
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 17.0,
+      "sodium_mg": 50,
+      "potassium_mg": 160,
+      "calcium_mg": 150,
+      "iron_mg": 0.2,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.2,
+      "saturated_fat_g": 5.0,
+      "cholesterol_mg": 28
+    },
+    "source": "ifct",
+    "aliases": [
+      "indian ice cream"
+    ]
+  },
+  {
+    "name": "Shrikhand",
+    "serving": "0.5 cup (100 g)",
+    "macros": {
+      "calories": 200,
+      "protein_g": 7.5,
+      "carbs_g": 28.0,
+      "fat_g": 6.5
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 25.0,
+      "sodium_mg": 55,
+      "potassium_mg": 190,
+      "calcium_mg": 200,
+      "iron_mg": 0.1,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.2,
+      "saturated_fat_g": 4.0,
+      "cholesterol_mg": 22
+    },
+    "source": "ifct",
+    "aliases": [
+      "srikhand"
+    ]
+  },
+  {
+    "name": "Rasmalai",
+    "serving": "2 pieces (120 g)",
+    "macros": {
+      "calories": 230,
+      "protein_g": 8.0,
+      "carbs_g": 30.0,
+      "fat_g": 9.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 27.0,
+      "sodium_mg": 60,
+      "potassium_mg": 180,
+      "calcium_mg": 200,
+      "iron_mg": 0.2,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0.3,
+      "saturated_fat_g": 6.0,
+      "cholesterol_mg": 30
+    },
+    "source": "ifct",
+    "aliases": [
+      "ras malai",
+      "rasamalai"
+    ]
+  },
+  {
+    "name": "Momos (Veg)",
+    "serving": "6 pieces (120 g)",
+    "macros": {
+      "calories": 210,
+      "protein_g": 7.0,
+      "carbs_g": 35.0,
+      "fat_g": 4.5
+    },
+    "micros": {
+      "fiber_g": 3.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 420,
+      "potassium_mg": 180,
+      "calcium_mg": 30,
+      "iron_mg": 1.2,
+      "vitamin_c_mg": 10,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 0.8,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct"
+  },
+  {
+    "name": "Momos (Chicken)",
+    "serving": "6 pieces (120 g)",
+    "macros": {
+      "calories": 240,
+      "protein_g": 16.0,
+      "carbs_g": 28.0,
+      "fat_g": 6.5
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 2.0,
+      "sodium_mg": 480,
+      "potassium_mg": 200,
+      "calcium_mg": 25,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.5,
+      "cholesterol_mg": 40
+    },
+    "source": "ifct"
+  },
+  {
+    "name": "Besan Chilla",
+    "serving": "2 pieces (120 g)",
+    "macros": {
+      "calories": 195,
+      "protein_g": 9.0,
+      "carbs_g": 26.0,
+      "fat_g": 5.5
+    },
+    "micros": {
+      "fiber_g": 4.5,
+      "sugar_g": 3.0,
+      "sodium_mg": 310,
+      "potassium_mg": 240,
+      "calcium_mg": 45,
+      "iron_mg": 2.5,
+      "vitamin_c_mg": 15,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 1.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "besan cheela",
+      "besan chilla",
+      "chilla",
+      "gram flour pancake"
+    ]
+  },
+  {
+    "name": "Prawn Masala",
+    "serving": "1 cup (180 g)",
+    "macros": {
+      "calories": 220,
+      "protein_g": 26.0,
+      "carbs_g": 8.0,
+      "fat_g": 9.0
+    },
+    "micros": {
+      "fiber_g": 1.0,
+      "sugar_g": 3.0,
+      "sodium_mg": 600,
+      "potassium_mg": 310,
+      "calcium_mg": 80,
+      "iron_mg": 2.0,
+      "vitamin_c_mg": 6,
+      "vitamin_d_mcg": 0.3,
+      "saturated_fat_g": 2.0,
+      "cholesterol_mg": 160
+    },
+    "source": "ifct",
+    "aliases": [
+      "jhinga masala",
+      "prawn curry",
+      "shrimp curry"
+    ]
+  },
+  {
+    "name": "Lamb Rogan Josh",
+    "serving": "1 cup (200 g)",
+    "macros": {
+      "calories": 310,
+      "protein_g": 28.0,
+      "carbs_g": 7.0,
+      "fat_g": 18.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 2.5,
+      "sodium_mg": 560,
+      "potassium_mg": 370,
+      "calcium_mg": 35,
+      "iron_mg": 3.0,
+      "vitamin_c_mg": 5,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 7.5,
+      "cholesterol_mg": 85
+    },
+    "source": "ifct",
+    "aliases": [
+      "mutton rogan josh",
+      "rogan josh"
+    ]
+  },
+  {
+    "name": "Whole Milk (Buffalo)",
+    "serving": "1 cup (240 ml)",
+    "macros": {
+      "calories": 240,
+      "protein_g": 8.0,
+      "carbs_g": 12.0,
+      "fat_g": 17.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 12.0,
+      "sodium_mg": 95,
+      "potassium_mg": 310,
+      "calcium_mg": 300,
+      "iron_mg": 0.1,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0.5,
+      "saturated_fat_g": 11.0,
+      "cholesterol_mg": 52
+    },
+    "source": "ifct",
+    "aliases": [
+      "buffalo milk"
+    ]
+  },
+  {
+    "name": "Whole Milk (Cow)",
+    "serving": "1 cup (240 ml)",
+    "macros": {
+      "calories": 148,
+      "protein_g": 8.0,
+      "carbs_g": 12.0,
+      "fat_g": 8.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 12.0,
+      "sodium_mg": 105,
+      "potassium_mg": 350,
+      "calcium_mg": 290,
+      "iron_mg": 0.1,
+      "vitamin_c_mg": 2,
+      "vitamin_d_mcg": 0.5,
+      "saturated_fat_g": 5.0,
+      "cholesterol_mg": 30
+    },
+    "source": "ifct",
+    "aliases": [
+      "cow milk",
+      "milk"
+    ]
+  },
+  {
+    "name": "Coconut Milk",
+    "serving": "0.5 cup (120 ml)",
+    "macros": {
+      "calories": 180,
+      "protein_g": 2.0,
+      "carbs_g": 4.0,
+      "fat_g": 18.0
+    },
+    "micros": {
+      "fiber_g": 0,
+      "sugar_g": 2.5,
+      "sodium_mg": 15,
+      "potassium_mg": 240,
+      "calcium_mg": 15,
+      "iron_mg": 1.5,
+      "vitamin_c_mg": 1,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 16.0,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "nariyal milk"
+    ]
+  },
+  {
+    "name": "Groundnut / Peanut (Roasted)",
+    "serving": "2 tbsp (30 g)",
+    "macros": {
+      "calories": 175,
+      "protein_g": 7.5,
+      "carbs_g": 5.5,
+      "fat_g": 14.0
+    },
+    "micros": {
+      "fiber_g": 1.5,
+      "sugar_g": 1.5,
+      "sodium_mg": 80,
+      "potassium_mg": 180,
+      "calcium_mg": 18,
+      "iron_mg": 0.8,
+      "vitamin_c_mg": 0,
+      "vitamin_d_mcg": 0,
+      "saturated_fat_g": 2.5,
+      "cholesterol_mg": 0
+    },
+    "source": "ifct",
+    "aliases": [
+      "groundnut",
+      "moongphali",
+      "peanut",
+      "peanuts"
+    ]
+  }
 ]
