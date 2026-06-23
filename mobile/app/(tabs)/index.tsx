@@ -276,15 +276,15 @@ function PlansSection({
 
   return (
     <View style={[card, s.cardPad]}>
-      {/* Big browse buttons */}
+      {/* Big browse buttons — icon stacked over label so longer labels fit */}
       <View style={s.browseRow}>
         <Pressable style={s.browseBtn} onPress={() => router.push('/(tabs)/library')}>
-          <Ionicons name="barbell-outline" size={24} color={colors.primary} />
-          <Text style={s.browseBtnText}>Browse Exercises</Text>
+          <Ionicons name="barbell-outline" size={22} color={colors.primary} />
+          <Text style={s.browseBtnText} numberOfLines={1}>Browse Exercises</Text>
         </Pressable>
         <Pressable style={s.browseBtn} onPress={() => router.push('/plans' as never)}>
-          <Ionicons name="list-outline" size={24} color={colors.primary} />
-          <Text style={s.browseBtnText}>Browse Plans</Text>
+          <Ionicons name="list-outline" size={22} color={colors.primary} />
+          <Text style={s.browseBtnText} numberOfLines={1}>Browse Plans</Text>
         </Pressable>
       </View>
 
@@ -811,17 +811,17 @@ const s = StyleSheet.create({
   browseRow: { flexDirection: 'row', gap: spacing.sm },
   browseBtn: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.base,
+    gap: 6,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: '#EBF3FF',
     borderWidth: 1,
     borderColor: '#B6D4FE',
   },
-  browseBtnText: { fontSize: 14, fontWeight: '700', color: colors.primary },
+  browseBtnText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   planRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   planName: { fontSize: 14, fontWeight: '500', color: colors.text },
   planMeta: { fontSize: 12, color: colors.gray400, marginTop: 2 },
