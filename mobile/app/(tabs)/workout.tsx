@@ -914,7 +914,10 @@ export default function WorkoutScreen() {
   return (
     <KeyboardAvoidingView
       style={s.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // The set inputs live deep in a ScrollView; iOS keyboard insets on the
+      // ScrollView (below) scroll the focused field into view. Adding 'padding'
+      // here too would double-adjust, so the ScrollView owns keyboard handling.
+      behavior={undefined}
       keyboardVerticalOffset={0}
     >
       {/* Top bar */}
@@ -973,6 +976,11 @@ export default function WorkoutScreen() {
       <ScrollView
         style={s.list}
         contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + spacing.xl }]}
+        // Scroll the focused set input above the keyboard, and let taps on
+        // other inputs go through without first dismissing the keyboard.
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         {grouped.length === 0 && (
           <Text style={s.emptyText}>No exercises yet. Tap "Add exercise" to begin.</Text>
