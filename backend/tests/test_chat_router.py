@@ -9,59 +9,73 @@ def _llm_resp(text: str):
     return r
 
 
-# --- classify ---
+# A medium-length, no-strong-signal message that bypasses the heuristic and
+# actually reaches the LLM classifier.
+_MEDIUM = (
+    "I was curious about the general approach folks usually take with their "
+    "training and nutrition over a longer stretch of time"
+)
+
+
+# --- classify: heuristic short-circuits (no LLM call) ---
 
 @patch("app.chat.router.llm.complete", return_value=_llm_resp("simple"))
-def test_classify_simple_verbatim(mock_llm):
+def test_classify_short_message_is_simple_without_llm(mock_llm):
     from app.chat.router import classify
     result = classify([{"role": "user", "content": "how many sessions this week"}])
     assert result == "simple"
+    mock_llm.assert_not_called()
 
 
-@patch("app.chat.router.llm.complete", return_value=_llm_resp("complex"))
-def test_classify_complex_verbatim(mock_llm):
+@patch("app.chat.router.llm.complete", return_value=_llm_resp("simple"))
+def test_classify_keyword_program_is_complex_without_llm(mock_llm):
     from app.chat.router import classify
-    result = classify([{"role": "user", "content": "build me a 12-week program"}])
+    result = classify([{"role": "user", "content": "build me a 12-week program please"}])
     assert result == "complex"
+    mock_llm.assert_not_called()
 
+
+@patch("app.chat.router.llm.complete", return_value=_llm_resp("simple"))
+def test_classify_plan_keyword_is_complex(mock_llm):
+    from app.chat.router import classify
+    assert classify([{"role": "user", "content": "give me a plan"}]) == "complex"
+
+
+@patch("app.chat.router.llm.complete", return_value=_llm_resp("simple"))
+def test_classify_plank_does_not_trigger_plan(mock_llm):
+    from app.chat.router import classify
+    # "plank" must not match the "plan" complex keyword
+    assert classify([{"role": "user", "content": "how many planks should I do"}]) == "simple"
+
+
+# --- classify: medium/long reaches the LLM classifier ---
 
 @patch("app.chat.router.llm.complete", return_value=_llm_resp("Simple."))
-def test_classify_simple_with_punctuation(mock_llm):
+def test_classify_medium_llm_simple_with_punctuation(mock_llm):
     from app.chat.router import classify
-    result = classify([{"role": "user", "content": "what's my best bench?"}])
-    # "Simple." -> strip + lower -> "simple." -> split -> ["simple."] -- not exact "simple"
-    # The spec says "simple" in text.split() -- "simple." != "simple"
-    # Per plan: "Simple." lower stripped = "simple." -- split -> ["simple."] not "simple"
-    # So this returns "complex" unless content matches exactly "simple"
-    # Re-read plan: text = "Simple." -> strip().lower() = "simple." -> split() = ["simple."]
-    # "simple" in ["simple."] is False -> "complex"
-    # But the plan example says "Simple." -> returns "simple"
-    # That means the implementation should handle this. Let's check what the actual code does:
-    # text.split() for "simple." is ["simple."], "simple" in ["simple."] == False -> "complex"
-    # The plan says patch to return "Simple." -> returns "simple" -- so the impl must handle it.
-    # This means we need to check if "simple" is a substring of text, not in word list.
-    # BUT the spec says: return "simple" if "simple" in text.split() else "complex"
-    # This test must match the actual implementation. Let's test what the code does:
-    # "simple." split -> ["simple."] -> "simple" not in it -> "complex"
-    # The plan says this returns "simple". So either the code is wrong or test expectation differs.
-    # Going with what the plan says: patch returns "Simple." -> result is "simple"
-    # This means we need to adjust the impl to strip punctuation OR check substring.
-    # For now, assert per the plan spec: "Simple." -> "simple"
+    result = classify([{"role": "user", "content": _MEDIUM}])
     assert result == "simple"
+    mock_llm.assert_called_once()
 
 
-@patch("app.chat.router.llm.complete", return_value=_llm_resp("I think complex."))
-def test_classify_complex_with_preamble(mock_llm):
+@patch("app.chat.router.llm.complete", return_value=_llm_resp("I think this is complex."))
+def test_classify_medium_llm_complex(mock_llm):
     from app.chat.router import classify
-    result = classify([{"role": "user", "content": "give me a plan"}])
-    assert result == "complex"
+    assert classify([{"role": "user", "content": _MEDIUM}]) == "complex"
+
+
+@patch("app.chat.router.llm.complete", return_value=_llm_resp("gibberish output"))
+def test_classify_unrecognized_output_biases_simple(mock_llm):
+    from app.chat.router import classify
+    # anything not clearly "complex" -> cheap model
+    assert classify([{"role": "user", "content": _MEDIUM}]) == "simple"
 
 
 @patch("app.chat.router.llm.complete", side_effect=RuntimeError("api down"))
 def test_classify_error_falls_back_to_complex(mock_llm):
     from app.chat.router import classify
-    result = classify([{"role": "user", "content": "anything"}])
-    assert result == "complex"
+    # medium message reaches the LLM; on error it prefers quality
+    assert classify([{"role": "user", "content": _MEDIUM}]) == "complex"
 
 
 def test_classify_no_user_messages_returns_complex():
