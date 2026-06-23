@@ -98,6 +98,37 @@ def test_estimate_from_image_returns_parsed_dict():
     mock_complete.assert_called_once()
 
 
+_LABEL_CONTENT = json.dumps({
+    "is_label": True,
+    "name": "Phulka Fresh",
+    "serving": "1 piece (35g)",
+    "macros": {"calories": 100, "protein_g": 2, "carbs_g": 15, "fat_g": 3.5},
+    "micros": {
+        "fiber_g": 1, "sugar_g": 0, "sodium_mg": 120, "potassium_mg": 0,
+        "calcium_mg": 5, "iron_mg": 0.7, "vitamin_c_mg": 0, "vitamin_d_mcg": 0,
+        "saturated_fat_g": 0.3, "cholesterol_mg": 0,
+    },
+    "confidence": 0.95,
+})
+
+
+def test_estimate_from_image_label_is_verbatim_no_usda_enrichment():
+    """A detected nutrition label keeps its printed micros and skips USDA enrichment."""
+    from app.services import nutrition_ai
+    resp = _make_resp(_LABEL_CONTENT, 20, 8)
+    with patch("app.services.nutrition_ai.llm.complete", return_value=resp), \
+         patch("app.services.nutrition_ai.usda.enrich_estimation") as mock_enrich, \
+         patch("app.services.nutrition_ai.usage_service.record_usage"):
+        result = nutrition_ai.estimate_from_image("user2", "https://example.com/label.jpg")
+    # label micros preserved verbatim
+    assert result["micros"]["sodium_mg"] == 120.0
+    assert result["micros"]["calcium_mg"] == 5.0
+    assert result["micros"]["iron_mg"] == 0.7
+    assert result["micros_source"] == "label"
+    # USDA enrichment must NOT run for a label — the label is authoritative
+    mock_enrich.assert_not_called()
+
+
 def test_estimate_from_image_records_usage_source_photo():
     from app.services import nutrition_ai
     resp = _make_resp(_GOOD_CONTENT, 20, 8)

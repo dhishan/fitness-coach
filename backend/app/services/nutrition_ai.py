@@ -186,18 +186,48 @@ def estimate_from_label(user_id: str, image_url: str) -> dict:
         return {"error": f"{type(e).__name__}: {e}"}
 
 
+VISION_SYSTEM = (
+    "You analyze a food photo and return JSON only. FIRST decide whether the image is a "
+    "packaged-food NUTRITION FACTS label or a photo of prepared/served food. "
+    "Schema: "
+    '{"is_label": boolean, "name": string, "serving": string, '
+    '"macros": {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}, '
+    '"micros": {"fiber_g": number, "sugar_g": number, "sodium_mg": number, "potassium_mg": number, '
+    '"calcium_mg": number, "iron_mg": number, "vitamin_c_mg": number, "vitamin_d_mcg": number, '
+    '"saturated_fat_g": number, "cholesterol_mg": number}, '
+    '"confidence": number between 0 and 1}. '
+    "If it IS a Nutrition Facts label: set is_label=true and read the PER-SERVING values EXACTLY "
+    "as printed — do NOT estimate or rescale. Set serving to the label's serving size including "
+    "the gram weight if shown (e.g. '1 piece (35g)'). If the product/brand is visible, set name to "
+    "'<Product> (<Brand>)'. Use 0 for any value not printed on the label. "
+    "If it is PREPARED FOOD (not a label): set is_label=false and estimate macros plus best-effort "
+    "micros; assume the most common serving and note it in the name "
+    "(e.g. 'Chicken bowl (1 standard serving ~350g)'); default unknown micros to 0. "
+    "Round calories to whole numbers and grams to 1 decimal. Never invent precision."
+)
+
+
 def estimate_from_image(user_id: str, image_url: str, hint: str = "") -> dict:
+    """Estimate from a food photo. Auto-detects a Nutrition Facts label vs a
+    prepared-food photo: a label is read verbatim and treated as authoritative
+    (no USDA enrichment); prepared food is estimated and USDA-enriched."""
     s = get_settings()
     start = time.monotonic()
     try:
         fetch_url = _signed_get(image_url)
+        instruction = (
+            "Determine if this is a packaged nutrition-facts label or prepared food, "
+            "then return the values per the schema."
+        )
+        if hint:
+            instruction = f"{hint}\n\n{instruction}"
         content = [
-            {"type": "text", "text": hint or "Estimate macros for the food shown."},
+            {"type": "text", "text": instruction},
             {"type": "image_url", "image_url": {"url": fetch_url}},
         ]
         resp = llm.complete(
             [
-                {"role": "system", "content": ESTIMATION_SYSTEM},
+                {"role": "system", "content": VISION_SYSTEM},
                 {"role": "user", "content": content},
             ],
             model=s.nutrition_model,
@@ -209,7 +239,24 @@ def estimate_from_image(user_id: str, image_url: str, hint: str = "") -> dict:
             response_format={"type": "json_object"},
         )
         _record(user_id, "nutrition_photo", resp, int((time.monotonic() - start) * 1000))
-        return _enrich(_parse(resp))
+        parsed = _parse(resp)
+
+        if parsed.get("is_label"):
+            # The label is the source of truth — take its values verbatim and
+            # skip USDA enrichment (which would override the printed numbers).
+            macros = parsed.get("macros") or {}
+            parsed["macros"] = {
+                k: float(macros.get(k, 0) or 0)
+                for k in ("calories", "protein_g", "carbs_g", "fat_g")
+            }
+            ai_micros = parsed.get("micros") or {}
+            parsed["micros"] = {k: float(ai_micros.get(k, 0) or 0) for k in _MICRO_KEYS}
+            parsed["micros_source"] = "label"
+            parsed.setdefault("usda_fdc_id", None)
+            return parsed
+
+        # Prepared food — estimate + USDA enrichment.
+        return _enrich(parsed)
     except Exception as e:
         logger.exception("estimate_from_image failed")
         return {"error": f"{type(e).__name__}: {e}"}
