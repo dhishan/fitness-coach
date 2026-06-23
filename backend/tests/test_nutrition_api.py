@@ -130,6 +130,31 @@ def test_list_logs_bad_date(client):
     assert r.status_code == 422
 
 
+def test_foods_search_ifct_first_and_drops_zero_macro(client):
+    """Combined search round-robins IFCT first and drops zero-macro junk."""
+    def _hit(name, src, cals=100):
+        return {"name": name, "serving": "100 g",
+                "macros": {"calories": cals, "protein_g": 1, "carbs_g": 1, "fat_g": 1},
+                "source": src}
+    usda_hits = [
+        {"name": "Chole Spice Mix", "serving": "1 g",
+         "macros": {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}, "source": "usda"},
+        _hit("Branded Chole", "usda"),
+    ]
+    off_hits = [_hit("OFF Chole", "off")]
+    ifct_hits = [_hit("Chana Masala", "ifct", 270)]
+
+    with patch("app.routers.nutrition.usda.search_full", return_value=usda_hits), \
+         patch("app.routers.nutrition.off_search.search_off", return_value=off_hits), \
+         patch("app.routers.nutrition.ifct.search_ifct", return_value=ifct_hits):
+        r = client.get("/api/v1/nutrition/foods/search?q=chole&limit=5", headers=_auth(client))
+    assert r.status_code == 200
+    names = [h["name"] for h in r.json()]
+    # IFCT curated dish leads; zero-macro spice mix dropped
+    assert names[0] == "Chana Masala"
+    assert "Chole Spice Mix" not in names
+
+
 def test_update_log(client):
     updated = {**SAMPLE_LOG, "name": "Updated name"}
     with patch(f"{FOOD_SVC}.update_log", return_value=updated) as m:

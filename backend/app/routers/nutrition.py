@@ -106,12 +106,24 @@ async def search_foods(
     for h in usda_hits:
         h.setdefault("source", "usda")
 
-    # Interleave: one USDA, one OFF, one IFCT, repeat
+    def _usable(hit: dict) -> bool:
+        # Drop entries with no usable macros (e.g. USDA branded spice mixes
+        # that report 0 for everything) — useless for tracking.
+        m = hit.get("macros") or {}
+        return any((m.get(k) or 0) for k in ("calories", "protein_g", "carbs_g", "fat_g"))
+
+    # Round-robin across sources so no single source dominates the top slots.
+    # IFCT first: its curated Indian dishes (e.g. "Chana Masala" for "chole")
+    # are the most reliable when present; then USDA whole foods; then OFF.
+    from itertools import zip_longest
+
     merged: list[dict] = []
     seen: set[str] = set()
-    for group in [usda_hits, off_hits, ifct_hits]:
-        for hit in group:
-            key = hit.get("name", "").lower()
+    for tier in zip_longest(ifct_hits, usda_hits, off_hits):
+        for hit in tier:
+            if not hit or not _usable(hit):
+                continue
+            key = (hit.get("name", "") or "").lower()
             if key and key not in seen:
                 seen.add(key)
                 merged.append(hit)
