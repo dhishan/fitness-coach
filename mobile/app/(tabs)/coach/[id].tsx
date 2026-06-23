@@ -101,11 +101,23 @@ export default function CoachThread() {
   const [sending, setSending] = useState(false)
   const [activeConvId, setActiveConvId] = useState<string | undefined>(isNew ? undefined : id)
   const [totalCost, setTotalCost] = useState(0)
+  // Messages typed while a response is still generating wait here and are
+  // sent automatically, in order, once the current turn finishes.
+  const [queue, setQueue] = useState<string[]>([])
 
   const cancelStreamRef = useRef<(() => void) | null>(null)
   const lastSeqRef = useRef<number>(0)
   const pendingTurnIdRef = useRef<string | null>(null)
+  const queueRef = useRef<string[]>([])
   const listRef = useRef<FlatList>(null)
+
+  useEffect(() => {
+    queueRef.current = queue
+  }, [queue])
+
+  // A turn is actively generating when the assistant turn is still pending.
+  const generating = pendingTurnIdRef.current !== null ||
+    turns.some((t) => t.role === 'assistant' && t.status === 'pending')
 
   // ---- hydrate from server ----
   const { data: detail } = useQuery({
@@ -225,14 +237,29 @@ export default function CoachThread() {
         queryClient.invalidateQueries({ queryKey: ['chat-conversations'] })
         queryClient.invalidateQueries({ queryKey: ['chat-conversation', cid] })
         scrollToBottom()
+        // Send the next queued message, if any.
+        const next = queueRef.current[0]
+        if (next) {
+          setQueue((q) => q.slice(1))
+          void send(next, cid, true)
+        }
       })
     } else if (e.type === 'error') {
       markFailed(assistantTurnId)
     }
   }
 
-  async function send(message: string, retryConvId?: string) {
-    if (!message.trim() || sending) return
+  async function send(message: string, retryConvId?: string, fromQueue = false) {
+    const text = message.trim()
+    if (!text) return
+    // If a response is still generating (or a start is in flight), queue this
+    // message instead of firing a second concurrent turn. The auto-dequeue
+    // path passes fromQueue=true to bypass the guard.
+    if (!fromQueue && (sending || generating || pendingTurnIdRef.current !== null)) {
+      setQueue((q) => [...q, text])
+      setInput('')
+      return
+    }
     setSending(true)
     setInput('')
     track('chat.message.sent')
@@ -368,6 +395,24 @@ export default function CoachThread() {
         }
       />
 
+      {/* Queued messages (waiting for the current response to finish) */}
+      {queue.length > 0 ? (
+        <View style={styles.queueBar}>
+          {queue.map((q, i) => (
+            <View key={`${i}-${q}`} style={styles.queuedRow}>
+              <Text style={styles.queuedLabel}>Queued</Text>
+              <Text style={styles.queuedText} numberOfLines={1}>{q}</Text>
+              <TouchableOpacity
+                onPress={() => setQueue((prev) => prev.filter((_, idx) => idx !== i))}
+                hitSlop={10}
+              >
+                <Text style={styles.queuedCancel}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {/* Composer */}
       <View style={[styles.composer, { paddingBottom: spacing.sm }]}>
         <TextInput
@@ -484,6 +529,32 @@ const styles = StyleSheet.create({
   retryText: { color: colors.error, fontSize: 14 },
   toolStatus: { fontSize: 11, color: colors.gray400, marginTop: 4, paddingHorizontal: spacing.sm, fontStyle: 'italic' },
   turnCost: { fontSize: 10, color: colors.gray300, marginTop: 2, paddingHorizontal: spacing.sm, fontVariant: ['tabular-nums'] },
+
+  // queued messages
+  queueBar: {
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.xs,
+    gap: 4,
+    backgroundColor: colors.surface,
+  },
+  queuedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#F0F2F5',
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  queuedLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.gray500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  queuedText: { flex: 1, fontSize: 13, color: colors.gray700 },
+  queuedCancel: { fontSize: 13, color: colors.gray400, fontWeight: '600' },
 
   // composer
   composer: {

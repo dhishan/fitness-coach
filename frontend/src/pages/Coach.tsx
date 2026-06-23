@@ -152,11 +152,22 @@ function ConversationThread({ convId }: { convId: string }) {
   const [sending, setSending] = useState(false)
   const [activeConvId, setActiveConvId] = useState<string | undefined>(isNew ? undefined : convId)
   const [totalCost, setTotalCost] = useState<number>(0)
+  // Messages typed while a response is still generating wait here and are
+  // sent automatically, in order, once the current turn finishes.
+  const [queue, setQueue] = useState<string[]>([])
 
   // per active stream state
   const cancelStreamRef = useRef<(() => void) | null>(null)
   const lastSeqRef = useRef<number>(0)
   const pendingTurnIdRef = useRef<string | null>(null)
+  const queueRef = useRef<string[]>([])
+
+  useEffect(() => {
+    queueRef.current = queue
+  }, [queue])
+
+  const generating = pendingTurnIdRef.current !== null ||
+    turns.some((t) => t.role === 'assistant' && t.status === 'pending')
 
   // hydrate from existing conversation
   const { data: detail } = useQuery({
@@ -268,14 +279,27 @@ function ConversationThread({ convId }: { convId: string }) {
         setTotalCost(refreshed.total_cost_usd)
         queryClient.invalidateQueries({ queryKey: ['chat-conversations'] })
         queryClient.invalidateQueries({ queryKey: ['chat-conversation', cid] })
+        // Send the next queued message, if any.
+        const next = queueRef.current[0]
+        if (next) {
+          setQueue((q) => q.slice(1))
+          void send(next, cid, true)
+        }
       })
     } else if (e.type === 'error') {
       markFailed(assistantTurnId)
     }
   }
 
-  async function send(message: string, retryConvId?: string) {
-    if (!message.trim() || sending) return
+  async function send(message: string, retryConvId?: string, fromQueue = false) {
+    const text = message.trim()
+    if (!text) return
+    // Queue instead of firing a second concurrent turn while one generates.
+    if (!fromQueue && (sending || generating || pendingTurnIdRef.current !== null)) {
+      setQueue((q) => [...q, text])
+      setInput('')
+      return
+    }
     setSending(true)
     setInput('')
 
@@ -415,6 +439,25 @@ function ConversationThread({ convId }: { convId: string }) {
           </div>
         ))}
       </div>
+
+      {/* queued messages (waiting for the current response to finish) */}
+      {queue.length > 0 && (
+        <div className="px-4 pt-2 bg-white flex flex-col gap-1">
+          {queue.map((q, i) => (
+            <div key={`${i}-${q}`} className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Queued</span>
+              <span className="flex-1 text-sm text-gray-700 truncate">{q}</span>
+              <button
+                onClick={() => setQueue((prev) => prev.filter((_, idx) => idx !== i))}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+                aria-label="cancel queued message"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* input */}
       <div className="px-4 py-3 border-t border-gray-100 bg-white flex gap-2">
