@@ -26,7 +26,13 @@ resource "cloudflare_record" "mcp" {
   name    = "mcp.fitness-tracker"
   type    = "CNAME"
   content = "ghs.googlehosted.com"
-  proxied = true   # proxied so Cloudflare Access can inject Cf-Access-Jwt-Assertion
+  # DNS-only: the MCP server now authenticates via Google OAuth (not Cloudflare
+  # Access), so no proxy is needed. It also CANNOT be proxied — this is a
+  # two-level subdomain that Cloudflare Universal SSL does not cover, so the
+  # proxied path fails the TLS handshake. Google's Cloud Run managed cert serves
+  # directly when DNS-only. (The public, DCR-fronted connector uses a separate
+  # single-level host, fitness-mcp.*, which IS proxied for the Worker.)
+  proxied = false
 }
 
 resource "google_cloud_run_domain_mapping" "api" {
