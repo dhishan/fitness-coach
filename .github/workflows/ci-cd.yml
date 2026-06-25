@@ -59,6 +59,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_sentry_dsn_backend: ${{ secrets.SENTRY_DSN_BACKEND }}
+          # Public MCP connector (Phase 1/2). Empty secrets keep it inert.
+          TF_VAR_google_client_secret: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          TF_VAR_mcp_gateway_secret: ${{ secrets.MCP_GATEWAY_SECRET }}
         run: |
           make terraform-init
           make terraform-apply

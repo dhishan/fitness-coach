@@ -16,7 +16,21 @@ for the connector directories.
   caller's custom only; cross-user `get_*` returns None. 544 backend tests pass.
 - **Phase 5 (legal) — DRAFTED.** `/privacy` and `/terms` public pages live on the
   web app (linked from Login). Review/sign-off pending before Google submission.
-- **Next:** Phase 2 (the Cloudflare Worker OAuth provider) — all infra via Terraform.
+- **Phase 2/3 — BUILT + provisioned.** `worker/` (TS, @cloudflare/workers-oauth-provider:
+  DCR /register, Google upstream login, MCP proxy with signed gateway assertion),
+  bundled to `terraform/main/mcp_oauth_worker.js`. Terraform `mcp_oauth_worker.tf`
+  (KV + worker_script + worker_domain `fitness-mcp.blueelephants.org`) plans clean
+  (3 to add) and deploys via CI. Provisions **inert** until secrets exist.
+
+### Remaining to go live (user actions)
+1. Add GH secrets: `GOOGLE_OAUTH_CLIENT_SECRET` (the web OAuth client's secret),
+   `MCP_GATEWAY_SECRET` (any long random string; same value used by Worker + backend).
+2. Google Cloud OAuth client → Authorized redirect URI:
+   `https://fitness-mcp.blueelephants.org/callback`.
+3. Phase 4: OAuth consent screen → Production + submit for verification.
+4. Flip `PUBLIC_SIGNUP_ENABLED=true` (GH repo variable) when ready to open signups.
+5. Add the connector in claude.ai/chatgpt: URL `https://fitness-mcp.blueelephants.org/mcp`
+   (DCR means no client id/secret to paste).
 
 ## Decisions (locked)
 

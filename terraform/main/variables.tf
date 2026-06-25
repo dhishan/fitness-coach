@@ -71,6 +71,14 @@ variable "mcp_gateway_secret" {
   default   = ""
 }
 
+# Google OAuth client SECRET for the OAuth Worker's server-side code exchange.
+# Fed from a GH secret via TF_VAR_google_client_secret.
+variable "google_client_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 variable "sentry_dsn_backend" {
   type      = string
   sensitive = true
