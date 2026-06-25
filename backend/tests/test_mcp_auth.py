@@ -54,17 +54,83 @@ class TestResolveUserIdFromRequest:
         assert exc.value.status_code == 401
         assert "email" in exc.value.detail
 
-    def test_google_email_not_in_firestore_raises_403(self):
+    def test_google_email_not_in_firestore_raises_403_when_signup_off(self):
         from fastapi import HTTPException
         from app.auth.mcp_auth import resolve_user_id_from_request
 
         with (
             patch("app.auth.mcp_auth.verify_google_oauth_bearer", return_value=_GOOGLE_CLAIMS),
             patch("app.auth.mcp_auth._lookup_uid_by_email", return_value=None),
+            patch("app.auth.mcp_auth.get_settings") as mock_s,
         ):
+            mock_s.return_value.public_signup_enabled = False
             with pytest.raises(HTTPException) as exc:
                 resolve_user_id_from_request({"authorization": "Bearer t"})
         assert exc.value.status_code == 403
+
+    def test_public_signup_provisions_new_verified_user(self):
+        from app.auth.mcp_auth import resolve_user_id_from_request
+
+        with (
+            patch("app.auth.mcp_auth.verify_google_oauth_bearer", return_value=_GOOGLE_CLAIMS),
+            patch("app.auth.mcp_auth._lookup_uid_by_email", return_value=None),
+            patch("app.auth.mcp_auth._provision_user", return_value="g-sub") as prov,
+            patch("app.auth.mcp_auth.get_settings") as mock_s,
+        ):
+            mock_s.return_value.public_signup_enabled = True
+            uid = resolve_user_id_from_request({"authorization": "Bearer t"})
+        assert uid == "g-sub"
+        prov.assert_called_once_with("g-sub", "user@example.com")
+
+    def test_public_signup_skips_unverified_email(self):
+        from fastapi import HTTPException
+        from app.auth.mcp_auth import resolve_user_id_from_request
+
+        unverified = {"email": "u@example.com", "sub": "s", "email_verified": False}
+        with (
+            patch("app.auth.mcp_auth.verify_google_oauth_bearer", return_value=unverified),
+            patch("app.auth.mcp_auth._lookup_uid_by_email", return_value=None),
+            patch("app.auth.mcp_auth.get_settings") as mock_s,
+        ):
+            mock_s.return_value.public_signup_enabled = True
+            with pytest.raises(HTTPException) as exc:
+                resolve_user_id_from_request({"authorization": "Bearer t"})
+        assert exc.value.status_code == 403
+
+    # --- gateway assertion path (public Worker) ---
+
+    def test_gateway_assertion_resolves_user(self):
+        from app.auth.mcp_auth import resolve_user_id_from_request
+
+        with (
+            patch("app.auth.mcp_auth.verify_gateway_assertion",
+                  return_value={"email": "user@example.com", "sub": "g-sub", "email_verified": True}),
+            patch("app.auth.mcp_auth._lookup_uid_by_email", return_value="fs-uid-9"),
+        ):
+            uid = resolve_user_id_from_request({"x-mcp-gateway-assertion": "signed.jwt"})
+        assert uid == "fs-uid-9"
+
+    def test_gateway_assertion_invalid_signature_401(self):
+        from fastapi import HTTPException
+        from app.auth.mcp_auth import verify_gateway_assertion
+
+        with patch("app.auth.mcp_auth.get_settings") as mock_s:
+            mock_s.return_value.mcp_gateway_secret = "shh"
+            with pytest.raises(HTTPException) as exc:
+                verify_gateway_assertion("not.a.validjwt")
+        assert exc.value.status_code == 401
+
+    def test_gateway_assertion_roundtrip(self):
+        """A token signed with the gateway secret verifies and yields the email."""
+        import jwt
+        from app.auth.mcp_auth import verify_gateway_assertion
+
+        with patch("app.auth.mcp_auth.get_settings") as mock_s:
+            mock_s.return_value.mcp_gateway_secret = "shared-secret"
+            token = jwt.encode({"sub": "s1", "email": "a@b.com"}, "shared-secret", algorithm="HS256")
+            claims = verify_gateway_assertion(token)
+        assert claims["email"] == "a@b.com"
+        assert claims["sub"] == "s1"
 
     # --- dev fallback ---
 

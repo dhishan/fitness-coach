@@ -90,6 +90,11 @@ export default function Login() {
           <p className="text-sm text-gray-500 mt-1">Track your training, talk to your coach.</p>
         </div>
         <div ref={buttonRef} />
+        <p className="text-center text-xs text-gray-400 mt-6">
+          <a href="/privacy" className="hover:underline">Privacy Policy</a>
+          <span className="mx-2">&middot;</span>
+          <a href="/terms" className="hover:underline">Terms of Service</a>
+        </p>
       </div>
     </div>
   )

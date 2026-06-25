@@ -58,6 +58,19 @@ variable "mcp_domain" {
   default = "mcp.fitness-tracker.blueelephants.org"
 }
 
+variable "public_signup_enabled" {
+  type    = string
+  default = "false"
+}
+
+# Shared HS256 secret between the Cloudflare OAuth Worker and the backend.
+# Fed from a GH secret via TF_VAR_mcp_gateway_secret; empty = gateway disabled.
+variable "mcp_gateway_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 variable "sentry_dsn_backend" {
   type      = string
   sensitive = true

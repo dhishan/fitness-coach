@@ -67,6 +67,74 @@ def _lookup_uid_by_email(email: str) -> str | None:
     return uid
 
 
+def _provision_user(sub: str, email: str) -> str:
+    """Create a users/{google_sub} doc (matching the web sign-in shape) and
+    return the uid. Used for public-signup auto-provisioning."""
+    from datetime import datetime, timezone
+
+    from app.firestore import get_db
+
+    get_db().collection("users").document(sub).set(
+        {
+            "email": email,
+            "display_name": "",
+            "preferred_units": "kg",
+            "created_via": "mcp",
+            "updated_at": datetime.now(timezone.utc),
+        },
+        merge=True,
+    )
+    _uid_cache[email] = sub
+    return sub
+
+
+def _resolve_or_provision(claims: dict) -> str:
+    """Map a verified Google identity to an internal user_id, provisioning a
+    new account when public signup is enabled.
+
+    Raises HTTPException(401) if email is missing, HTTPException(403) if the
+    user has no account and public signup is off.
+    """
+    email = (claims.get("email") or "").lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Google token missing email claim")
+    uid = _lookup_uid_by_email(email)
+    if uid is not None:
+        return uid
+
+    settings = get_settings()
+    if settings.public_signup_enabled and claims.get("email_verified") and claims.get("sub"):
+        return _provision_user(str(claims["sub"]), email)
+
+    raise HTTPException(
+        status_code=403,
+        detail=(
+            f"User {email} authenticated with Google but has no account in the "
+            "fitness tracker. Sign in to the web app once to create your account."
+        ),
+    )
+
+
+def verify_gateway_assertion(token: str) -> dict:
+    """Verify the HS256 assertion the Cloudflare OAuth gateway signs after it
+    has authenticated the user upstream. Returns {email, sub, email_verified}."""
+    import jwt
+
+    secret = get_settings().mcp_gateway_secret
+    if not secret:
+        raise HTTPException(status_code=401, detail="gateway auth not configured")
+    try:
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=f"invalid gateway assertion: {exc}")
+    return {
+        "email": payload.get("email"),
+        "sub": payload.get("sub"),
+        # the gateway only signs after a successful Google login, so trust it
+        "email_verified": True,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Resolver — returns user_id or raises HTTPException(401/403).
 # ---------------------------------------------------------------------------
@@ -89,7 +157,20 @@ def resolve_user_id_from_request(
     settings = get_settings()
     env = environment if environment is not None else settings.environment
 
-    # 1. Google OAuth bearer (ID token or access token).
+    # 1. Cloudflare OAuth gateway assertion (public connector path). The Worker
+    #    already authenticated the user upstream via Google and signs {sub,email}.
+    gw = headers.get("x-mcp-gateway-assertion")
+    if gw:
+        claims = verify_gateway_assertion(gw)
+        uid = _resolve_or_provision(claims)
+        logger.info(
+            "mcp.auth source=gateway user_id=%s",
+            uid,
+            extra={"json_fields": {"event": "mcp_auth", "source": "gateway", "user_id": uid}},
+        )
+        return uid
+
+    # 2. Direct Google OAuth bearer (private path: claude.ai with pasted client).
     auth = headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
         token = auth.split(" ", 1)[1].strip()
@@ -97,18 +178,7 @@ def resolve_user_id_from_request(
             claims = verify_google_oauth_bearer(token)
         except GoogleOAuthError as exc:
             raise HTTPException(status_code=401, detail=f"Google OAuth bearer invalid: {exc}")
-        email = claims.get("email")
-        if not email:
-            raise HTTPException(status_code=401, detail="Google token missing email claim")
-        uid = _lookup_uid_by_email(email)
-        if uid is None:
-            raise HTTPException(
-                status_code=403,
-                detail=(
-                    f"User {email} authenticated with Google but has no account in "
-                    "the fitness tracker. Sign in to the web app once to create your account."
-                ),
-            )
+        uid = _resolve_or_provision(claims)
         logger.info(
             "mcp.auth source=google user_id=%s",
             uid,
@@ -116,7 +186,7 @@ def resolve_user_id_from_request(
         )
         return uid
 
-    # 2. Local-dev escape hatch — header-based user injection.
+    # 3. Local-dev escape hatch — header-based user injection.
     if env == "development":
         dev_user = headers.get("x-mcp-user-id")
         if dev_user:

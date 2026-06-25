@@ -50,6 +50,16 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "GOOGLE_OAUTH_CLIENT_IDS"
         value = var.google_oauth_client_ids
       }
+      # Public MCP connector (Phase 1). Off until launch; gateway secret empty
+      # disables the Worker-gateway auth path. Both fed from GH secrets via TF_VAR.
+      env {
+        name  = "PUBLIC_SIGNUP_ENABLED"
+        value = var.public_signup_enabled
+      }
+      env {
+        name  = "MCP_GATEWAY_SECRET"
+        value = var.mcp_gateway_secret
+      }
       env {
         name  = "CORS_ORIGINS"
         value = jsonencode(["http://localhost:5173", "https://${var.ui_domain}", "https://fitness-tracker-ble.web.app"])

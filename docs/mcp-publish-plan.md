@@ -6,6 +6,18 @@ Anyone can add `fitness-tracker` as a custom connector in claude.ai / chatgpt.co
 sign in with Google, and talk to their own data. No pasting client secrets. Aim
 for the connector directories.
 
+## Status
+
+- **Phase 1 — DONE.** Backend multi-tenant + gateway-trust auth shipped
+  (`public_signup_enabled`, `mcp_gateway_secret`, `X-Mcp-Gateway-Assertion`
+  path, auto-provision verified Google emails). Env wired in `cloud_run.tf`
+  (off until launch). **Data-isolation audit passed** — every read/list/get is
+  user_id-scoped; goals are doc-id scoped; `list_exercises` returns system +
+  caller's custom only; cross-user `get_*` returns None. 544 backend tests pass.
+- **Phase 5 (legal) — DRAFTED.** `/privacy` and `/terms` public pages live on the
+  web app (linked from Login). Review/sign-off pending before Google submission.
+- **Next:** Phase 2 (the Cloudflare Worker OAuth provider) — all infra via Terraform.
+
 ## Decisions (locked)
 
 - **Audience:** fully public / listed.

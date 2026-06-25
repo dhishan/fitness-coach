@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     sentry_profiles_sample_rate: float = 1.0
     # Public URL of the hosted MCP resource (for OAuth discovery metadata).
     mcp_public_url: str = "https://mcp.fitness-tracker.blueelephants.org/mcp/"
+    # Public connector: when true, a verified Google email with no existing
+    # account is auto-provisioned on first MCP login. Off until launch.
+    public_signup_enabled: bool = False
+    # Shared HS256 secret between the Cloudflare Worker OAuth gateway and this
+    # backend. The Worker signs a short-lived assertion {sub,email}; the backend
+    # trusts it via X-Mcp-Gateway-Assertion. Empty = gateway path disabled.
+    mcp_gateway_secret: str = ""
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 
