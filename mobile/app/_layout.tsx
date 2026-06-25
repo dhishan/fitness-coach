@@ -130,7 +130,7 @@ function RootLayout() {
         <Stack.Screen name="history/[id]" options={{ title: 'Workout' }} />
         <Stack.Screen name="body" options={{ title: 'Body metrics' }} />
         <Stack.Screen name="cardio" options={{ title: 'Cardio' }} />
-        <Stack.Screen name="recipes/index" options={{ title: 'Recipes' }} />
+        <Stack.Screen name="recipes/index" options={{ title: 'Saved foods' }} />
         <Stack.Screen name="recipes/[id]" options={{ title: 'Recipe' }} />
         <Stack.Screen name="+not-found" />
       </Stack>

@@ -218,6 +218,18 @@ async def create_favorite(body: FavoriteCreate, user: CurrentUser = Depends(get_
     return await asyncio.to_thread(food_service.create_favorite, user.user_id, body.model_dump())
 
 
+@router.put("/favorites/{fav_id}")
+async def update_favorite(
+    fav_id: str, body: FavoriteCreate, user: CurrentUser = Depends(get_current_user)
+):
+    result = await asyncio.to_thread(
+        food_service.update_favorite, user.user_id, fav_id, body.model_dump()
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Favorite not found")
+    return result
+
+
 @router.delete("/favorites/{fav_id}", status_code=204)
 async def delete_favorite(fav_id: str, user: CurrentUser = Depends(get_current_user)):
     ok = await asyncio.to_thread(food_service.delete_favorite, user.user_id, fav_id)

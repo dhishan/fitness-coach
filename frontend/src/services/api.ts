@@ -190,6 +190,8 @@ export const nutritionApi = {
       api.get<Favorite[]>('/nutrition/favorites').then((r) => r.data),
     create: (body: FavoriteCreate) =>
       api.post<Favorite>('/nutrition/favorites', body).then((r) => r.data),
+    update: (id: string, body: FavoriteCreate) =>
+      api.put<Favorite>(`/nutrition/favorites/${id}`, body).then((r) => r.data),
     remove: (id: string) =>
       api.delete(`/nutrition/favorites/${id}`),
     log: (id: string, date: string) =>

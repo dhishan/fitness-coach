@@ -222,6 +222,23 @@ def test_create_favorite(client):
     assert r.json()["id"] == "fav1"
 
 
+def test_update_favorite(client):
+    payload = {"name": "Oats (rolled)", "serving": "40g", "macros": MACROS}
+    ret = {"id": "fav1", "user_id": "u1", **payload}
+    with patch(f"{FOOD_SVC}.update_favorite", return_value=ret) as m:
+        r = client.put("/api/v1/nutrition/favorites/fav1", json=payload, headers=_auth(client))
+    assert r.status_code == 200
+    assert r.json()["name"] == "Oats (rolled)"
+    assert m.call_args.args[:2] == ("u1", "fav1")
+
+
+def test_update_favorite_404(client):
+    payload = {"name": "X", "serving": "", "macros": MACROS}
+    with patch(f"{FOOD_SVC}.update_favorite", return_value=None):
+        r = client.put("/api/v1/nutrition/favorites/nope", json=payload, headers=_auth(client))
+    assert r.status_code == 404
+
+
 def test_delete_favorite(client):
     with patch(f"{FOOD_SVC}.delete_favorite", return_value="fav1"):
         r = client.delete("/api/v1/nutrition/favorites/fav1", headers=_auth(client))

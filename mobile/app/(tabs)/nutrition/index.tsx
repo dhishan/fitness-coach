@@ -1244,7 +1244,12 @@ function NutritionScreenInner() {
       {/* Composer */}
       {!estimating && (
         <View style={[card, s.cardPad]}>
-          <Text style={s.sectionTitle}>Log food</Text>
+          <View style={s.row}>
+            <Text style={s.sectionTitle}>Log food</Text>
+            <Pressable onPress={() => router.push('/recipes' as never)}>
+              <Text style={s.savedFoodsLink}>Saved foods ›</Text>
+            </Pressable>
+          </View>
 
           {/* Primary add button */}
           <Pressable
@@ -1663,6 +1668,7 @@ const s = StyleSheet.create({
   groupLabel: { fontSize: 11, fontWeight: '600', color: colors.gray400, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm },
   logRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, gap: spacing.sm },
   logRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.gray50 },
+  savedFoodsLink: { fontSize: 13, color: colors.primary, fontWeight: '600' },
   logName: { fontSize: 14, fontWeight: '500', color: colors.text },
   logDesc: { fontSize: 12, color: colors.gray500, fontStyle: 'italic', marginTop: 1 },
   aiDescription: { fontSize: 13, color: colors.gray600, fontStyle: 'italic', lineHeight: 18, marginBottom: spacing.sm },

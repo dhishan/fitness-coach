@@ -184,6 +184,18 @@ def create_favorite(user_id: str, payload: dict) -> dict:
     return {**doc, "id": ref.id}
 
 
+def update_favorite(user_id: str, fav_id: str, updates: dict) -> dict | None:
+    ref = get_db().collection("favorites").document(fav_id)
+    snap = ref.get()
+    if not snap.exists:
+        return None
+    d = snap.to_dict()
+    if d.get("user_id") != user_id:
+        return None
+    ref.update(updates)
+    return {**d, **updates, "id": fav_id}
+
+
 def delete_favorite(user_id: str, fav_id: str) -> str | None:
     ref = get_db().collection("favorites").document(fav_id)
     snap = ref.get()
