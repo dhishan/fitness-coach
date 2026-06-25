@@ -4,60 +4,69 @@ from typing import Literal, Optional
 from app.config import get_settings
 from app.services import llm
 
-# Phrases that signal genuinely heavy work — always use the strong model.
-# Word-boundaried so "plan" doesn't fire on "plank", "split" not on "splits".
+# Quality-first routing. Coaching ADVICE (recommendations, "what should I…",
+# "why", planning, analysis) is the heart of the product and must use the
+# strong model. Only narrow, single-fact DATA LOOKUPS go to the cheap model.
+
+# Clear advice / analysis / planning signals -> strong model.
 _COMPLEX_RE = re.compile(
     r"\b("
-    r"program|programme|mesocycle|macrocycle|periodi[sz]e|periodization|periodisation|"
-    r"split|routine for|plan for|a plan|give me a plan|make a plan|build me|"
-    r"design|analy[sz]e|analysis|compare|trade[- ]?offs?|"
-    r"plateau|stalled|stalling|deload|"
-    r"over the next|for the next|how (?:should|do) i structure|should i switch"
+    r"recommend|suggest|should i|what should|what do i|what do you|"
+    r"why|because|explain|"
+    r"plan|program|programme|split|routine|periodi[sz]|mesocycle|deload|"
+    r"analy[sz]e|analysis|compare|improve|progress(?:ion)?|optimi[sz]e|"
+    r"better|worse|too (?:much|little|heavy|light)|enough|"
+    r"what(?:'?s| is) next|whats next|next (?:exercise|move|lift|set)|"
+    r"focus on|work on|target|weak|lagging|plateau|stall|form|technique|"
+    r"how (?:do|should|can) i|is it (?:ok|okay|fine|good|bad)|do you think"
     r")\b",
     re.IGNORECASE,
 )
 
-# In a coaching chat, short messages are almost always quick lookups, quick
-# advice, or follow-ups — the cheap model handles them well.
-_SIMPLE_MAX_WORDS = 12
+# Clear single-fact data-lookup signals -> cheap model is fine.
+_SIMPLE_RE = re.compile(
+    r"^\s*("
+    r"how many\b|how much did|what(?:'?s| is| was) my (?:best|max|pr|current|last|total|average|avg)\b|"
+    r"show (?:me|my)\b|list (?:my)?\b|when did i\b|how long\b|"
+    r"what(?:'?s| is| was) my .* (?:weight|bench|squat|deadlift|press|pr|max|total)\b"
+    r")",
+    re.IGNORECASE,
+)
+
+# Short throwaway follow-ups / acknowledgements -> cheap.
+_FOLLOWUP_PREFIXES = ("and ", "what about", "ok ", "okay", "thanks", "thank you", "got it", "cool", "nice")
 
 CLASSIFIER_SYSTEM = (
-    "You route a fitness-coaching message to a cheap model ('simple') or a "
-    "strong model ('complex'). Default to 'simple' — the cheap model answers "
-    "most coaching questions well. "
-    "simple = factual lookups, recent numbers, quick advice, form/technique "
-    "tips, what-to-log questions, single-exercise or single-day recommendations, "
-    "and any short follow-up. "
-    "complex = ONLY genuinely heavy work: designing a multi-week program or "
-    "training split, analyzing trends across many sessions, diagnosing a "
-    "plateau, or weighing several options with detailed trade-offs. "
-    "When unsure, answer 'simple'. Reply with exactly one word: simple or complex."
+    "Classify a fitness-coaching message as 'simple' or 'complex'. "
+    "simple = a single fact or recent number answered by ONE data lookup with no "
+    "reasoning (e.g. 'how many sessions this week', 'what is my best bench', "
+    "'show my last workout'). "
+    "complex = ANYTHING needing judgment: recommendations, advice, what-should-I, "
+    "why questions, form/technique, programming, planning, analysis, comparisons, "
+    "or anything ambiguous. "
+    "When in doubt, answer 'complex' — a coach should reason carefully. "
+    "Reply with exactly one word, lowercase: simple or complex."
 )
 
 
 def _heuristic(text: str) -> Optional[Literal["simple", "complex"]]:
-    """Cheap, deterministic pre-filter that avoids an LLM call for obvious cases.
-
-    Returns None when the message is medium/long with no strong signal, leaving
-    the final call to the LLM classifier.
-    """
     t = text.strip()
     if not t:
-        return "simple"
-    if _COMPLEX_RE.search(t):
         return "complex"
-    if len(t.split()) <= _SIMPLE_MAX_WORDS:
+    low = t.lower()
+    # Advice signals win — never send these to the weak model.
+    if _COMPLEX_RE.search(low):
+        return "complex"
+    if low.startswith(_FOLLOWUP_PREFIXES):
         return "simple"
-    return None
+    if _SIMPLE_RE.match(low):
+        return "simple"
+    return None  # let the LLM decide; it defaults to complex when unsure
 
 
 def classify(messages: list[dict]) -> Literal["simple", "complex"]:
-    """Bias toward 'simple' (cheap). Only escalate clearly-heavy requests.
-
-    Order: heuristic short-circuit -> LLM classifier (bias simple) -> on error,
-    prefer quality ('complex') since we only reach here for medium/long,
-    no-strong-signal messages.
-    """
+    """Quality-first: only clear single-fact lookups go cheap; everything
+    advisory (the bulk of coaching) uses the strong model."""
     user_msgs = [m for m in messages if m.get("role") == "user"]
     if not user_msgs:
         return "complex"
@@ -75,8 +84,8 @@ def classify(messages: list[dict]) -> Literal["simple", "complex"]:
         ]
         resp = llm.complete(prompt, model=s.chat_router_model)
         out = (resp.choices[0].message.content or "").strip().lower()
-        # Bias to cheap: only the strong model when the classifier clearly says so.
-        return "complex" if "complex" in out else "simple"
+        # Bias to quality: only an explicit 'simple' uses the cheap model.
+        return "simple" if "simple" in out else "complex"
     except Exception:
         return "complex"
 

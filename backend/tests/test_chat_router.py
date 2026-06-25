@@ -42,10 +42,33 @@ def test_classify_plan_keyword_is_complex(mock_llm):
 
 
 @patch("app.chat.router.llm.complete", return_value=_llm_resp("simple"))
-def test_classify_plank_does_not_trigger_plan(mock_llm):
+def test_classify_plank_lookup_is_simple(mock_llm):
     from app.chat.router import classify
-    # "plank" must not match the "plan" complex keyword
-    assert classify([{"role": "user", "content": "how many planks should I do"}]) == "simple"
+    # a pure count lookup is cheap; "plank" must not trip the "plan" keyword
+    assert classify([{"role": "user", "content": "how many planks did i do"}]) == "simple"
+
+
+# --- classify: ADVICE goes to the strong model (quality-first) ---
+
+@patch("app.chat.router.llm.complete", return_value=_llm_resp("simple"))
+def test_classify_advice_what_should_i_is_complex(mock_llm):
+    from app.chat.router import classify
+    # advice/recommendation must NOT use the cheap model, even if short
+    assert classify([{"role": "user", "content": "what should I train today?"}]) == "complex"
+    mock_llm.assert_not_called()
+
+
+@patch("app.chat.router.llm.complete", return_value=_llm_resp("simple"))
+def test_classify_recommendation_is_complex(mock_llm):
+    from app.chat.router import classify
+    assert classify([{"role": "user", "content": "suggest me a pull exercise"}]) == "complex"
+
+
+@patch("app.chat.router.llm.complete", return_value=_llm_resp("simple"))
+def test_classify_fact_lookup_is_simple(mock_llm):
+    from app.chat.router import classify
+    assert classify([{"role": "user", "content": "what is my best bench"}]) == "simple"
+    mock_llm.assert_not_called()
 
 
 # --- classify: medium/long reaches the LLM classifier ---
@@ -65,10 +88,10 @@ def test_classify_medium_llm_complex(mock_llm):
 
 
 @patch("app.chat.router.llm.complete", return_value=_llm_resp("gibberish output"))
-def test_classify_unrecognized_output_biases_simple(mock_llm):
+def test_classify_unrecognized_output_biases_complex(mock_llm):
     from app.chat.router import classify
-    # anything not clearly "complex" -> cheap model
-    assert classify([{"role": "user", "content": _MEDIUM}]) == "simple"
+    # quality-first: anything not clearly "simple" -> strong model
+    assert classify([{"role": "user", "content": _MEDIUM}]) == "complex"
 
 
 @patch("app.chat.router.llm.complete", side_effect=RuntimeError("api down"))
