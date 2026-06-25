@@ -89,6 +89,7 @@ from app.routers.nutrition import router as nutrition_router
 from app.routers.body import router as body_router
 from app.routers.cardio import router as cardio_router
 from app.routers.healthkit import router as healthkit_router
+from app.routers.wellknown import router as wellknown_router
 
 app.include_router(auth_router)
 app.include_router(exercises_router)
@@ -102,6 +103,19 @@ app.include_router(nutrition_router)
 app.include_router(body_router)
 app.include_router(cardio_router)
 app.include_router(healthkit_router)
+app.include_router(wellknown_router, tags=["well-known"])
+
+
+# claude.ai / chatgpt.com POST to /mcp (no trailing slash); FastAPI's default
+# 307 redirect to /mcp/ drops the Authorization header. Rewrite in-place so the
+# mounted app handles it without a redirect.
+@app.middleware("http")
+async def _mcp_trailing_slash(request: Request, call_next):
+    if request.url.path == "/mcp":
+        request.scope["path"] = "/mcp/"
+        request.scope["raw_path"] = b"/mcp/"
+    return await call_next(request)
+
 
 app.mount("/mcp", build_mcp_app())
 

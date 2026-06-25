@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     sentry_environment: str = "development"
     sentry_traces_sample_rate: float = 1.0
     sentry_profiles_sample_rate: float = 1.0
+    # Public URL of the hosted MCP resource (for OAuth discovery metadata).
+    mcp_public_url: str = "https://mcp.fitness-tracker.blueelephants.org/mcp/"
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 

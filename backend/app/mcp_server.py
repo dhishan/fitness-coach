@@ -10,6 +10,7 @@ import logging
 from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from app.auth.mcp_auth import McpAuthMiddleware, _current_user_id, get_mcp_user_id
 from app.services import (
@@ -25,7 +26,30 @@ from app.services import (
 
 logger = logging.getLogger(__name__)
 
-mcp = FastMCP("fitness-tracker", stateless_http=True, streamable_http_path="/")
+mcp = FastMCP(
+    "fitness-tracker",
+    stateless_http=True,
+    streamable_http_path="/",
+    # MCP's DNS-rebinding-protection rejects any Host/Origin not listed here
+    # with HTTP 421. claude.ai / chatgpt.com hit mcp.fitness-tracker.* — list
+    # it (and the api.* path + localhost) explicitly.
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            "mcp.fitness-tracker.blueelephants.org",
+            "api.fitness-tracker.blueelephants.org",
+            "127.0.0.1:*",
+            "localhost:*",
+        ],
+        allowed_origins=[
+            "https://claude.ai",
+            "https://chatgpt.com",
+            "https://chat.openai.com",
+            "http://127.0.0.1:*",
+            "http://localhost:*",
+        ],
+    ),
+)
 
 
 def _uid() -> str:

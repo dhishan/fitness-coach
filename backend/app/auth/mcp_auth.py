@@ -1,19 +1,20 @@
 """MCP authentication middleware and ContextVar.
 
-Auth precedence (in priority order):
-  1. Cloudflare Access JWT in `Cf-Access-Jwt-Assertion` header (production).
-  2. Bearer token = our own JWT issued by /api/v1/auth/google (fallback).
-  3. `X-Mcp-User-Id` header (LOCAL DEV ONLY - gated by ENVIRONMENT=development).
+Auth precedence:
+  1. `Authorization: Bearer <google_oauth_token>` — a Google ID or access
+     token issued for one of our configured OAuth client ids. Validated by
+     `app.auth.google_oauth.verify_google_oauth_bearer`, then the email is
+     mapped to our internal user_id via the `users` collection.
+  2. `X-Mcp-User-Id` header — LOCAL DEV ONLY (ENVIRONMENT=development).
+
+This is the auth model that lets claude.ai / chatgpt.com custom connectors
+authenticate via Google OAuth. The previous Cloudflare Access JWT and
+app-issued JWT paths were removed.
 
 The resolved internal user_id is stashed in a ContextVar so MCP tool
-functions can read it without re-implementing auth for each tool.
-
-The resolver function `resolve_user_id_from_request` accepts a plain dict of
-headers so tests never need a real Starlette Request object.
-
-The ASGI middleware `McpAuthMiddleware` wraps any downstream ASGI app, calls
-the resolver, sets the ContextVar, and forwards the request. Unauthenticated
-requests get a minimal JSON 401 without reaching the downstream app.
+functions can read it without re-implementing auth per tool. On a 401 the
+middleware emits a `WWW-Authenticate` header pointing at our OAuth
+protected-resource metadata so clients can discover how to authenticate.
 """
 from __future__ import annotations
 
@@ -27,8 +28,7 @@ from cachetools import TTLCache
 from fastapi import HTTPException
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.auth.cloudflare import CloudflareAuthError, verify_cf_access_jwt
-from app.auth.tokens import verify_access_token
+from app.auth.google_oauth import GoogleOAuthError, verify_google_oauth_bearer
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -49,16 +49,11 @@ def get_mcp_user_id() -> str | None:
 # Firestore email->uid lookup (cached per process).
 # ---------------------------------------------------------------------------
 
-
 _uid_cache: TTLCache[str, str | None] = TTLCache(maxsize=64, ttl=300)
 
 
 def _lookup_uid_by_email(email: str) -> str | None:
-    """Return the Firestore user_id for the given email, or None.
-
-    Cached for 5 minutes so a deleted account stops authenticating soon after
-    deletion (vs `lru_cache` which would persist for the container lifetime).
-    """
+    """Return the Firestore user_id for the given email, or None (5-min cache)."""
     if email in _uid_cache:
         return _uid_cache[email]
     from app.firestore import get_db
@@ -73,7 +68,7 @@ def _lookup_uid_by_email(email: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Resolver — returns user_id or raises HTTPException(401).
+# Resolver — returns user_id or raises HTTPException(401/403).
 # ---------------------------------------------------------------------------
 
 
@@ -81,75 +76,47 @@ def resolve_user_id_from_request(
     headers: dict[str, str],
     environment: str | None = None,
 ) -> str:
-    """Validate auth headers and return the internal user_id (Google UID).
+    """Validate auth headers and return the internal user_id.
 
     Args:
-        headers: A case-insensitive-friendly dict of HTTP request headers.
-                 Callers should lower-case keys before passing, or use a
-                 Starlette Headers-like object coerced to dict.
-        environment: The ENVIRONMENT setting value. If None, reads from
-                     settings. Exposed as a parameter so tests can inject it
-                     without patching settings.
+        headers: case-insensitive-friendly dict of request headers (lower-cased keys).
+        environment: ENVIRONMENT value; read from settings when None.
 
     Raises:
-        HTTPException(401): On any auth failure or missing credentials.
-        HTTPException(403): If the CF Access email is not in our user store.
+        HTTPException(401): on missing/invalid credentials.
+        HTTPException(403): if the Google email has no account in our user store.
     """
     settings = get_settings()
     env = environment if environment is not None else settings.environment
 
-    # 1. Cloudflare Access JWT (production path).
-    cf_jwt = headers.get("cf-access-jwt-assertion")
-    if cf_jwt:
+    # 1. Google OAuth bearer (ID token or access token).
+    auth = headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        token = auth.split(" ", 1)[1].strip()
         try:
-            claims = verify_cf_access_jwt(cf_jwt)
-        except CloudflareAuthError as exc:
-            raise HTTPException(
-                status_code=401, detail=f"Cloudflare Access JWT invalid: {exc}"
-            )
+            claims = verify_google_oauth_bearer(token)
+        except GoogleOAuthError as exc:
+            raise HTTPException(status_code=401, detail=f"Google OAuth bearer invalid: {exc}")
         email = claims.get("email")
         if not email:
-            raise HTTPException(
-                status_code=401, detail="Cloudflare JWT missing email claim"
-            )
+            raise HTTPException(status_code=401, detail="Google token missing email claim")
         uid = _lookup_uid_by_email(email)
         if uid is None:
             raise HTTPException(
                 status_code=403,
                 detail=(
-                    f"User {email} authenticated with Cloudflare Access but has no "
-                    "account in the fitness tracker. Sign in to the web app once to "
-                    "create your account."
+                    f"User {email} authenticated with Google but has no account in "
+                    "the fitness tracker. Sign in to the web app once to create your account."
                 ),
             )
         logger.info(
-            "mcp.auth source=cf user_id=%s",
+            "mcp.auth source=google user_id=%s",
             uid,
-            extra={"json_fields": {"event": "mcp_auth", "source": "cf", "user_id": uid}},
+            extra={"json_fields": {"event": "mcp_auth", "source": "google", "user_id": uid}},
         )
         return uid
 
-    # 2. Bearer token: our own app JWT.
-    auth = headers.get("authorization", "")
-    if auth.lower().startswith("bearer "):
-        token = auth.split(" ", 1)[1].strip()
-        try:
-            payload = verify_access_token(token)
-        except Exception as exc:
-            raise HTTPException(
-                status_code=401, detail=f"Invalid bearer token: {exc}"
-            )
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Token missing subject")
-        logger.info(
-            "mcp.auth source=jwt user_id=%s",
-            user_id,
-            extra={"json_fields": {"event": "mcp_auth", "source": "jwt", "user_id": user_id}},
-        )
-        return user_id
-
-    # 3. Local-dev escape hatch — header-based user injection.
+    # 2. Local-dev escape hatch — header-based user injection.
     if env == "development":
         dev_user = headers.get("x-mcp-user-id")
         if dev_user:
@@ -162,8 +129,17 @@ def resolve_user_id_from_request(
 
     raise HTTPException(
         status_code=401,
-        detail="MCP requires Cloudflare Access JWT, Bearer token, or X-Mcp-User-Id (dev only).",
+        detail="MCP requires Authorization: Bearer <google_oauth_token> (or X-Mcp-User-Id in dev).",
     )
+
+
+def _resource_metadata_url() -> str:
+    """Base /.well-known/oauth-protected-resource URL derived from mcp_public_url."""
+    settings = get_settings()
+    base = (settings.mcp_public_url or "").rsplit("/mcp/", 1)[0] or (
+        "https://mcp.fitness-tracker.blueelephants.org"
+    )
+    return f"{base}/.well-known/oauth-protected-resource"
 
 
 # ---------------------------------------------------------------------------
@@ -172,35 +148,42 @@ def resolve_user_id_from_request(
 
 
 class McpAuthMiddleware:
-    """ASGI middleware that authenticates MCP requests and sets the ContextVar.
-
-    Usage:
-        asgi_app = mcp.streamable_http_app()
-        wrapped = McpAuthMiddleware(asgi_app)
-        app.mount("/mcp", wrapped)
-    """
+    """ASGI middleware that authenticates MCP requests and sets the ContextVar."""
 
     def __init__(self, app: ASGIApp) -> None:
         self._app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] not in ("http", "websocket"):
-            # Pass-through for lifespan events etc.
             await self._app(scope, receive, send)
             return
 
-        # Build a header dict (lower-cased keys) from the scope.
         raw_headers: list[tuple[bytes, bytes]] = scope.get("headers", [])
         headers: dict[str, str] = {
-            k.decode("latin-1").lower(): v.decode("latin-1")
-            for k, v in raw_headers
+            k.decode("latin-1").lower(): v.decode("latin-1") for k, v in raw_headers
         }
 
         try:
             user_id = resolve_user_id_from_request(headers)
         except HTTPException as exc:
-            await _send_json_response(send, exc.status_code, {"error": exc.detail})
+            extra: dict[str, str] = {}
+            if exc.status_code == 401:
+                # Tell the client where to find OAuth metadata (RFC 9728).
+                extra["www-authenticate"] = (
+                    'Bearer realm="mcp.fitness-tracker", '
+                    f'resource_metadata="{_resource_metadata_url()}"'
+                )
+            await _send_json_response(send, exc.status_code, {"error": exc.detail}, extra)
             return
+
+        # Attribute any captured error to this user (mirrors in-app chat).
+        try:
+            import sentry_sdk
+
+            sentry_sdk.set_user({"id": user_id})
+            sentry_sdk.set_tag("mcp.source", "remote")
+        except Exception:
+            pass
 
         token = _current_user_id.set(user_id)
         try:
@@ -209,17 +192,18 @@ class McpAuthMiddleware:
             _current_user_id.reset(token)
 
 
-async def _send_json_response(send: Send, status_code: int, body: Any) -> None:
+async def _send_json_response(
+    send: Send, status_code: int, body: Any, extra_headers: dict[str, str] | None = None
+) -> None:
     """Send a minimal ASGI HTTP response."""
     encoded = json.dumps(body).encode("utf-8")
+    headers = [
+        (b"content-type", b"application/json"),
+        (b"content-length", str(len(encoded)).encode()),
+    ]
+    for k, v in (extra_headers or {}).items():
+        headers.append((k.encode("latin-1"), v.encode("latin-1")))
     await send(
-        {
-            "type": "http.response.start",
-            "status": status_code,
-            "headers": [
-                (b"content-type", b"application/json"),
-                (b"content-length", str(len(encoded)).encode()),
-            ],
-        }
+        {"type": "http.response.start", "status": status_code, "headers": headers}
     )
     await send({"type": "http.response.body", "body": encoded, "more_body": False})
