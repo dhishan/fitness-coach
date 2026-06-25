@@ -117,6 +117,21 @@ def test_create_log_bad_date(client):
     assert r.status_code == 422
 
 
+def test_create_log_accepts_label_micros_source(client):
+    """A scanned nutrition label saves with micros_source='label' (not just ai/usda)."""
+    payload = {
+        "date": "2026-06-13",
+        "name": "Think High Protein Bar",
+        "serving": "1 Bar (60g)",
+        "macros": MACROS,
+        "source": "ai_photo",
+        "micros_source": "label",
+    }
+    with patch(f"{FOOD_SVC}.create_log", return_value={"id": "log1", **payload}):
+        r = client.post("/api/v1/nutrition/logs", json=payload, headers=_auth(client))
+    assert r.status_code == 201
+
+
 def test_list_logs(client):
     day_result = {"items": [SAMPLE_LOG], "totals": MACROS}
     with patch(f"{FOOD_SVC}.list_by_date", return_value=day_result):

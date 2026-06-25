@@ -116,7 +116,7 @@ class FoodLogCreate(BaseModel):
     logged_at: str | None = None
     micros: Micros | None = None
     usda_fdc_id: int | None = None
-    micros_source: Optional[Literal["ai", "usda"]] = None
+    micros_source: Optional[Literal["ai", "usda", "label"]] = None
 
 
 class FoodLogUpdate(BaseModel):
@@ -130,7 +130,7 @@ class FoodLogUpdate(BaseModel):
     logged_at: str | None = None
     micros: Micros | None = None
     usda_fdc_id: int | None = None
-    micros_source: Optional[Literal["ai", "usda"]] = None
+    micros_source: Optional[Literal["ai", "usda", "label"]] = None
 
 
 class DayStatusUpdate(BaseModel):

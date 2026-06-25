@@ -160,7 +160,7 @@ function MacroBar({ value, goal, label }: { value: number; goal: number; label: 
 
 function MicrosPanel({ micros, source, targets }: {
   micros: Micros | null | undefined
-  source?: 'ai' | 'usda' | null
+  source?: 'ai' | 'usda' | 'label' | null
   targets?: Micros | null
 }) {
   const [open, setOpen] = useState(false)

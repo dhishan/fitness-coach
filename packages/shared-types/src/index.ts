@@ -173,7 +173,7 @@ export interface FoodLog {
   logged_at?: string | null;
   micros?: Micros | null;
   usda_fdc_id?: number | null;
-  micros_source?: 'ai' | 'usda' | null;
+  micros_source?: 'ai' | 'usda' | 'label' | null;
 }
 export interface FoodLogCreate {
   date: string; name: string; description?: string; serving?: string; macros: Macros; source?: FoodLogSource; notes?: string;
@@ -181,7 +181,7 @@ export interface FoodLogCreate {
   logged_at?: string | null;
   micros?: Micros | null;
   usda_fdc_id?: number | null;
-  micros_source?: 'ai' | 'usda' | null;
+  micros_source?: 'ai' | 'usda' | 'label' | null;
 }
 export interface FoodLogUpdate {
   date?: string;
@@ -255,7 +255,7 @@ export interface Estimation {
   name: string; description?: string; serving: string; macros: Macros; confidence: number;
   micros?: Micros;
   usda_fdc_id?: number | null;
-  micros_source?: 'ai' | 'usda' | null;
+  micros_source?: 'ai' | 'usda' | 'label' | null;
   is_label?: boolean;
 }
 export interface FoodSuggestion {
