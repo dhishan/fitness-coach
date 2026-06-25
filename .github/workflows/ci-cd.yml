@@ -62,6 +62,10 @@ jobs:
           # Public MCP connector (Phase 1/2). Empty secrets keep it inert.
           TF_VAR_google_client_secret: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
           TF_VAR_mcp_gateway_secret: ${{ secrets.MCP_GATEWAY_SECRET }}
+          # Repo variables (unset = empty = disabled). Flip to "true" to launch:
+          # MCP_OAUTH_ENABLED needs the CF token's Workers KV Storage:Edit scope first.
+          TF_VAR_mcp_oauth_enabled: ${{ vars.MCP_OAUTH_ENABLED }}
+          TF_VAR_public_signup_enabled: ${{ vars.PUBLIC_SIGNUP_ENABLED }}
         run: |
           make terraform-init
           make terraform-apply

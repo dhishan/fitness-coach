@@ -63,6 +63,14 @@ variable "public_signup_enabled" {
   default = "false"
 }
 
+# Gates the Cloudflare OAuth Worker stack (KV + script + domain). Keep "false"
+# until the CF token has Workers KV Storage:Edit and the Worker secrets exist;
+# otherwise `terraform apply` fails creating the KV namespace.
+variable "mcp_oauth_enabled" {
+  type    = string
+  default = "false"
+}
+
 # Shared HS256 secret between the Cloudflare OAuth Worker and the backend.
 # Fed from a GH secret via TF_VAR_mcp_gateway_secret; empty = gateway disabled.
 variable "mcp_gateway_secret" {

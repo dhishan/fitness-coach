@@ -140,7 +140,7 @@ function MicroBar({ value, goal, label, unit }: { value: number; goal: number; l
 
 function MicrosPanel({ micros, source, targets }: {
   micros: Micros | null | undefined
-  source?: 'ai' | 'usda' | null
+  source?: 'ai' | 'usda' | 'label' | null
   targets?: Micros | null
 }) {
   const [open, setOpen] = useState(false)
