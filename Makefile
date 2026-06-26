@@ -1,16 +1,29 @@
 TF_DIR=terraform/main
 TF_ENV?=prod
+# Backend targets the same interpreter as CI + the Cloud Run image. The repo's
+# schemas use 3.10+ `X | None` unions that error at import on 3.9, so never run
+# backend tests with the system python3 — always go through this venv.
+PY312?=python3.12
 
-.PHONY: backend-install backend-dev backend-test terraform-init terraform-plan terraform-apply mobile-build-ipa mobile-publish-ipa mobile-release
+.PHONY: backend-install backend-venv backend-dev backend-test test-backend terraform-init terraform-plan terraform-apply mobile-build-ipa mobile-publish-ipa mobile-release
 
-backend-install: ## install backend deps into .venv
-	cd backend && python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+backend-install: ## install backend deps into .venv (3.12)
+	cd backend && $(PY312) -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+
+# Create the venv on first use and assert it is 3.12 so a stale 3.9 venv can't
+# silently break collection.
+backend-venv:
+	@cd backend && { [ -x .venv/bin/python ] || $(PY312) -m venv .venv; }
+	@cd backend && .venv/bin/python -c 'import sys; v=sys.version_info; \
+		assert (v.major,v.minor)==(3,12), f"backend .venv is {v.major}.{v.minor}, expected 3.12 — run: rm -rf backend/.venv && make backend-install"'
+	@cd backend && .venv/bin/python -c 'import pytest' 2>/dev/null || \
+		(echo ">> installing backend dev deps into .venv" && cd backend && .venv/bin/pip install -q -r requirements-dev.txt)
 
 backend-dev: ## run backend locally
 	cd backend && .venv/bin/uvicorn app.main:app --reload --port 8000
 
-backend-test: ## run backend tests
-	cd backend && .venv/bin/pytest -q
+backend-test test-backend: backend-venv ## run backend tests on pinned 3.12 (bootstraps .venv if missing)
+	cd backend && .venv/bin/pytest -q $(PYTEST_ARGS)
 
 terraform-init:
 	terraform -chdir=$(TF_DIR) init -backend-config=../workspaces/$(TF_ENV)/backend.conf
