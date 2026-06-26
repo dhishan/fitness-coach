@@ -8,19 +8,22 @@
       "distribution": "internal",
       "ios": {
         "simulator": false
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": true
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "distribution": "store",
       "ios": {
         "autoIncrement": "buildNumber"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

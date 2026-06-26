@@ -54,8 +54,8 @@ mobile-run-phone: ## build + install Release on connected iPhone (DEVICE_NAME=<s
 	if [ -z "$$DEVICE_UDID" ]; then echo "No matching connected iPhone found"; exit 1; fi; \
 	cd mobile && npx expo run:ios --device "$$DEVICE_UDID" --configuration Release
 
-mobile-update: ## OTA via EAS Update (JS-only changes)
-	cd mobile && npx eas update --branch main --auto
+mobile-update: ## OTA via EAS Update (JS-only changes). Publishes to the production channel/branch; installed AltStore builds carry expo-channel-name=production.
+	cd mobile && npx eas update --branch production --message "$$(git log -1 --pretty='%h %s')"
 
 mobile-typecheck: ## tsc --noEmit
 	cd mobile && npx tsc --noEmit

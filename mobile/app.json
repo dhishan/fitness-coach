@@ -19,6 +19,11 @@
             "CFBundleURLSchemes": [
               "com.googleusercontent.apps.610355955735-o419lsj7882jl3dqfn02nm1kmmm21vf6"
             ]
+          },
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.610355955735-o419lsj7882jl3dqfn02nm1kmmm21vf6"
+            ]
           }
         ]
       }
@@ -28,7 +33,13 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#3B82F6"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -94,13 +105,22 @@
     "extra": {
       "sentry": {
         "dsn": "https://f16f8b5b8995e20c6a40887f8098264f@o4511581462921216.ingest.us.sentry.io/4511583731253248"
+      },
+      "router": {},
+      "eas": {
+        "projectId": "4003e295-2be4-4492-b7d2-0f2137f32c9b"
       }
     },
     "experiments": {
       "typedRoutes": true
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
+    "runtimeVersion": "1.0.0",
+    "owner": "dhishan",
+    "updates": {
+      "url": "https://u.expo.dev/4003e295-2be4-4492-b7d2-0f2137f32c9b",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     }
   }
 }
