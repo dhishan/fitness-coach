@@ -1,0 +1,76 @@
+name: Mobile OTA
+
+# Publishes a JS-only OTA update to the "production" EAS channel on every push
+# to main that changes mobile JS/TS (or the shared types it imports).
+#
+# Safety: an OTA must NEVER ship JS that depends on native code the installed
+# binary lacks. So if the push touches native-affecting files (deps, app.json,
+# eas.json, lockfile), we SKIP the OTA and tell you to cut a native rebuild
+# (make mobile-release) instead. Runtime targeting is handled by the fixed
+# runtimeVersion ("1.0.0") in app.json — every installed AltStore build carries
+# it, so a published update reaches them all; we never track IPA versions here.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'packages/shared-types/**'
+  workflow_dispatch: {}   # allow a manual OTA push
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ota-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ota:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need history to diff the pushed range
+
+      - name: Guard — EXPO_TOKEN must be set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::warning::EXPO_TOKEN secret not set — skipping OTA. Add it to enable auto-publish."
+            echo "skip=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Detect native-affecting changes
+        if: env.skip != '1'
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="$(git rev-parse HEAD^ 2>/dev/null || echo HEAD)"
+          fi
+          CHANGED="$(git diff --name-only "$BASE" "${{ github.sha }}" || true)"
+          echo "Changed files:"; echo "$CHANGED"
+          # Files that can change native code/config -> need a rebuild, not an OTA.
+          if echo "$CHANGED" | grep -qE '^(mobile/package\.json|mobile/app\.json|mobile/eas\.json|package-lock\.json|package\.json)$'; then
+            echo "::warning::Native-affecting files changed (deps/app config). Skipping OTA — run 'make mobile-release' to rebuild the IPA."
+            echo "skip=1" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: env.skip != '1'
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm install --no-audit --no-fund
+        if: env.skip != '1'
+
+      - name: Publish OTA to production channel
+        if: env.skip != '1'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          MSG="${GITHUB_SHA::7} $(git log -1 --pretty=%s)"
+          cd mobile && npx eas update --branch production --message "$MSG" --non-interactive
