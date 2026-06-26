@@ -41,6 +41,33 @@ import FoodEditSheet from '../../../src/components/FoodEditSheet'
 import PhotoNoteModal from '../../../src/components/PhotoNoteModal'
 
 // ---------------------------------------------------------------------------
+// Favorites
+// ---------------------------------------------------------------------------
+
+// Reduce a logged entry to its base (per-serving) dish. A multi-serving log
+// carries a "N× ..." serving label with macros/micros scaled by N; strip the
+// multiplier and divide back to one serving so the favorite is the dish itself.
+function baseDishFromLog(log: FoodLog): { serving: string; macros: Macros; micros?: Micros } {
+  const r1 = (v: number) => Math.round(v * 10) / 10
+  const m = /^(\d+(?:\.\d+)?)×\s*(.*)$/.exec(log.serving || '')
+  const mult = m ? parseFloat(m[1]) : 1
+  const div = mult > 0 ? mult : 1
+  const serving = m ? m[2] : log.serving || ''
+  const macros: Macros = {
+    calories: Math.round(log.macros.calories / div),
+    protein_g: r1(log.macros.protein_g / div),
+    carbs_g: r1(log.macros.carbs_g / div),
+    fat_g: r1(log.macros.fat_g / div),
+  }
+  const micros = log.micros
+    ? (Object.fromEntries(
+        Object.entries(log.micros).map(([k, v]) => [k, r1(((v as number) || 0) / div)]),
+      ) as unknown as Micros)
+    : undefined
+  return { serving, macros, micros }
+}
+
+// ---------------------------------------------------------------------------
 // Date helpers
 // ---------------------------------------------------------------------------
 
@@ -1111,7 +1138,17 @@ function NutritionScreenInner() {
 
   const handleSaveAsFavorite = async (log: FoodLog) => {
     try {
-      await nutritionApi.favorites.create({ name: log.name, serving: log.serving, macros: log.macros })
+      // Save the base (per-serving) dish, not the multiplied entry. A log saved
+      // at N servings has a "N× ..." serving label and macros/micros scaled by
+      // N; strip the multiplier and divide back down to one serving.
+      const base = baseDishFromLog(log)
+      await nutritionApi.favorites.create({
+        name: log.name,
+        serving: base.serving,
+        macros: base.macros,
+        ...(base.micros ? { micros: base.micros } : {}),
+        ...(log.micros_source ? { micros_source: log.micros_source } : {}),
+      })
       void qc.invalidateQueries({ queryKey: ['favorites'] })
     } catch {
       Alert.alert('Error', 'Could not save favorite')
