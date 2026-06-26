@@ -67,10 +67,16 @@ jobs:
       - run: npm install --no-audit --no-fund
         if: env.skip != '1'
 
+      # Installs eas-cli and authenticates from EXPO_TOKEN (npx eas can't resolve
+      # the eas-cli bin in a fresh checkout).
+      - uses: expo/expo-github-action@v8
+        if: env.skip != '1'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
       - name: Publish OTA to production channel
         if: env.skip != '1'
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           MSG="${GITHUB_SHA::7} $(git log -1 --pretty=%s)"
-          cd mobile && npx eas update --branch production --message "$MSG" --non-interactive
+          cd mobile && eas update --branch production --message "$MSG" --non-interactive
