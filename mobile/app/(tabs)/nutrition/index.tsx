@@ -362,6 +362,11 @@ function PreviewModal({
                 carbs_g: round1(baseMacros.carbs_g),
                 fat_g: round1(baseMacros.fat_g),
               },
+              // Store per-serving (base) micros so re-logging keeps them.
+              ...(baseMicros ? { micros: baseMicros } : {}),
+              ...(state.estimation.micros_source
+                ? { micros_source: state.estimation.micros_source }
+                : {}),
             })
             void qc.invalidateQueries({ queryKey: ['favorites'] })
           } catch {

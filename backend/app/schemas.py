@@ -142,6 +142,9 @@ class FavoriteCreate(BaseModel):
     name: str
     serving: str = ""
     macros: Macros
+    # Per-serving micros, stored so re-logging a saved food keeps its micros.
+    micros: Micros | None = None
+    micros_source: Optional[Literal["ai", "usda", "label"]] = None
 
 
 class RecipeIngredient(BaseModel):

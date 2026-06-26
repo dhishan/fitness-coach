@@ -190,8 +190,8 @@ export interface FoodLogUpdate {
   logged_at?: string | null;
   micros?: Micros | null;
 }
-export interface Favorite { id: string; user_id: string; name: string; serving: string; macros: Macros; last_used_at: string | null }
-export interface FavoriteCreate { name: string; serving?: string; macros: Macros }
+export interface Favorite { id: string; user_id: string; name: string; serving: string; macros: Macros; micros?: Micros | null; micros_source?: 'ai' | 'usda' | 'label' | null; last_used_at: string | null }
+export interface FavoriteCreate { name: string; serving?: string; macros: Macros; micros?: Micros | null; micros_source?: 'ai' | 'usda' | 'label' | null }
 
 // ---- Recipes ----
 export interface RecipeIngredient {

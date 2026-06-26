@@ -733,7 +733,13 @@ export default function Nutrition() {
   // Save as favorite
   const handleSaveAsFavorite = async (log: FoodLog) => {
     try {
-      await nutritionApi.favorites.create({ name: log.name, serving: log.serving, macros: log.macros })
+      await nutritionApi.favorites.create({
+        name: log.name,
+        serving: log.serving,
+        macros: log.macros,
+        ...(log.micros ? { micros: log.micros } : {}),
+        ...(log.micros_source ? { micros_source: log.micros_source } : {}),
+      })
       toast.success('Saved as favorite')
       void qc.invalidateQueries({ queryKey: ['favorites'] })
     } catch {

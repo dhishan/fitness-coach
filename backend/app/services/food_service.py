@@ -176,6 +176,8 @@ def create_favorite(user_id: str, payload: dict) -> dict:
         "name": payload["name"],
         "serving": payload.get("serving", ""),
         "macros": payload["macros"],
+        "micros": payload.get("micros"),
+        "micros_source": payload.get("micros_source"),
         "last_used_at": None,
         "created_at": datetime.now(timezone.utc),
     }
@@ -192,6 +194,11 @@ def update_favorite(user_id: str, fav_id: str, updates: dict) -> dict | None:
     d = snap.to_dict()
     if d.get("user_id") != user_id:
         return None
+    # Don't let a partial edit (e.g. the manual name/macros form) clobber stored
+    # micros with nulls — only overwrite micros when the caller actually sends them.
+    for k in ("micros", "micros_source"):
+        if updates.get(k) is None:
+            updates.pop(k, None)
     ref.update(updates)
     return {**d, **updates, "id": fav_id}
 
@@ -359,6 +366,8 @@ def log_from_favorite(user_id: str, fav_id: str, date: str) -> dict | None:
         "name": fav["name"],
         "serving": fav.get("serving", ""),
         "macros": fav["macros"],
+        "micros": fav.get("micros"),
+        "micros_source": fav.get("micros_source"),
         "source": "favorite",
         "notes": "",
         "created_at": now,

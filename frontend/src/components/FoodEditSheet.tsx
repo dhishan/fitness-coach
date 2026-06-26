@@ -245,6 +245,8 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
               carbs_g: round1(hit.macros.carbs_g),
               fat_g: round1(hit.macros.fat_g),
             } as Macros,
+            // Store per-serving (base) micros so re-logging keeps them.
+            ...(hit.micros ? { micros: hit.micros as unknown as Micros } : {}),
           })
           void qc.invalidateQueries({ queryKey: ['favorites'] })
         } catch {
