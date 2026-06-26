@@ -93,16 +93,27 @@ The app icon now lives on your home screen. Tap it - opens full-screen with no S
 
 ---
 
-## Use the coach from Claude / Cursor / any MCP client
+## Use the coach from Claude / ChatGPT / any MCP client
 
-The backend exposes an **MCP server** so any MCP-aware chat client (Claude Desktop, Cursor, Windsurf, etc.) can read your training data and answer questions in-chat.
+The backend exposes an **MCP server** so an MCP-aware chat client can read your
+training data and log workouts in-chat. There are two ways in:
 
-**Endpoint**
+- **Public connector** (claude.ai, ChatGPT): sign in with Google, nothing to
+  paste. This is the easy path.
+- **Direct endpoint with a token** (Claude Desktop, Cursor, Windsurf): paste a
+  JWT. Good for local clients.
+
+**Connector URL (public)**
 ```
-https://api.fitness-tracker.blueelephants.org/mcp/
+https://fitness-mcp.blueelephants.org/mcp
 ```
+
+Authentication is OAuth with Dynamic Client Registration, so there is no client
+id or secret to paste. The client self-registers and sends you to Google to log
+in. Each person only ever sees their own data.
 
 **Tools available**
+- `log_workout` - record a finished workout (the only write tool)
 - `get_dashboard_summary` - this week's streak, volume, sessions, muscle split
 - `get_workouts` - list past workouts in a date range
 - `get_active_workout` - the in-progress session, if one is running
@@ -110,11 +121,49 @@ https://api.fitness-tracker.blueelephants.org/mcp/
 - `get_exercise_history` - last N sets for a single exercise
 - `get_alternatives` - same-muscle alternative exercises
 - `list_exercises` - browse the library
-- `log_workout` - record a finished workout
+- `get_nutrition_logs`, `get_nutrition_summary`, `get_nutrition_goals`,
+  `list_recipes`, `list_favorites` - read nutrition
+- `get_body_metrics` - weight and measurements over time
+- `get_cardio_logs` - cardio sessions
 
-### Claude Desktop
+You can add workouts and read everything. Nutrition, body metrics, and cardio
+are read-only over MCP.
 
-Open **Settings -> Developer -> Edit Config** and add:
+### Claude (claude.ai)
+
+1. **Settings**, then **Connectors**.
+2. **Add custom connector**.
+3. URL: `https://fitness-mcp.blueelephants.org/mcp`.
+4. Click through and log in with Google when prompted. The tools appear.
+
+No developer mode or extra toggles. Works in a normal chat.
+
+### ChatGPT (chatgpt.com)
+
+ChatGPT's default connector surface (Deep Research) only calls `search` and
+`fetch` tools, which this server does not implement. To use the real tools you
+need **Developer Mode**.
+
+1. Paid plan required (Plus, Pro, Business, Enterprise, or Edu). Use the web or
+   desktop app.
+2. **Settings**, then **Connectors**, then **Advanced settings**. Turn on
+   **Developer Mode**. This exposes the full set of MCP tools, including write
+   actions.
+3. **Settings**, then **Connectors**, then **Create** / **Add custom connector**.
+   - Name: anything (e.g. Fitness Tracker).
+   - MCP Server URL: `https://fitness-mcp.blueelephants.org/mcp`.
+   - Authentication: **OAuth**.
+4. Sign in with Google in the popup. The connector shows as connected.
+5. In a chat, open the tools menu and enable the connector for that
+   conversation. Write actions prompt you to confirm before they run.
+
+If ChatGPT only offers the connector under Deep Research or reports no tools,
+Developer Mode is not on. That is the usual gotcha.
+
+### Claude Desktop / Cursor / Windsurf (direct, with a token)
+
+For local MCP clients, skip the OAuth connector and point straight at the
+backend with a JWT. Open the client's MCP config and add:
 
 ```json
 {
@@ -130,30 +179,22 @@ Open **Settings -> Developer -> Edit Config** and add:
 }
 ```
 
-Restart Claude Desktop. The 8 tools appear in the tools menu of any conversation.
+- **Claude Desktop:** Settings, Developer, Edit Config. Restart after saving.
+- **Cursor:** Settings, MCP, Add Server. Reload the window.
+- **Windsurf / others:** any client that speaks Streamable HTTP MCP works.
 
-### Cursor
+**Where do I get the JWT?** It is the same token your browser uses to call the
+API. Open `https://ui.fitness-tracker.blueelephants.org`, open DevTools, go to
+the Network tab, click any request to `api.fitness-tracker.blueelephants.org`,
+and copy the `Authorization: Bearer ...` header value. Tokens expire after 24
+hours; sign in again to get a fresh one.
 
-Open **Settings -> MCP -> Add Server** and paste the same JSON snippet above. Reload the window.
-
-### Windsurf / other clients
-
-Any client that speaks **Streamable HTTP MCP** works. Point it at the URL above with your JWT in the `Authorization` header.
-
-### Where do I get the JWT?
-
-The app's JWT is the same one your phone or browser uses to call the API. Easiest paths:
-
-1. **Web app** -> open `https://ui.fitness-tracker.blueelephants.org` -> DevTools -> Network tab -> any request to `api.fitness-tracker.blueelephants.org` -> copy the `Authorization: Bearer ...` header value.
-2. **iOS app** -> currently no in-app token export; pull from the web app above.
-
-Tokens expire after 24 hours (post security-hardening). Refresh by signing in again on web and copying the new token.
-
-### Example prompts to try in Claude / Cursor
+### Example prompts
 
 - "How is my bench progressing? Use the fitness-tracker tools."
 - "What should I train today given my last 7 days?"
 - "Show me my weekly volume by muscle group."
+- "Log today's workout: bench press 3x8 at 60kg, squats 3x5 at 100kg."
 - "List alternatives for Romanian Deadlift if I only have dumbbells."
 
 ---
