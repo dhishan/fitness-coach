@@ -99,6 +99,33 @@ def test_get_dashboard_summary_defaults_to_today():
         _current_user_id.reset(token)
 
 
+def test_get_workouts_unwraps_items_and_passes_offset():
+    """get_workouts calls list_workouts with offset and returns the items list.
+
+    Regression: list_workouts(user, from, to, limit, offset) -> {"items", "total"}.
+    The tool used to call it with 4 args and iterate the dict, raising TypeError.
+    """
+    from datetime import datetime, timezone
+
+    ended = datetime(2026, 6, 1, 10, 0, tzinfo=timezone.utc)
+    page = {"items": [{"id": "w1", "date": "2026-06-01", "ended_at": ended}], "total": 1}
+
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(
+            mcp_server.workout_service, "list_workouts", return_value=page
+        ) as mock_list:
+            result = mcp_server.get_workouts(from_date="2026-06-01", to_date="2026-06-30", limit=5)
+
+        mock_list.assert_called_once_with("u1", "2026-06-01", "2026-06-30", 5, 0)
+        assert isinstance(result, list)
+        assert result[0]["id"] == "w1"
+        # datetimes are serialised to strings for JSON transport
+        assert result[0]["ended_at"] == str(ended)
+    finally:
+        _current_user_id.reset(token)
+
+
 # ---------------------------------------------------------------------------
 # build_mcp_app returns an ASGI callable
 # ---------------------------------------------------------------------------

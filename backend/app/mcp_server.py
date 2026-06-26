@@ -108,10 +108,10 @@ def get_workouts(
     limit: max number of workouts to return (default 10).
     """
     uid = _uid()
-    workouts = workout_service.list_workouts(uid, from_date, to_date, limit)
-    # Convert any datetime values to strings for JSON serialisation.
+    page = workout_service.list_workouts(uid, from_date, to_date, limit, 0)
+    # list_workouts returns {"items": [...], "total": n}; serialise the items.
     result = []
-    for w in workouts:
+    for w in page["items"]:
         row = {}
         for k, v in w.items():
             row[k] = str(v) if hasattr(v, "isoformat") else v
