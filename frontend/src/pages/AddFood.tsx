@@ -297,6 +297,7 @@ export default function AddFood({ open, date, initialMeal, onClose, onLogged }: 
                         name: fav.name,
                         serving: fav.serving,
                         macros: fav.macros,
+                        micros: (fav.micros as Record<string, number> | null) ?? undefined,
                         source: 'favorite',
                       })}
                       className="w-full text-left flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"

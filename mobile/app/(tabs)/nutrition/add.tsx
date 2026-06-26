@@ -62,7 +62,13 @@ function logToFoodHit(log: FoodLog): FoodHit {
 }
 
 function favToFoodHit(fav: Favorite): FoodHit {
-  return { name: fav.name, serving: fav.serving, macros: fav.macros, micros: null, source: 'favorite' }
+  return {
+    name: fav.name,
+    serving: fav.serving,
+    macros: fav.macros,
+    micros: (fav.micros as unknown as Record<string, number>) ?? null,
+    source: 'favorite',
+  }
 }
 
 function recipeToFoodHit(r: Recipe): FoodHit {
