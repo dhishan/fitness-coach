@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  InputAccessoryView,
   Keyboard,
   Platform,
   Pressable,
@@ -98,6 +99,9 @@ function recipeToFoodHit(r: Recipe): FoodHit {
 }
 
 // ---- badge ----
+
+// iOS shows a "Done" bar above the keyboard to dismiss it from the search field.
+const KB_ACCESSORY_ID = 'addFoodKeyboard'
 
 const SOURCE_BADGE: Record<string, { bg: string; fg: string; label: string }> = {
   ifct: { bg: '#fef3c7', fg: '#b45309', label: 'IFCT' },
@@ -389,6 +393,7 @@ export default function AddFoodScreen() {
           returnKeyType="search"
           autoFocus
           clearButtonMode="while-editing"
+          inputAccessoryViewID={Platform.OS === 'ios' ? KB_ACCESSORY_ID : undefined}
         />
         <Pressable onPress={() => setShowBarcode(true)} hitSlop={8}>
           <Ionicons name="barcode-outline" size={22} color={colors.gray500} />
@@ -438,6 +443,7 @@ export default function AddFoodScreen() {
         sections={sections}
         keyExtractor={(item, idx) => `${item.source ?? ''}:${item.name}:${idx}`}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         renderSectionHeader={({ section }) => (
           <View style={as.sectionHeader}>
             <Text style={as.sectionTitle}>{section.title.toUpperCase()}</Text>
@@ -458,6 +464,17 @@ export default function AddFoodScreen() {
         stickySectionHeadersEnabled={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       />
+
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={KB_ACCESSORY_ID}>
+          <View style={as.kbBar}>
+            <Pressable onPress={() => Keyboard.dismiss()} hitSlop={8} style={as.kbDone}>
+              <Ionicons name="chevron-down" size={18} color={colors.primary} />
+              <Text style={as.kbDoneText}>Done</Text>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      )}
 
       <FoodEditSheet
         visible={editSheetVisible}
@@ -489,6 +506,16 @@ export default function AddFoodScreen() {
 }
 
 const as = StyleSheet.create({
+  kbBar: {
+    backgroundColor: colors.gray100,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'flex-end',
+  },
+  kbDone: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 4, paddingHorizontal: 8 },
+  kbDoneText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
   screen: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row',
