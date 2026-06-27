@@ -54,7 +54,7 @@ jobs:
           IMG=${REGION}-docker.pkg.dev/${PROJECT_ID}/fitness-tracker-backend/backend:latest
           docker build -t "$IMG" backend
           docker push "$IMG"
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
       - name: Terraform apply
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
