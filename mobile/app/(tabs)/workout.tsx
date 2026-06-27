@@ -3,11 +3,11 @@ import {
   Alert,
   Animated,
   FlatList,
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -92,124 +92,51 @@ function useAutosave(
 }
 
 // ---------------------------------------------------------------------------
-// Set row
+// Set summary row — a compact, readable, tappable line. Editing happens in the
+// docked ActiveSetTray, not here, so nothing is cramped and there are no tiny
+// inline inputs to mis-tap. Tap a row to make it the active set in the tray.
 // ---------------------------------------------------------------------------
 
-function SetRow({
+function SetSummaryRow({
   set,
   index,
-  onUpdate,
-  onRemove,
+  active,
+  unit,
+  onPress,
 }: {
   set: SetEntry
   index: number
-  onUpdate: (s: SetEntry) => void
-  onRemove: () => void
+  active: boolean
+  unit: 'kg' | 'lb'
+  onPress: () => void
 }) {
   const isWarmup = !!set.is_warmup
-  const unit = useWeightUnit()
   const weightDisplay = kgToDisplay(set.weight ?? 0, unit)
-  const weightStep = stepFor(unit)
-
-  const step = (field: 'weight' | 'reps', delta: number) => {
-    if (field === 'weight') {
-      const newDisplay = Math.max(0, weightDisplay + delta)
-      onUpdate({ ...set, weight: displayToKg(newDisplay, unit) })
-      return
-    }
-    const val = Math.max(0, (set.reps ?? 0) + delta)
-    onUpdate({ ...set, reps: val })
-  }
-
   return (
-    <View style={[s.setRow, isWarmup && s.setRowWarmup]}>
-      {/* Warmup toggle */}
-      <View style={s.warmupCol}>
-        <Switch
-          value={isWarmup}
-          onValueChange={(v) => onUpdate({ ...set, is_warmup: v })}
-          trackColor={{ false: colors.gray200, true: '#fbbf24' }}
-          thumbColor={isWarmup ? '#f59e0b' : colors.gray400}
-          style={s.warmupSwitch}
-        />
-        <Text style={s.warmupLabel}>Warmup</Text>
+    <TouchableOpacity
+      style={[s.summaryRow, active && s.summaryRowActive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityLabel={`set ${index + 1}`}
+    >
+      <View style={[s.setNumBadge, isWarmup && s.setNumBadgeWarmup, active && s.setNumBadgeActive]}>
+        <Text style={[s.setNumText, isWarmup && s.setNumTextWarmup, active && s.setNumTextActive]}>
+          {isWarmup ? 'W' : index + 1}
+        </Text>
       </View>
-
-      {/* Weight stepper */}
-      <View style={s.stepperGroup}>
-        <TouchableOpacity
-          onPress={() => step('weight', -weightStep)}
-          style={s.stepBtn}
-          accessibilityLabel="decrease weight"
-        >
-          <Text style={s.stepBtnText}>-</Text>
-        </TouchableOpacity>
-        <TextInput
-          style={s.stepInput}
-          value={formatWeight(weightDisplay)}
-          onChangeText={(t) =>
-            onUpdate({ ...set, weight: displayToKg(parseFloat(t) || 0, unit) })
-          }
-          keyboardType="decimal-pad"
-          accessibilityLabel={`set ${index + 1} weight`}
-        />
-        <TouchableOpacity
-          onPress={() => step('weight', weightStep)}
-          style={s.stepBtn}
-          accessibilityLabel="increase weight"
-        >
-          <Text style={s.stepBtnText}>+</Text>
-        </TouchableOpacity>
-        <Text style={s.unit}>{unit}</Text>
+      <View style={s.summaryValGroup}>
+        <Text style={s.summaryVal}>{formatWeight(weightDisplay)}</Text>
+        <Text style={s.summaryUnit}>{unit}</Text>
       </View>
-
-      {/* Reps stepper */}
-      <View style={s.stepperGroup}>
-        <TouchableOpacity
-          onPress={() => step('reps', -1)}
-          style={s.stepBtn}
-          accessibilityLabel="decrease reps"
-        >
-          <Text style={s.stepBtnText}>-</Text>
-        </TouchableOpacity>
-        <TextInput
-          style={s.stepInput}
-          value={String(set.reps ?? 0)}
-          onChangeText={(t) => onUpdate({ ...set, reps: parseInt(t, 10) || 0 })}
-          keyboardType="number-pad"
-          accessibilityLabel={`set ${index + 1} reps`}
-        />
-        <TouchableOpacity
-          onPress={() => step('reps', 1)}
-          style={s.stepBtn}
-          accessibilityLabel="increase reps"
-        >
-          <Text style={s.stepBtnText}>+</Text>
-        </TouchableOpacity>
-        <Text style={s.unit}>reps</Text>
+      <Text style={s.summaryTimes}>×</Text>
+      <View style={s.summaryValGroup}>
+        <Text style={s.summaryVal}>{set.reps ?? 0}</Text>
+        <Text style={s.summaryUnit}>reps</Text>
       </View>
-
-      {/* RPE */}
-      <TextInput
-        style={s.rpeInput}
-        placeholder="RPE"
-        placeholderTextColor={colors.gray400}
-        value={set.rpe != null ? String(set.rpe) : ''}
-        onChangeText={(t) => onUpdate({ ...set, rpe: t ? parseFloat(t) : null })}
-        keyboardType="decimal-pad"
-        accessibilityLabel={`set ${index + 1} RPE`}
-      />
-
-      {/* Remove */}
-      <TouchableOpacity
-        onPress={onRemove}
-        style={s.removeSetBtn}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        accessibilityLabel="remove set"
-      >
-        <Text style={s.removeSetText}>✕</Text>
-      </TouchableOpacity>
-    </View>
+      <View style={{ flex: 1 }} />
+      {set.rpe != null ? <Text style={s.summaryRpe}>@{set.rpe}</Text> : null}
+      {active ? <Text style={s.summaryEditHint}>Editing</Text> : <Text style={s.summaryChevron}>›</Text>}
+    </TouchableOpacity>
   )
 }
 
@@ -230,6 +157,9 @@ function EntryCard({
   canMoveDown,
   onMoveUp,
   onMoveDown,
+  unit,
+  activeSetIndex,
+  onActivateSet,
 }: {
   entry: EntryWithHistory
   onUpdate: (e: WorkoutEntry) => void
@@ -243,21 +173,17 @@ function EntryCard({
   canMoveDown: boolean
   onMoveUp: () => void
   onMoveDown: () => void
+  unit: 'kg' | 'lb'
+  activeSetIndex: number | null
+  onActivateSet: (i: number) => void
 }) {
   const router = useRouter()
-  const updateSet = (i: number, updated: SetEntry) => {
-    const sets = entry.sets.map((x, idx) => (idx === i ? updated : x))
-    onUpdate({ ...entry, sets })
-  }
-
-  const removeSet = (i: number) => {
-    const sets = entry.sets.filter((_, idx) => idx !== i)
-    onUpdate({ ...entry, sets })
-  }
 
   const addSet = () => {
     const last = entry.sets[entry.sets.length - 1] ?? { weight: 0, reps: 0 }
-    onUpdate({ ...entry, sets: [...entry.sets, { ...last, is_warmup: false }] })
+    const sets = [...entry.sets, { ...last, is_warmup: false }]
+    onUpdate({ ...entry, sets })
+    onActivateSet(sets.length - 1)
   }
 
   return (
@@ -318,15 +244,20 @@ function EntryCard({
 
       {/* Sets */}
       <View style={s.setsList}>
-        {entry.sets.map((set, i) => (
-          <SetRow
-            key={i}
-            set={set}
-            index={i}
-            onUpdate={(u) => updateSet(i, u)}
-            onRemove={() => removeSet(i)}
-          />
-        ))}
+        {entry.sets.length === 0 ? (
+          <Text style={s.noSets}>No sets yet — tap "+ Add set"</Text>
+        ) : (
+          entry.sets.map((set, i) => (
+            <SetSummaryRow
+              key={i}
+              set={set}
+              index={i}
+              unit={unit}
+              active={activeSetIndex === i}
+              onPress={() => onActivateSet(i)}
+            />
+          ))
+        )}
       </View>
 
       <TouchableOpacity onPress={addSet} style={s.addSetBtn}>
@@ -442,6 +373,139 @@ function FinishModal({
         </View>
       </View>
     </Modal>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Active set tray — docked bottom editor for the selected set. Big steppers for
+// thumb entry, plus tappable numeric fields that open the keypad for granular
+// values (e.g. 102.5). RPE is a chip strip. Sits above the keyboard.
+// ---------------------------------------------------------------------------
+
+const RPE_VALUES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10]
+
+function ActiveSetTray({
+  entryName,
+  set,
+  setIndex,
+  setCount,
+  unit,
+  keyboardHeight,
+  safeBottom,
+  onUpdate,
+  onLogNext,
+  onRemove,
+}: {
+  entryName: string
+  set: SetEntry
+  setIndex: number
+  setCount: number
+  unit: 'kg' | 'lb'
+  keyboardHeight: number
+  safeBottom: number
+  onUpdate: (s: SetEntry) => void
+  onLogNext: () => void
+  onRemove: () => void
+}) {
+  const weightDisplay = kgToDisplay(set.weight ?? 0, unit)
+  const weightStep = stepFor(unit)
+
+  const stepWeight = (delta: number) => {
+    const next = Math.max(0, Math.round((weightDisplay + delta) * 100) / 100)
+    onUpdate({ ...set, weight: displayToKg(next, unit) })
+  }
+  const stepReps = (delta: number) => {
+    onUpdate({ ...set, reps: Math.max(0, (set.reps ?? 0) + delta) })
+  }
+
+  return (
+    <View style={[s.tray, { bottom: keyboardHeight, paddingBottom: keyboardHeight > 0 ? 10 : safeBottom + 10 }]}>
+      <View style={s.trayHandle} />
+      <View style={s.trayHeader}>
+        <Text style={s.trayName} numberOfLines={1}>{entryName}</Text>
+        <Text style={s.traySetOf}>Set {setIndex + 1} of {setCount}</Text>
+        <TouchableOpacity onPress={onRemove} hitSlop={10} style={s.trayRemove}>
+          <Text style={s.trayRemoveText}>Delete set</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={s.trayFields}>
+        {/* Weight */}
+        <View style={s.trayField}>
+          <Text style={s.trayLabel}>WEIGHT ({unit})</Text>
+          <View style={s.trayStepper}>
+            <TouchableOpacity style={s.trayStepBtn} onPress={() => stepWeight(-weightStep)} accessibilityLabel="decrease weight">
+              <Text style={s.trayStepText}>−</Text>
+            </TouchableOpacity>
+            <TextInput
+              style={s.trayInput}
+              value={formatWeight(weightDisplay)}
+              onChangeText={(t) => onUpdate({ ...set, weight: displayToKg(parseFloat(t) || 0, unit) })}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              accessibilityLabel="weight"
+            />
+            <TouchableOpacity style={s.trayStepBtn} onPress={() => stepWeight(weightStep)} accessibilityLabel="increase weight">
+              <Text style={s.trayStepText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {/* Reps */}
+        <View style={s.trayField}>
+          <Text style={s.trayLabel}>REPS</Text>
+          <View style={s.trayStepper}>
+            <TouchableOpacity style={s.trayStepBtn} onPress={() => stepReps(-1)} accessibilityLabel="decrease reps">
+              <Text style={s.trayStepText}>−</Text>
+            </TouchableOpacity>
+            <TextInput
+              style={s.trayInput}
+              value={String(set.reps ?? 0)}
+              onChangeText={(t) => onUpdate({ ...set, reps: parseInt(t, 10) || 0 })}
+              keyboardType="number-pad"
+              selectTextOnFocus
+              accessibilityLabel="reps"
+            />
+            <TouchableOpacity style={s.trayStepBtn} onPress={() => stepReps(1)} accessibilityLabel="increase reps">
+              <Text style={s.trayStepText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* RPE chips */}
+      <View style={s.rpeRow}>
+        <Text style={s.rpeRowLabel}>RPE</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.rpeChips} keyboardShouldPersistTaps="handled">
+          {RPE_VALUES.map((v) => {
+            const on = set.rpe === v
+            return (
+              <TouchableOpacity
+                key={v}
+                style={[s.rpeChip, on && s.rpeChipActive]}
+                onPress={() => onUpdate({ ...set, rpe: on ? null : v })}
+              >
+                <Text style={[s.rpeChipText, on && s.rpeChipTextActive]}>{v}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Warmup + Log */}
+      <View style={s.trayActions}>
+        <TouchableOpacity
+          style={[s.warmupPill, set.is_warmup && s.warmupPillActive]}
+          onPress={() => onUpdate({ ...set, is_warmup: !set.is_warmup })}
+        >
+          <Text style={[s.warmupPillText, set.is_warmup && s.warmupPillTextActive]}>
+            {set.is_warmup ? '✓ Warmup' : 'Warmup'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.logSetBtn} onPress={onLogNext}>
+          <Text style={s.logSetText}>Log set & next</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   )
 }
 
@@ -609,6 +673,69 @@ export default function WorkoutScreen() {
 
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+
+  // Active set being edited in the docked tray: { entry index, set index }.
+  const [active, setActive] = useState<{ entry: number; set: number } | null>(null)
+  const [kbHeight, setKbHeight] = useState(0)
+
+  // Track the keyboard so the tray floats just above it when a field is focused.
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
+    const sub1 = Keyboard.addListener(showEvt, (e) => setKbHeight(e.endCoordinates.height))
+    const sub2 = Keyboard.addListener(hideEvt, () => setKbHeight(0))
+    return () => { sub1.remove(); sub2.remove() }
+  }, [])
+
+  // Keep `active` valid as entries change; default to the first set when a
+  // session has exercises and nothing is selected yet.
+  useEffect(() => {
+    if (entries.length === 0) {
+      if (active !== null) setActive(null)
+      return
+    }
+    const validEntry = active && active.entry < entries.length
+    const validSet = validEntry && active!.set < (entries[active!.entry]?.sets.length ?? 0)
+    if (!validEntry || !validSet) {
+      const ei = entries.findIndex((e) => e.sets.length > 0)
+      setActive(ei >= 0 ? { entry: ei, set: 0 } : null)
+    }
+  }, [entries, active])
+
+  const updateActiveSet = (updated: SetEntry) => {
+    if (!active) return
+    const entry = entries[active.entry]
+    if (!entry) return
+    const sets = entry.sets.map((x, i) => (i === active.set ? updated : x))
+    handleUpdateEntry(active.entry, { ...entry, sets })
+  }
+
+  const removeActiveSet = () => {
+    if (!active) return
+    const entry = entries[active.entry]
+    if (!entry) return
+    const sets = entry.sets.filter((_, i) => i !== active.set)
+    handleUpdateEntry(active.entry, { ...entry, sets })
+    setActive(sets.length ? { entry: active.entry, set: Math.max(0, active.set - 1) } : null)
+  }
+
+  const logSetAndNext = () => {
+    if (!active) return
+    const entry = entries[active.entry]
+    if (!entry) return
+    if (active.set < entry.sets.length - 1) {
+      setActive({ entry: active.entry, set: active.set + 1 })
+    } else {
+      const last = entry.sets[active.set] ?? { weight: 0, reps: 0 }
+      const sets = [...entry.sets, { ...last, is_warmup: false }]
+      handleUpdateEntry(active.entry, { ...entry, sets })
+      setActive({ entry: active.entry, set: sets.length - 1 })
+    }
+    Keyboard.dismiss()
+  }
+
+  const activeEntry = active ? entries[active.entry] : null
+  const activeSet = activeEntry ? activeEntry.sets[active!.set] : null
 
   const [finishing, setFinishing] = useState(false)
   const [finishData, setFinishData] = useState<FinishResponse | null>(null)
@@ -855,6 +982,9 @@ export default function WorkoutScreen() {
           canMoveDown={item.originalIndex < entries.length - 1}
           onMoveUp={() => handleMoveEntry(item.originalIndex, -1)}
           onMoveDown={() => handleMoveEntry(item.originalIndex, 1)}
+          unit={userUnit}
+          activeSetIndex={active?.entry === item.originalIndex ? active.set : null}
+          onActivateSet={(si) => setActive({ entry: item.originalIndex, set: si })}
         />
       )
     }
@@ -881,6 +1011,9 @@ export default function WorkoutScreen() {
               canMoveDown={idx < item.entries.length - 1}
               onMoveUp={() => handleMoveEntry(originalIndex, -1)}
               onMoveDown={() => handleMoveEntry(originalIndex, 1)}
+              unit={userUnit}
+              activeSetIndex={active?.entry === originalIndex ? active.set : null}
+              onActivateSet={(si) => setActive({ entry: originalIndex, set: si })}
             />
           ))}
         </View>
@@ -975,7 +1108,7 @@ export default function WorkoutScreen() {
       {/* Entry list */}
       <ScrollView
         style={s.list}
-        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + spacing.xl }]}
+        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + (activeSet ? 260 : spacing.xl) }]}
         // Scroll the focused set input above the keyboard, and let taps on
         // other inputs go through without first dismissing the keyboard.
         automaticallyAdjustKeyboardInsets
@@ -1005,6 +1138,22 @@ export default function WorkoutScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Docked active-set editor */}
+      {activeEntry && activeSet && !selectMode && (
+        <ActiveSetTray
+          entryName={activeEntry.exercise_name}
+          set={activeSet}
+          setIndex={active!.set}
+          setCount={activeEntry.sets.length}
+          unit={userUnit}
+          keyboardHeight={kbHeight}
+          safeBottom={insets.bottom}
+          onUpdate={updateActiveSet}
+          onLogNext={logSetAndNext}
+          onRemove={removeActiveSet}
+        />
+      )}
 
       {/* Suggest-next approve/cancel modal */}
       <Modal
@@ -1311,9 +1460,140 @@ const s = StyleSheet.create({
   },
   setsList: { gap: 0 },
   addSetBtn: { marginTop: 8 },
-  addSetText: { fontSize: 12, fontWeight: '500', color: colors.primary },
+  addSetText: { fontSize: 13, fontWeight: '600', color: colors.primary },
+  noSets: { fontSize: 13, color: colors.gray400, paddingVertical: 8 },
 
-  // Set row
+  // Set summary row (tap to edit in the tray)
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: radius.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  summaryRowActive: {
+    backgroundColor: '#eff6ff',
+    borderBottomColor: 'transparent',
+  },
+  setNumBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setNumBadgeWarmup: { backgroundColor: '#fef3c7' },
+  setNumBadgeActive: { backgroundColor: colors.primary },
+  setNumText: { fontSize: 13, fontWeight: '700', color: colors.gray600 },
+  setNumTextWarmup: { color: '#b45309' },
+  setNumTextActive: { color: '#fff' },
+  summaryValGroup: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
+  summaryVal: { fontSize: 17, fontWeight: '700', color: colors.text },
+  summaryUnit: { fontSize: 11, color: colors.gray400 },
+  summaryTimes: { fontSize: 13, color: colors.gray400 },
+  summaryRpe: { fontSize: 13, fontWeight: '600', color: colors.primary, marginRight: 6 },
+  summaryEditHint: { fontSize: 11, fontWeight: '600', color: colors.primary },
+  summaryChevron: { fontSize: 18, color: colors.gray300 },
+
+  // Active set tray
+  tray: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.base,
+    paddingTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 12,
+  },
+  trayHandle: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.gray200,
+    marginBottom: 8,
+  },
+  trayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  trayName: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.text },
+  traySetOf: { fontSize: 12, color: colors.gray500 },
+  trayRemove: { paddingHorizontal: 6, paddingVertical: 2 },
+  trayRemoveText: { fontSize: 12, color: colors.error, fontWeight: '500' },
+  trayFields: { flexDirection: 'row', gap: spacing.md },
+  trayField: { flex: 1 },
+  trayLabel: { fontSize: 10, fontWeight: '700', color: colors.gray500, letterSpacing: 0.5, marginBottom: 6 },
+  trayStepper: { flexDirection: 'row', alignItems: 'center' },
+  trayStepBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trayStepText: { fontSize: 24, color: colors.gray700, lineHeight: 28 },
+  trayInput: {
+    flex: 1,
+    height: 48,
+    marginHorizontal: 6,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  rpeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  rpeRowLabel: { fontSize: 10, fontWeight: '700', color: colors.gray500, letterSpacing: 0.5, width: 30 },
+  rpeChips: { gap: 6, paddingRight: 8 },
+  rpeChip: {
+    minWidth: 44,
+    height: 38,
+    paddingHorizontal: 12,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rpeChipActive: { backgroundColor: colors.primary },
+  rpeChipText: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
+  rpeChipTextActive: { color: '#fff' },
+  trayActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 12 },
+  warmupPill: {
+    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warmupPillActive: { backgroundColor: '#fef3c7', borderColor: '#fcd34d' },
+  warmupPillText: { fontSize: 13, fontWeight: '600', color: colors.gray500 },
+  warmupPillTextActive: { color: '#b45309' },
+  logSetBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logSetText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  // Set row (legacy, retained styles)
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
