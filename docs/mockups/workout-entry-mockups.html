@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Workout Entry Mockups</title>
+<style>
+  /* ---- reset / page ---- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #e8eaed;
+    padding: 40px 24px 80px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+  }
+  .page-sub {
+    text-align: center;
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 48px;
+  }
+
+  /* ---- frames row ---- */
+  .frames {
+    display: flex;
+    gap: 48px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .frame-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .frame-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    text-align: center;
+    max-width: 320px;
+  }
+  .frame-caption {
+    font-size: 12px;
+    color: #6b7280;
+    text-align: center;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+
+  /* ---- iPhone shell ---- */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #fcfcfc;
+    border-radius: 54px;
+    box-shadow:
+      0 0 0 10px #1c1c1e,
+      0 0 0 12px #3a3a3c,
+      0 24px 64px rgba(0,0,0,0.35);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  /* notch / status bar */
+  .status-bar {
+    height: 50px;
+    background: #ffffff;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 6px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .status-bar::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 130px; height: 34px;
+    background: #1c1c1e;
+    border-radius: 0 0 22px 22px;
+  }
+  .status-time {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    z-index: 1;
+  }
+  .status-icons {
+    font-size: 12px;
+    color: #111827;
+    z-index: 1;
+    letter-spacing: 2px;
+  }
+
+  /* theme tokens */
+  :root {
+    --primary:       #3b82f6;
+    --primary-dark:  #2563eb;
+    --primary-light: #60a5fa;
+    --gray50:  #f9fafb;
+    --gray100: #f3f4f6;
+    --gray200: #e5e7eb;
+    --gray300: #d1d5db;
+    --gray400: #9ca3af;
+    --gray500: #6b7280;
+    --gray600: #4b5563;
+    --gray700: #374151;
+    --gray800: #1f2937;
+    --bg:      #fcfcfc;
+    --surface: #ffffff;
+    --border:  #f3f4f6;
+    --text:    #111827;
+    --text2:   #6b7280;
+    --success: #22c55e;
+    --error:   #ef4444;
+  }
+
+  /* ============================================================
+     SHARED INNER CHROME
+     ============================================================ */
+  .top-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .top-bar-date { font-size: 12px; color: var(--gray400); }
+  .top-bar-right { display: flex; gap: 8px; align-items: center; }
+  .btn-ghost {
+    border: 1px solid var(--gray200);
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray500);
+    background: transparent;
+  }
+  .btn-primary {
+    background: var(--primary);
+    border-radius: 8px;
+    padding: 5px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .phone-scroll {
+    flex: 1;
+    overflow: hidden;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .exercise-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .last-time { font-size: 11px; color: var(--gray400); margin-top: 1px; }
+
+  /* ============================================================
+     DIRECTION A - FAT STEPPERS
+     ============================================================ */
+  .card-a {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 12px 12px 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .card-a-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .card-a-header-right {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .tiny-link { font-size: 12px; color: var(--primary); font-weight: 500; }
+  .tiny-gray { font-size: 12px; color: var(--gray400); }
+
+  /* set row - direction A */
+  .set-row-a {
+    border-radius: 8px;
+    padding: 8px 6px;
+    margin-bottom: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--gray50);
+  }
+  .set-row-a.active-set { background: #eff6ff; border: 1px solid #bfdbfe; }
+
+  .set-row-a-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .set-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray400);
+    width: 18px;
+    text-align: center;
+  }
+
+  /* warmup pill */
+  .warmup-pill {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 7px;
+    border-radius: 9999px;
+    border: 1px solid var(--gray300);
+    color: var(--gray500);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+  .warmup-pill.on {
+    background: #fef3c7;
+    border-color: #fbbf24;
+    color: #92400e;
+  }
+
+  /* fat stepper */
+  .stepper-a {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+  }
+  .stepper-a-btn {
+    width: 44px; height: 44px;
+    background: var(--gray100);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray600);
+    flex-shrink: 0;
+  }
+  .stepper-a-val {
+    flex: 1;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .stepper-a-unit {
+    font-size: 10px;
+    color: var(--gray400);
+    margin-left: 4px;
+    text-align: left;
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  /* RPE chips row */
+  .rpe-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px;
+  }
+  .rpe-label { font-size: 10px; color: var(--gray400); font-weight: 600; margin-right: 4px; width: 26px; }
+  .rpe-chip {
+    flex: 1;
+    height: 30px;
+    border-radius: 6px;
+    background: var(--gray100);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    color: var(--gray500);
+  }
+  .rpe-chip.selected {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .add-set-btn-a {
+    margin-top: 6px;
+    border: 2px dashed var(--gray200);
+    border-radius: 8px;
+    height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
+    color: var(--primary);
+  }
+  .add-set-note-a {
+    font-size: 10px;
+    color: var(--gray400);
+    text-align: center;
+    margin-top: 2px;
+  }
+
+  /* ============================================================
+     DIRECTION B - ACTIVE SET TRAY
+     ============================================================ */
+  .card-b {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .card-b-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  /* set chips summary row */
+  .set-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .set-chip {
+    background: var(--gray100);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 11px;
+    color: var(--gray600);
+    font-weight: 500;
+  }
+  .set-chip.done {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .set-chip.active-chip {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+  }
+  .set-chip.empty {
+    border: 1px dashed var(--gray300);
+    background: transparent;
+    color: var(--gray400);
+  }
+
+  /* ---- sticky tray ---- */
+  .tray-b {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 14px 14px 0;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tray-b-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .tray-b-exercise {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .tray-b-set-label {
+    font-size: 12px;
+    color: var(--gray400);
+    font-weight: 500;
+  }
+
+  .tray-b-inputs {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .tray-input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tray-input-group label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gray400);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tray-stepper {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    height: 52px;
+  }
+  .tray-stepper-btn {
+    width: 48px; height: 52px;
+    background: var(--gray50);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; color: var(--gray600);
+    flex-shrink: 0;
+  }
+  .tray-stepper-val {
+    flex: 1;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  .tray-rpe-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .tray-rpe-label {
+    font-size: 10px; font-weight: 700; color: var(--gray400);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    width: 26px;
+  }
+  .tray-rpe-chip {
+    flex: 1; height: 36px;
+    border-radius: 8px;
+    background: var(--gray100);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--gray500);
+  }
+  .tray-rpe-chip.sel { background: var(--primary); color: #fff; }
+
+  .log-set-btn {
+    background: var(--primary);
+    border-radius: 12px;
+    height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800;
+    color: #fff;
+    margin-bottom: 14px;
+    letter-spacing: 0.2px;
+  }
+
+  /* ============================================================
+     DIRECTION C - SET CARD SWIPER
+     ============================================================ */
+  .card-c-outer {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .card-c-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  /* progress dots */
+  .set-dots {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .set-dot {
+    width: 8px; height: 8px;
+    border-radius: 9999px;
+    background: var(--gray200);
+  }
+  .set-dot.done { background: var(--success); }
+  .set-dot.active { background: var(--primary); width: 20px; }
+
+  /* big set card */
+  .big-set-card {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .big-set-label {
+    font-size: 11px; font-weight: 700; color: var(--primary);
+    text-transform: uppercase; letter-spacing: 1px;
+    text-align: center;
+  }
+
+  .big-stepper-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .big-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .big-field-label {
+    font-size: 10px; font-weight: 700; color: var(--primary);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .big-stepper-btn {
+    width: 52px; height: 52px;
+    background: #dbeafe;
+    border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 700; color: var(--primary-dark);
+  }
+  .big-val {
+    font-size: 32px; font-weight: 800; color: var(--text);
+    line-height: 1;
+  }
+  .big-unit {
+    font-size: 11px; color: var(--gray400); margin-top: -4px;
+  }
+  .big-divider {
+    width: 1px; height: 80px; background: #bfdbfe;
+  }
+
+  /* RPE segmented in card C */
+  .rpe-seg {
+    display: flex;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .rpe-seg-item {
+    flex: 1;
+    height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    color: var(--primary);
+    background: #dbeafe;
+    border-right: 1px solid #bfdbfe;
+  }
+  .rpe-seg-item:last-child { border-right: none; }
+  .rpe-seg-item.seg-sel { background: var(--primary); color: #fff; }
+
+  .log-btn-c {
+    background: var(--primary);
+    border-radius: 12px;
+    height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800;
+    color: #fff;
+    gap: 8px;
+  }
+  .log-btn-c .arrow { font-size: 18px; }
+
+  /* nav bar at bottom */
+  .tab-bar {
+    height: 52px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around;
+    flex-shrink: 0;
+    padding-bottom: 4px;
+  }
+  .tab-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .tab-icon { font-size: 20px; }
+  .tab-text { font-size: 9px; color: var(--gray400); font-weight: 600; }
+  .tab-text.active { color: var(--primary); }
+
+  /* B phone has no-scroll layout so it needs different structure */
+  .phone-b {
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-b-scroll {
+    flex: 1;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  /* old / comparison callout */
+  .callout {
+    background: #fef9c3;
+    border: 1px solid #fde047;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 10px;
+    color: #78350f;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<h1>Workout Entry - UX Redesign Directions</h1>
+<p class="page-sub">3 design directions for faster, lower-error gym data entry. Real app theme colors (theme.ts). No code changes yet.</p>
+
+<div class="frames">
+
+  <!-- ===================== DIRECTION A ===================== -->
+  <div class="frame-wrap">
+    <div class="frame-label">Direction A - Fat Steppers</div>
+    <div class="phone">
+      <!-- status bar -->
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">&#9679; &#9679; &#9679;</span>
+      </div>
+
+      <!-- top bar -->
+      <div class="top-bar">
+        <div>
+          <div class="top-bar-date">2026-06-26</div>
+        </div>
+        <div class="top-bar-right">
+          <div class="btn-ghost">Superset</div>
+          <div class="btn-primary">Finish</div>
+        </div>
+      </div>
+
+      <!-- scroll area -->
+      <div class="phone-scroll">
+
+        <!-- EXERCISE CARD -->
+        <div class="card-a">
+          <div class="card-a-header">
+            <div>
+              <div class="exercise-name">Bench Press &rsaquo;</div>
+              <div class="last-time">Last: 3 x 8 @ 100 kg  (2 weeks ago)</div>
+            </div>
+            <div class="card-a-header-right">
+              <div class="tiny-link">Swap</div>
+              <div class="tiny-gray">Remove</div>
+            </div>
+          </div>
+
+          <!-- SET 1 (logged/done, shown smaller) -->
+          <div class="set-row-a">
+            <div class="set-row-a-top">
+              <div class="set-num">1</div>
+              <div class="warmup-pill">W</div>
+              <div class="stepper-a" style="flex:none;gap:0;align-items:center;">
+                <div class="stepper-a-btn" style="width:36px;height:36px;font-size:16px;">-</div>
+                <div class="stepper-a-val" style="font-size:15px;height:36px;width:46px;">60</div>
+                <div class="stepper-a-btn" style="width:36px;height:36px;font-size:16px;">+</div>
+                <div class="stepper-a-unit">kg</div>
+              </div>
+              <div class="stepper-a" style="flex:none;gap:0;align-items:center;">
+                <div class="stepper-a-btn" style="width:36px;height:36px;font-size:16px;">-</div>
+                <div class="stepper-a-val" style="font-size:15px;height:36px;width:40px;">12</div>
+                <div class="stepper-a-btn" style="width:36px;height:36px;font-size:16px;">+</div>
+                <div class="stepper-a-unit">reps</div>
+              </div>
+              <div style="margin-left:auto;font-size:18px;color:#9ca3af;">&#10005;</div>
+            </div>
+            <!-- RPE chips -->
+            <div class="rpe-row">
+              <div class="rpe-label">RPE</div>
+              <div class="rpe-chip">6</div>
+              <div class="rpe-chip">7</div>
+              <div class="rpe-chip">8</div>
+              <div class="rpe-chip">9</div>
+              <div class="rpe-chip">10</div>
+            </div>
+          </div>
+
+          <!-- SET 2 (active) -->
+          <div class="set-row-a active-set">
+            <div class="set-row-a-top">
+              <div class="set-num" style="color:#3b82f6;">2</div>
+              <div class="warmup-pill" style="border-color:#3b82f6;color:#3b82f6;">W</div>
+              <!-- FAT weight stepper -->
+              <div class="stepper-a">
+                <div class="stepper-a-btn">-</div>
+                <div class="stepper-a-val">100</div>
+                <div class="stepper-a-btn">+</div>
+                <div class="stepper-a-unit">kg</div>
+              </div>
+              <div style="margin-left:auto;font-size:18px;color:#9ca3af;">&#10005;</div>
+            </div>
+            <!-- reps on own line for active set too -->
+            <div class="rpe-row" style="padding-top:2px;">
+              <div class="rpe-label" style="color:#6b7280;font-weight:700;font-size:10px;">REPS</div>
+              <div class="stepper-a" style="gap:0;flex:1;">
+                <div class="stepper-a-btn" style="width:44px;height:36px;font-size:18px;">-</div>
+                <div class="stepper-a-val" style="height:36px;font-size:18px;">8</div>
+                <div class="stepper-a-btn" style="width:44px;height:36px;font-size:18px;">+</div>
+              </div>
+            </div>
+            <!-- RPE chips -->
+            <div class="rpe-row">
+              <div class="rpe-label">RPE</div>
+              <div class="rpe-chip">6</div>
+              <div class="rpe-chip">7</div>
+              <div class="rpe-chip selected">8</div>
+              <div class="rpe-chip">9</div>
+              <div class="rpe-chip">10</div>
+            </div>
+          </div>
+
+          <!-- ADD SET -->
+          <div class="add-set-btn-a">+ Add set &nbsp;<span style="font-size:11px;color:#9ca3af;font-weight:400;">(copies set 2)</span></div>
+        </div>
+
+        <!-- second exercise (collapsed preview) -->
+        <div class="card-a" style="opacity:0.6;">
+          <div class="card-a-header" style="margin-bottom:0;">
+            <div>
+              <div class="exercise-name">Incline DB Press &rsaquo;</div>
+              <div class="last-time">Last: 3 x 10 @ 30 kg  (2 weeks ago)</div>
+            </div>
+            <div class="card-a-header-right">
+              <div class="tiny-link">Swap</div>
+              <div class="tiny-gray">Remove</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- add exercise -->
+        <div style="border:2px dashed #e5e7eb;border-radius:10px;height:44px;display:flex;align-items:center;justify-content:center;margin-top:4px;">
+          <span style="font-size:13px;font-weight:500;color:#9ca3af;">+ Add exercise</span>
+        </div>
+
+      </div><!-- /phone-scroll -->
+
+      <!-- tab bar -->
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon">&#127968;</div><div class="tab-text">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">&#127947;</div><div class="tab-text active" style="color:#3b82f6;">Workout</div></div>
+        <div class="tab-item"><div class="tab-icon">&#128203;</div><div class="tab-text">Log</div></div>
+        <div class="tab-item"><div class="tab-icon">&#128218;</div><div class="tab-text">Library</div></div>
+      </div>
+    </div><!-- /phone -->
+    <div class="frame-caption">
+      Same row-per-set structure, all tap targets raised to 44pt min. Warmup becomes a tappable pill. RPE is 5 chips (no keyboard). Active set is highlighted blue. "Add set" is a 44pt dashed button that labels itself as copying. Easiest to implement.
+    </div>
+  </div><!-- /frame-wrap A -->
+
+
+  <!-- ===================== DIRECTION B ===================== -->
+  <div class="frame-wrap">
+    <div class="frame-label">Direction B - Active Set Tray</div>
+    <div class="phone phone-b">
+      <!-- status bar -->
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">&#9679; &#9679; &#9679;</span>
+      </div>
+
+      <!-- top bar -->
+      <div class="top-bar">
+        <div>
+          <div class="top-bar-date">2026-06-26</div>
+        </div>
+        <div class="top-bar-right">
+          <div class="btn-ghost">Superset</div>
+          <div class="btn-primary">Finish</div>
+        </div>
+      </div>
+
+      <!-- exercise list area -->
+      <div class="phone-b-scroll">
+        <!-- exercise card B: shows set chips only, no row inputs -->
+        <div class="card-b">
+          <div class="card-b-header">
+            <div>
+              <div class="exercise-name">Bench Press &rsaquo;</div>
+              <div class="last-time">Last: 3 x 8 @ 100 kg  (2 weeks ago)</div>
+            </div>
+            <div class="card-a-header-right">
+              <div class="tiny-link">Swap</div>
+              <div class="tiny-gray">Remove</div>
+            </div>
+          </div>
+          <div class="set-chips">
+            <div class="set-chip done">W&nbsp; 60 kg x 12</div>
+            <div class="set-chip active-chip">Set 2 &rarr;</div>
+            <div class="set-chip empty">Set 3</div>
+            <div class="set-chip empty">Set 4</div>
+          </div>
+        </div>
+
+        <div class="card-b" style="opacity:0.55;">
+          <div class="card-b-header" style="margin-bottom:0;">
+            <div>
+              <div class="exercise-name">Incline DB Press &rsaquo;</div>
+              <div class="last-time">3 sets planned</div>
+            </div>
+            <div class="card-a-header-right">
+              <div class="tiny-link">Swap</div>
+              <div class="tiny-gray">Remove</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- add exercise -->
+        <div style="border:2px dashed #e5e7eb;border-radius:10px;height:44px;display:flex;align-items:center;justify-content:center;margin-top:4px;">
+          <span style="font-size:13px;font-weight:500;color:#9ca3af;">+ Add exercise</span>
+        </div>
+      </div><!-- /phone-b-scroll -->
+
+      <!-- STICKY TRAY -->
+      <div class="tray-b">
+        <div class="tray-b-header">
+          <div class="tray-b-exercise">Bench Press - Set 2 of 4</div>
+          <div class="tray-b-set-label">Last set: 100 kg x 8</div>
+        </div>
+
+        <div class="tray-b-inputs">
+          <!-- Weight -->
+          <div class="tray-input-group">
+            <label>Weight (kg)</label>
+            <div class="tray-stepper">
+              <div class="tray-stepper-btn">-</div>
+              <div class="tray-stepper-val">100</div>
+              <div class="tray-stepper-btn">+</div>
+            </div>
+          </div>
+          <!-- Reps -->
+          <div class="tray-input-group">
+            <label>Reps</label>
+            <div class="tray-stepper">
+              <div class="tray-stepper-btn">-</div>
+              <div class="tray-stepper-val">8</div>
+              <div class="tray-stepper-btn">+</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RPE chips -->
+        <div class="tray-rpe-row">
+          <div class="tray-rpe-label">RPE</div>
+          <div class="tray-rpe-chip">7</div>
+          <div class="tray-rpe-chip">7.5</div>
+          <div class="tray-rpe-chip sel">8</div>
+          <div class="tray-rpe-chip">8.5</div>
+          <div class="tray-rpe-chip">9</div>
+          <div class="tray-rpe-chip">9.5</div>
+        </div>
+
+        <!-- Log set CTA -->
+        <div class="log-set-btn">Log set &amp; next &#8594;</div>
+      </div>
+
+      <!-- tab bar -->
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon">&#127968;</div><div class="tab-text">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">&#127947;</div><div class="tab-text active" style="color:#3b82f6;">Workout</div></div>
+        <div class="tab-item"><div class="tab-icon">&#128203;</div><div class="tab-text">Log</div></div>
+        <div class="tab-item"><div class="tab-icon">&#128218;</div><div class="tab-text">Library</div></div>
+      </div>
+    </div><!-- /phone B -->
+    <div class="frame-caption">
+      Sets appear as summary chips in the card. A sticky bottom tray owns all input for the active set: 52pt tall steppers (no keyboard needed), RPE as half-step chips, and a full-width "Log set and next" CTA. Keyboard never covers any input row. Works one-handed.
+    </div>
+  </div><!-- /frame-wrap B -->
+
+
+  <!-- ===================== DIRECTION C ===================== -->
+  <div class="frame-wrap">
+    <div class="frame-label">Direction C - Set Card Swiper</div>
+    <div class="phone">
+      <!-- status bar -->
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">&#9679; &#9679; &#9679;</span>
+      </div>
+
+      <!-- top bar -->
+      <div class="top-bar">
+        <div>
+          <div class="top-bar-date">2026-06-26</div>
+        </div>
+        <div class="top-bar-right">
+          <div class="btn-ghost">Superset</div>
+          <div class="btn-primary">Finish</div>
+        </div>
+      </div>
+
+      <!-- scroll area -->
+      <div class="phone-scroll">
+
+        <div class="card-c-outer">
+          <div class="card-c-header">
+            <div>
+              <div class="exercise-name">Bench Press &rsaquo;</div>
+              <div class="last-time">Last: 3 x 8 @ 100 kg  (2 weeks ago)</div>
+            </div>
+            <div class="card-a-header-right">
+              <div class="tiny-link">Swap</div>
+              <div class="tiny-gray">Remove</div>
+            </div>
+          </div>
+
+          <!-- progress dots -->
+          <div class="set-dots">
+            <div class="set-dot done"></div>
+            <div class="set-dot active"></div>
+            <div class="set-dot"></div>
+            <div class="set-dot"></div>
+            <div style="font-size:10px;color:#9ca3af;margin-left:4px;">Set 2 of 4</div>
+          </div>
+
+          <!-- big set card -->
+          <div class="big-set-card">
+            <div class="big-set-label">Set 2  -  Working</div>
+
+            <div class="big-stepper-row">
+              <!-- Weight -->
+              <div class="big-field">
+                <div class="big-field-label">Weight</div>
+                <div class="big-stepper-btn">-</div>
+                <div class="big-val">100</div>
+                <div class="big-unit">kg</div>
+                <div class="big-stepper-btn">+</div>
+              </div>
+
+              <div class="big-divider"></div>
+
+              <!-- Reps -->
+              <div class="big-field">
+                <div class="big-field-label">Reps</div>
+                <div class="big-stepper-btn">-</div>
+                <div class="big-val">8</div>
+                <div class="big-unit">reps</div>
+                <div class="big-stepper-btn">+</div>
+              </div>
+            </div>
+
+            <!-- RPE segmented -->
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="font-size:10px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:0.5px;">RPE</div>
+              <div class="rpe-seg">
+                <div class="rpe-seg-item">7</div>
+                <div class="rpe-seg-item">7.5</div>
+                <div class="rpe-seg-item seg-sel">8</div>
+                <div class="rpe-seg-item">8.5</div>
+                <div class="rpe-seg-item">9</div>
+              </div>
+            </div>
+
+            <!-- log + swipe hint -->
+            <div class="log-btn-c">
+              Log set
+              <span class="arrow">&#8594;</span>
+            </div>
+          </div>
+
+          <!-- swipe hint -->
+          <div style="text-align:center;margin-top:6px;font-size:10px;color:#9ca3af;">Swipe left to log &amp; advance &bull; Swipe right to review</div>
+        </div>
+
+        <!-- second exercise header only -->
+        <div class="card-c-outer" style="opacity:0.55;">
+          <div class="card-c-header" style="margin-bottom:0;">
+            <div>
+              <div class="exercise-name">Incline DB Press &rsaquo;</div>
+              <div class="last-time">3 sets planned</div>
+            </div>
+            <div class="card-a-header-right">
+              <div class="tiny-link">Swap</div>
+              <div class="tiny-gray">Remove</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- add exercise -->
+        <div style="border:2px dashed #e5e7eb;border-radius:10px;height:44px;display:flex;align-items:center;justify-content:center;margin-top:4px;">
+          <span style="font-size:13px;font-weight:500;color:#9ca3af;">+ Add exercise</span>
+        </div>
+
+      </div><!-- /phone-scroll -->
+
+      <!-- tab bar -->
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon">&#127968;</div><div class="tab-text">Home</div></div>
+        <div class="tab-item"><div class="tab-icon">&#127947;</div><div class="tab-text active" style="color:#3b82f6;">Workout</div></div>
+        <div class="tab-item"><div class="tab-icon">&#128203;</div><div class="tab-text">Log</div></div>
+        <div class="tab-item"><div class="tab-icon">&#128218;</div><div class="tab-text">Library</div></div>
+      </div>
+    </div><!-- /phone C -->
+    <div class="frame-caption">
+      One set at a time fills the card. 52pt circular +/- buttons work one-handed. Progress dots show overall status. RPE is a 5-item segmented control. Swipe left logs the set and auto-advances. No keyboard involved. Best for users who want maximum focus per set; requires more scrolling to see all sets at once.
+    </div>
+  </div><!-- /frame-wrap C -->
+
+</div><!-- /frames -->
+
+</body>
+</html>
