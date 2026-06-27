@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import Constants from 'expo-constants'
+import * as Updates from 'expo-updates'
 import { useAuth } from '../src/store/auth'
 import { useUnitStore } from '../src/store/units'
 import { usageApi } from '../src/services/api'
@@ -24,6 +26,39 @@ export default function Settings() {
   const useKg = unit === 'kg'
   const [usage, setUsage] = useState<UsageSummary | null>(null)
   const [loadingUsage, setLoadingUsage] = useState(true)
+  const [checking, setChecking] = useState(false)
+
+  // Version + OTA info. expo-updates constants are safe to read (null in dev).
+  const appVersion = Constants.expoConfig?.version ?? 'unknown'
+  const otaLabel = Updates.isEmbeddedLaunch
+    ? 'Embedded (no OTA yet)'
+    : `${(Updates.updateId ?? '').slice(0, 8)}${
+        Updates.createdAt ? ` · ${Updates.createdAt.toLocaleDateString()}` : ''
+      }`
+
+  const handleCheckUpdate = async () => {
+    if (!Updates.isEnabled) {
+      Alert.alert('Updates', 'OTA updates are not available in this build.')
+      return
+    }
+    setChecking(true)
+    try {
+      const res = await Updates.checkForUpdateAsync()
+      if (!res.isAvailable) {
+        Alert.alert('Up to date', 'You are running the latest version.')
+        return
+      }
+      await Updates.fetchUpdateAsync()
+      Alert.alert('Update ready', 'Restart now to apply the update?', [
+        { text: 'Later', style: 'cancel' },
+        { text: 'Restart', onPress: () => void Updates.reloadAsync() },
+      ])
+    } catch (e) {
+      Alert.alert('Update check failed', String(e))
+    } finally {
+      setChecking(false)
+    }
+  }
 
   useEffect(() => {
     usageApi
@@ -90,6 +125,33 @@ export default function Settings() {
         )}
       </View>
 
+      <View style={[card, styles.section]}>
+        <Text style={styles.sectionTitle}>About</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>App version</Text>
+          <Text style={styles.value}>{appVersion}</Text>
+        </View>
+        <View style={[styles.row, { marginTop: spacing.sm }]}>
+          <Text style={styles.label}>Update</Text>
+          <Text style={styles.value}>{otaLabel}</Text>
+        </View>
+        <Text style={styles.subtext}>
+          Runtime {Updates.runtimeVersion ?? '-'} · channel {Updates.channel ?? '-'}
+        </Text>
+        <TouchableOpacity
+          style={styles.checkButton}
+          onPress={handleCheckUpdate}
+          activeOpacity={0.8}
+          disabled={checking}
+        >
+          {checking ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Text style={styles.checkText}>Check for updates</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.8}>
         <Text style={styles.signOutText}>Sign out</Text>
       </TouchableOpacity>
@@ -108,6 +170,15 @@ const styles = StyleSheet.create({
   subtext: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   unitLabel: { fontSize: 14, color: colors.gray400, marginHorizontal: 6 },
   activeUnit: { color: colors.text, fontWeight: '600' },
+  checkButton: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  checkText: { color: colors.primary, fontWeight: '600', fontSize: 14 },
   signOutButton: {
     backgroundColor: colors.error,
     borderRadius: radius.md,
