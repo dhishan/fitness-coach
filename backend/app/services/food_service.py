@@ -4,14 +4,53 @@ User isolation pattern: every read checks doc["user_id"] == uid.
 Returns None when doc is missing or belongs to a different user.
 Route layer translates None to 404.
 """
+import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from google.cloud import firestore
 
 from app.firestore import get_db
 
 logger = logging.getLogger(__name__)
+
+# Multi-source food search is identical for everyone and the underlying data
+# (USDA/OFF/IFCT) is effectively static, so cache merged results across users.
+_SEARCH_CACHE_TTL = timedelta(days=7)
+
+
+def _search_cache_key(q: str, limit: int) -> str:
+    return hashlib.md5(f"{q.strip().lower()}|{limit}".encode()).hexdigest()
+
+
+def get_search_cache(q: str, limit: int) -> list[dict] | None:
+    """Return cached merged search results, or None on miss/expiry/error."""
+    try:
+        snap = get_db().collection("food_search_cache").document(_search_cache_key(q, limit)).get()
+        if not snap.exists:
+            return None
+        d = snap.to_dict() or {}
+        ts = d.get("ts")
+        if ts is None:
+            return None
+        # Firestore returns tz-aware datetimes; guard naive just in case.
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - ts > _SEARCH_CACHE_TTL:
+            return None
+        return d.get("results") or []
+    except Exception:
+        logger.exception("search cache read failed")
+        return None
+
+
+def set_search_cache(q: str, limit: int, results: list[dict]) -> None:
+    try:
+        get_db().collection("food_search_cache").document(_search_cache_key(q, limit)).set(
+            {"q": q.strip().lower(), "results": results, "ts": datetime.now(timezone.utc)}
+        )
+    except Exception:
+        logger.exception("search cache write failed")
 
 
 def _doc(snap) -> dict:

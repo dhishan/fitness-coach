@@ -368,3 +368,71 @@ def test_enrich_estimation_returns_nutrients_above_threshold_branded(mock_db):
         result = usda.enrich_estimation("greek yogurt")
     assert result is not None
     assert result["macros"]["protein_g"] == 17
+
+
+# ---- search_full (inline parse + blended ranking) ----
+
+def _search_food(fdc_id, description, nutrients, brand_owner=None, score=800.0,
+                 data_type="Foundation", serving_size=None, serving_size_unit=None):
+    """A /foods/search food object with embedded foodNutrients (search shape)."""
+    return {
+        "fdcId": fdc_id,
+        "description": description,
+        "brandOwner": brand_owner,
+        "score": score,
+        "dataType": data_type,
+        "servingSize": serving_size,
+        "servingSizeUnit": serving_size_unit,
+        "foodNutrients": [{"nutrientId": nid, "value": val} for nid, val in nutrients],
+    }
+
+
+def test_search_full_parses_inline_and_makes_one_http_call(mock_db):
+    from app.services import usda
+    foods = [_search_food(1, "Almonds", [(1008, 579), (1003, 21), (1005, 22), (1004, 50), (1079, 12)])]
+    with patch("app.services.usda.get_settings") as mock_settings, \
+         patch("app.services.usda.requests.get", return_value=_mock_search_response(foods)) as mock_get, \
+         patch("app.services.usda.get_nutrients") as mock_detail:
+        mock_settings.return_value.usda_api_key = "testkey"
+        result = usda.search_full("almonds", limit=5)
+    # One search call, and crucially NO per-hit detail fetch.
+    mock_get.assert_called_once()
+    mock_detail.assert_not_called()
+    assert result[0]["macros"]["calories"] == 579
+    assert result[0]["macros"]["protein_g"] == 21
+    assert result[0]["micros"]["fiber_g"] == 12
+    assert result[0]["usda_fdc_id"] == 1
+
+
+def test_search_full_branded_exact_match_ranks_above_generic(mock_db):
+    from app.services import usda
+    macros = [(1008, 170), (1003, 6), (1005, 6), (1004, 15)]
+    foods = [
+        _search_food(1, "Nuts, almonds", macros, score=900, data_type="Foundation"),
+        _search_food(2, "Almonds", macros, brand_owner="Blue Diamond",
+                     score=600, data_type="Branded"),
+    ]
+    with patch("app.services.usda.get_settings") as mock_settings, \
+         patch("app.services.usda.requests.get", return_value=_mock_search_response(foods)):
+        mock_settings.return_value.usda_api_key = "testkey"
+        result = usda.search_full("blue diamond almonds", limit=5)
+    # The branded row matches all 3 query tokens (via brand owner); generic
+    # matches only "almonds". Branded should come first and be present.
+    assert result[0]["usda_fdc_id"] == 2
+    assert "Blue Diamond" in result[0]["name"]
+
+
+def test_search_full_generic_query_prefers_whole_food(mock_db):
+    from app.services import usda
+    macros = [(1008, 170), (1003, 6), (1005, 6), (1004, 15)]
+    foods = [
+        _search_food(2, "Almonds", macros, brand_owner="Blue Diamond",
+                     score=900, data_type="Branded"),
+        _search_food(1, "Almonds, raw", macros, score=600, data_type="Foundation"),
+    ]
+    with patch("app.services.usda.get_settings") as mock_settings, \
+         patch("app.services.usda.requests.get", return_value=_mock_search_response(foods)):
+        mock_settings.return_value.usda_api_key = "testkey"
+        result = usda.search_full("almonds", limit=5)
+    # Same match bucket -> tier tie-break puts the whole food first.
+    assert result[0]["usda_fdc_id"] == 1

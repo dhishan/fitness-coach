@@ -94,8 +94,14 @@ async def search_foods(
     """Multi-source ingredient search: USDA + OpenFoodFacts + IFCT 2017.
 
     All three sources run in parallel. Results are interleaved and
-    deduped by lowercase name. Total capped at `limit`.
+    deduped by lowercase name. Total capped at `limit`. The merged result is
+    cached (7d) keyed by query+limit, since it is identical across users and the
+    source data is static — a repeat search is one Firestore read, no HTTP.
     """
+    cached = await asyncio.to_thread(food_service.get_search_cache, q, limit)
+    if cached is not None:
+        return cached
+
     usda_hits, off_hits, ifct_hits = await asyncio.gather(
         asyncio.to_thread(usda.search_full, q, limit),
         asyncio.to_thread(off_search.search_off, q, limit),
@@ -128,7 +134,11 @@ async def search_foods(
                 seen.add(key)
                 merged.append(hit)
 
-    return merged[:limit]
+    result = merged[:limit]
+    # Only cache non-empty results so a transient source outage isn't frozen for 7d.
+    if result:
+        await asyncio.to_thread(food_service.set_search_cache, q, limit, result)
+    return result
 
 
 @router.post("/estimate/photo")

@@ -158,30 +158,112 @@ def get_nutrients(fdc_id: int) -> dict | None:
     return out
 
 
+def _nutrients_from_food(food: dict) -> tuple[dict, dict]:
+    """Pull macros + micros out of a /foods/search food object's foodNutrients.
+
+    The search payload already embeds per-100g nutrients (key `nutrientId` +
+    `value`), so we never need a second /food/{id} call. Falls back to the
+    detail-endpoint shape (`nutrient.id` + `amount`) for robustness.
+    """
+    macros = {"calories": 0.0, "protein_g": 0.0, "carbs_g": 0.0, "fat_g": 0.0}
+    micros = {
+        k: 0.0 for k in (
+            "fiber_g", "sugar_g", "sodium_mg", "potassium_mg", "calcium_mg",
+            "iron_mg", "vitamin_c_mg", "vitamin_d_mcg", "saturated_fat_g", "cholesterol_mg",
+        )
+    }
+    energy_alt: dict[int, float] = {}
+    for n in food.get("foodNutrients") or []:
+        nid = n.get("nutrientId") or (n.get("nutrient") or {}).get("id")
+        amount = n.get("value")
+        if amount is None:
+            amount = n.get("amount", 0)
+        amount = amount or 0
+        if nid in NUTRIENT_MAP:
+            field, kind = NUTRIENT_MAP[nid]
+            (macros if kind == "macro" else micros)[field] = float(amount)
+        elif nid in (2047, 2048, 1062):
+            energy_alt[nid] = float(amount)
+    if not macros["calories"]:
+        if energy_alt.get(2047):
+            macros["calories"] = energy_alt[2047]
+        elif energy_alt.get(2048):
+            macros["calories"] = energy_alt[2048]
+        elif energy_alt.get(1062):
+            macros["calories"] = round(energy_alt[1062] / 4.184, 1)
+    return macros, micros
+
+
+def _has_macros(macros: dict) -> bool:
+    return any((macros.get(k) or 0) for k in ("calories", "protein_g", "carbs_g", "fat_g"))
+
+
 def search_full(query: str, limit: int = 8) -> list[dict]:
     """Search USDA and return each hit with full per-serving nutrients.
 
-    Each item is the same Estimation-shaped dict get_nutrients() returns
-    (name, serving, macros, micros, usda_fdc_id). Used to populate the
-    recipe ingredient picker.
+    Parses nutrients straight from the single /foods/search response (no
+    per-hit /food/{id} fetches). Ranks so that branded products which clearly
+    match the query (e.g. "Blue Diamond Almonds") are not buried under generic
+    whole foods, while a generic query ("banana") still surfaces the whole food.
     """
-    hits = search(query, limit=limit)
-    out: list[dict] = []
-    for h in hits:
-        nutrients = get_nutrients(h.get("fdc_id"))
-        if nutrients is None:
+    key = _key()
+    if not key or not query.strip():
+        return []
+    try:
+        r = requests.get(
+            f"{USDA_BASE}/foods/search",
+            params={
+                "api_key": key,
+                "query": query,
+                "pageSize": 50,
+                "dataType": "Foundation,SR Legacy,Branded",
+            },
+            timeout=TIMEOUT_S,
+        )
+        if r.status_code != 200:
+            return []
+        foods = r.json().get("foods") or []
+    except Exception:
+        logger.exception("usda search_full failed for %r", query)
+        return []
+
+    q_tokens = [t for t in query.lower().split() if t]
+    candidates: list[tuple[int, int, float, dict]] = []
+    for f in foods:
+        macros, micros = _nutrients_from_food(f)
+        if not _has_macros(macros):
             continue
-        # Branded foods often have brandOwner not yet in nutrients name
-        name = nutrients.get("name", "")
-        brand = (h.get("brand_owner") or "").strip()
+        desc = f.get("description", "")
+        name = desc
+        brand = (f.get("brandOwner") or "").strip()
         if brand and brand.lower() not in name.lower():
             name = f"{name} ({brand})"
-        out.append({
-            **nutrients,
+        serving = "100 g"
+        if f.get("servingSize") and f.get("servingSizeUnit"):
+            serving = f"{f['servingSize']} {f['servingSizeUnit']}"
+        item = {
             "name": name,
-            "data_type": h.get("data_type"),
-        })
-    return out
+            "serving": serving,
+            "macros": macros,
+            "micros": micros,
+            "usda_fdc_id": f.get("fdcId"),
+            "data_type": f.get("dataType"),
+        }
+        # Match bucket: how many query tokens appear in the description. An exact
+        # brand query ("blue diamond almonds") fully matches its branded row but
+        # only partially matches generic "almonds", so the branded row wins; a
+        # generic query ("banana") fully matches the whole food, which then wins
+        # on the tier tie-break below.
+        match_text = f"{desc} {brand}".lower()
+        matched = sum(1 for t in q_tokens if t in match_text)
+        frac = matched / len(q_tokens) if q_tokens else 1.0
+        bucket = 0 if frac >= 0.999 else 1 if frac >= 0.5 else 2
+        tier = _DATA_TYPE_RANK.get(f.get("dataType") or "", 3)
+        score = float(f.get("score") or 0)
+        candidates.append((bucket, tier, -score, item))
+
+    candidates.sort(key=lambda c: (c[0], c[1], c[2]))
+    return [c[3] for c in candidates[:limit]]
 
 
 def lookup_by_barcode(code: str) -> dict | None:
