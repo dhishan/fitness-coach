@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/react-native'
 import Constants from 'expo-constants'
 import { useEffect } from 'react'
-import { ActivityIndicator, View, Keyboard } from 'react-native'
+import { ActivityIndicator, View } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import * as Linking from 'expo-linking'
 import * as SplashScreen from 'expo-splash-screen'
@@ -115,7 +115,7 @@ function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <View style={{ flex: 1 }} onStartShouldSetResponder={() => false} onTouchStart={() => Keyboard.dismiss()}>
+      <View style={{ flex: 1 }}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
