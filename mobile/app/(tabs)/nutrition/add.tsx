@@ -49,13 +49,29 @@ function hitToFoodHit(h: IngredientHit): FoodHit {
   }
 }
 
+// A logged entry stores servings-scaled macros/micros and an "N× ..." serving
+// label. The edit sheet treats a hit as the per-serving base (it re-applies a
+// servings multiplier), so reopening or re-saving a recent multi-serving log
+// must be un-scaled back to one serving first — otherwise a 3-serving log shows
+// (and saves) its total as if it were a single serving.
 function logToFoodHit(log: FoodLog): FoodHit {
+  const r1 = (v: number) => Math.round(v * 10) / 10
+  const m = /^(\d+(?:\.\d+)?)×\s*(.*)$/.exec(log.serving || '')
+  const div = m && parseFloat(m[1]) > 0 ? parseFloat(m[1]) : 1
+  const lm = log.micros as Record<string, number> | null | undefined
   return {
     name: log.name,
     description: log.description ?? null,
-    serving: log.serving,
-    macros: log.macros,
-    micros: log.micros as Record<string, number> | null,
+    serving: m ? m[2] : log.serving,
+    macros: {
+      calories: Math.round(log.macros.calories / div),
+      protein_g: r1(log.macros.protein_g / div),
+      carbs_g: r1(log.macros.carbs_g / div),
+      fat_g: r1(log.macros.fat_g / div),
+    },
+    micros: lm
+      ? (Object.fromEntries(Object.entries(lm).map(([k, v]) => [k, r1((v || 0) / div)])) as Record<string, number>)
+      : null,
     usda_fdc_id: log.usda_fdc_id ?? null,
     source: 'recent',
   }

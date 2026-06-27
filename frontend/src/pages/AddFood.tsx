@@ -36,6 +36,31 @@ function defaultMealForHour(): MealType {
   return 'dinner'
 }
 
+// A logged entry stores servings-scaled macros/micros and an "N× ..." serving
+// label. The edit sheet treats its hit as the per-serving base, so a recent log
+// must be un-scaled to one serving first — otherwise a 3-serving log shows and
+// re-saves its total as a single serving.
+function baseHitFromLog(log: FoodLog) {
+  const r1 = (v: number) => Math.round(v * 10) / 10
+  const m = /^(\d+(?:\.\d+)?)×\s*(.*)$/.exec(log.serving || '')
+  const div = m && parseFloat(m[1]) > 0 ? parseFloat(m[1]) : 1
+  const lm = log.micros as Record<string, number> | undefined
+  return {
+    name: log.name,
+    serving: m ? m[2] : log.serving,
+    macros: {
+      calories: Math.round(log.macros.calories / div),
+      protein_g: r1(log.macros.protein_g / div),
+      carbs_g: r1(log.macros.carbs_g / div),
+      fat_g: r1(log.macros.fat_g / div),
+    },
+    micros: lm
+      ? (Object.fromEntries(Object.entries(lm).map(([k, v]) => [k, r1((v || 0) / div)])) as Record<string, number>)
+      : undefined,
+    source: 'recent' as const,
+  }
+}
+
 function SourceBadge({ source }: { source?: string | null }) {
   const s = source?.toLowerCase() ?? ''
   const b = SOURCE_BADGE[s]
@@ -265,13 +290,7 @@ export default function AddFood({ open, date, initialMeal, onClose, onLogged }: 
                     <button
                       key={log.id}
                       type="button"
-                      onClick={() => openEditWithHit({
-                        name: log.name,
-                        serving: log.serving,
-                        macros: log.macros,
-                        micros: log.micros as Record<string, number> | undefined,
-                        source: 'recent',
-                      })}
+                      onClick={() => openEditWithHit(baseHitFromLog(log))}
                       className="w-full text-left flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
                     >
                       <div className="flex-1 min-w-0">
