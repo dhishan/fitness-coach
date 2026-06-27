@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
+import Slider from '@react-native-community/slider'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -382,8 +383,6 @@ function FinishModal({
 // values (e.g. 102.5). RPE is a chip strip. Sits above the keyboard.
 // ---------------------------------------------------------------------------
 
-const RPE_VALUES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10]
-
 function ActiveSetTray({
   entryName,
   set,
@@ -472,23 +471,26 @@ function ActiveSetTray({
         </View>
       </View>
 
-      {/* RPE chips */}
+      {/* RPE slider (6-10, half steps) */}
       <View style={s.rpeRow}>
         <Text style={s.rpeRowLabel}>RPE</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.rpeChips} keyboardShouldPersistTaps="handled">
-          {RPE_VALUES.map((v) => {
-            const on = set.rpe === v
-            return (
-              <TouchableOpacity
-                key={v}
-                style={[s.rpeChip, on && s.rpeChipActive]}
-                onPress={() => onUpdate({ ...set, rpe: on ? null : v })}
-              >
-                <Text style={[s.rpeChipText, on && s.rpeChipTextActive]}>{v}</Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
+        <Slider
+          style={s.rpeSlider}
+          minimumValue={6}
+          maximumValue={10}
+          step={0.5}
+          value={set.rpe ?? 8}
+          onValueChange={(v) => onUpdate({ ...set, rpe: Math.round(v * 2) / 2 })}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.gray200}
+          thumbTintColor={colors.primary}
+        />
+        <Text style={s.rpeValue}>{set.rpe != null ? set.rpe.toFixed(1) : '—'}</Text>
+        {set.rpe != null && (
+          <TouchableOpacity onPress={() => onUpdate({ ...set, rpe: null })} hitSlop={10} style={s.rpeClear}>
+            <Text style={s.rpeClearText}>✕</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Warmup + Log */}
@@ -1557,6 +1559,10 @@ const s = StyleSheet.create({
   },
   rpeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   rpeRowLabel: { fontSize: 10, fontWeight: '700', color: colors.gray500, letterSpacing: 0.5, width: 30 },
+  rpeSlider: { flex: 1, height: 40 },
+  rpeValue: { fontSize: 16, fontWeight: '700', color: colors.text, width: 36, textAlign: 'right' },
+  rpeClear: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  rpeClearText: { fontSize: 13, color: colors.gray400, fontWeight: '600' },
   rpeChips: { gap: 6, paddingRight: 8 },
   rpeChip: {
     minWidth: 44,

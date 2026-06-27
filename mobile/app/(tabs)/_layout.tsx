@@ -39,6 +39,9 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.gray400,
+        // Slide the tab bar away when the keyboard is up so bottom-docked UI
+        // (e.g. the workout set tray) sits flush on the keyboard, not above it.
+        tabBarHideOnKeyboard: true,
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
