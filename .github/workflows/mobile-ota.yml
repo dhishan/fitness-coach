@@ -75,8 +75,28 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      # Semver build stamp from git: "1.0.64+5.e3784da" = 5 commits past the
+      # mobile-v1.0.64 tag. Baked into the bundle (EXPO_PUBLIC_*) so the app's
+      # Settings shows an ordered, traceable OTA version, not just a UUID.
+      - name: Compute build version
+        if: env.skip != '1'
+        run: |
+          git fetch --tags --force --quiet || true
+          RAW=$(git describe --tags --match 'mobile-v*' --always 2>/dev/null || echo "")
+          if [[ "$RAW" =~ ^mobile-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)-g([0-9a-f]+)$ ]]; then
+            VER="${BASH_REMATCH[1]}+${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+          elif [[ "$RAW" =~ ^mobile-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VER="${BASH_REMATCH[1]}"
+          else
+            VER="0.0.0+${GITHUB_SHA::7}"
+          fi
+          echo "Build version: $VER"
+          echo "EXPO_PUBLIC_OTA_VERSION=$VER" >> "$GITHUB_ENV"
+
       - name: Publish OTA to production channel
         if: env.skip != '1'
+        env:
+          EXPO_PUBLIC_OTA_VERSION: ${{ env.EXPO_PUBLIC_OTA_VERSION }}
         run: |
           MSG="${GITHUB_SHA::7} $(git log -1 --pretty=%s)"
           cd mobile && eas update --branch production --message "$MSG" --non-interactive

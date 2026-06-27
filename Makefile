@@ -55,7 +55,14 @@ mobile-run-phone: ## build + install Release on connected iPhone (DEVICE_NAME=<s
 	cd mobile && npx expo run:ios --device "$$DEVICE_UDID" --configuration Release
 
 mobile-update: ## OTA via EAS Update (JS-only changes). Publishes to the production channel/branch; installed AltStore builds carry expo-channel-name=production.
-	cd mobile && npx eas update --branch production --message "$$(git log -1 --pretty='%h %s')"
+	@RAW=$$(git describe --tags --match 'mobile-v*' --always 2>/dev/null); \
+	if echo "$$RAW" | grep -qE '^mobile-v[0-9.]+-[0-9]+-g'; then \
+	  VER=$$(echo "$$RAW" | sed -E 's/^mobile-v([0-9.]+)-([0-9]+)-g([0-9a-f]+)$$/\1+\2.\3/'); \
+	elif echo "$$RAW" | grep -qE '^mobile-v[0-9.]+$$'; then \
+	  VER=$$(echo "$$RAW" | sed 's/^mobile-v//'); \
+	else VER="0.0.0+$$RAW"; fi; \
+	echo "Build version: $$VER"; \
+	cd mobile && EXPO_PUBLIC_OTA_VERSION="$$VER" npx eas update --branch production --message "$$(git log -1 --pretty='%h %s')"
 
 mobile-typecheck: ## tsc --noEmit
 	cd mobile && npx tsc --noEmit

@@ -77,6 +77,9 @@ jobs:
           json.dump(d, open(p, "w"), indent=2)
           print("set version to", "$VER")
           EOF
+          # Baked into the JS bundle so Settings shows a clean semver for the
+          # embedded build (OTAs add +N.sha on top via the OTA workflow).
+          echo "EXPO_PUBLIC_OTA_VERSION=$VER" >> "$GITHUB_ENV"
 
       - name: Expo prebuild (iOS)
         working-directory: mobile

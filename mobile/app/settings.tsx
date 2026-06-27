@@ -30,6 +30,9 @@ export default function Settings() {
 
   // Version + OTA info. expo-updates constants are safe to read (null in dev).
   const appVersion = Constants.expoConfig?.version ?? 'unknown'
+  // Semver build stamp baked at publish time (git describe): "1.0.64" at a
+  // release, "1.0.64+5.e3784da" for an OTA 5 commits past it.
+  const buildVersion = process.env.EXPO_PUBLIC_OTA_VERSION || appVersion
   const otaLabel = Updates.isEmbeddedLaunch
     ? 'Embedded (no OTA yet)'
     : `${(Updates.updateId ?? '').slice(0, 8)}${
@@ -130,6 +133,10 @@ export default function Settings() {
         <View style={styles.row}>
           <Text style={styles.label}>App version</Text>
           <Text style={styles.value}>{appVersion}</Text>
+        </View>
+        <View style={[styles.row, { marginTop: spacing.sm }]}>
+          <Text style={styles.label}>Build</Text>
+          <Text style={styles.value}>{buildVersion}</Text>
         </View>
         <View style={[styles.row, { marginTop: spacing.sm }]}>
           <Text style={styles.label}>Update</Text>
