@@ -17,6 +17,7 @@ import {
   Platform,
 } from 'react-native'
 import Slider from '@react-native-community/slider'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -394,6 +395,7 @@ function ActiveSetTray({
   onUpdate,
   onLogNext,
   onRemove,
+  onClose,
 }: {
   entryName: string
   set: SetEntry
@@ -405,6 +407,7 @@ function ActiveSetTray({
   onUpdate: (s: SetEntry) => void
   onLogNext: () => void
   onRemove: () => void
+  onClose: () => void
 }) {
   const weightDisplay = kgToDisplay(set.weight ?? 0, unit)
   const weightStep = stepFor(unit)
@@ -419,7 +422,9 @@ function ActiveSetTray({
 
   return (
     <View style={[s.tray, { bottom: keyboardHeight, paddingBottom: keyboardHeight > 0 ? 10 : safeBottom + 10 }]}>
-      <View style={s.trayHandle} />
+      <TouchableOpacity onPress={onClose} style={s.trayCollapse} hitSlop={10} accessibilityLabel="hide editor">
+        <Ionicons name="chevron-down" size={20} color={colors.gray400} />
+      </TouchableOpacity>
       <View style={s.trayHeader}>
         <Text style={s.trayName} numberOfLines={1}>{entryName}</Text>
         <Text style={s.traySetOf}>Set {setIndex + 1} of {setCount}</Text>
@@ -689,18 +694,13 @@ export default function WorkoutScreen() {
     return () => { sub1.remove(); sub2.remove() }
   }, [])
 
-  // Keep `active` valid as entries change; default to the first set when a
-  // session has exercises and nothing is selected yet.
+  // null means the tray is intentionally hidden — never auto-reopen it. Only
+  // close it if the set it points at was removed (so it can't edit a ghost).
   useEffect(() => {
-    if (entries.length === 0) {
-      if (active !== null) setActive(null)
-      return
-    }
-    const validEntry = active && active.entry < entries.length
-    const validSet = validEntry && active!.set < (entries[active!.entry]?.sets.length ?? 0)
-    if (!validEntry || !validSet) {
-      const ei = entries.findIndex((e) => e.sets.length > 0)
-      setActive(ei >= 0 ? { entry: ei, set: 0 } : null)
+    if (!active) return
+    const setCount = active.entry < entries.length ? entries[active.entry]?.sets.length ?? 0 : 0
+    if (active.entry >= entries.length || active.set >= setCount) {
+      setActive(null)
     }
   }, [entries, active])
 
@@ -839,7 +839,10 @@ export default function WorkoutScreen() {
     setShowAdd(false)
     if (!workout) return
     const newEntry = buildEntryFromHistory(exercise, hist, userUnit)
-    setEntries((prev) => [...prev, newEntry])
+    setEntries((prev) => {
+      setActive({ entry: prev.length, set: 0 }) // open the tray on the new exercise
+      return [...prev, newEntry]
+    })
   }
 
   const handleUpdateEntry = (i: number, updated: WorkoutEntry) => {
@@ -986,7 +989,11 @@ export default function WorkoutScreen() {
           onMoveDown={() => handleMoveEntry(item.originalIndex, 1)}
           unit={userUnit}
           activeSetIndex={active?.entry === item.originalIndex ? active.set : null}
-          onActivateSet={(si) => setActive({ entry: item.originalIndex, set: si })}
+          onActivateSet={(si) =>
+            setActive((prev) =>
+              prev?.entry === item.originalIndex && prev?.set === si ? null : { entry: item.originalIndex, set: si },
+            )
+          }
         />
       )
     }
@@ -1015,7 +1022,11 @@ export default function WorkoutScreen() {
               onMoveDown={() => handleMoveEntry(originalIndex, 1)}
               unit={userUnit}
               activeSetIndex={active?.entry === originalIndex ? active.set : null}
-              onActivateSet={(si) => setActive({ entry: originalIndex, set: si })}
+              onActivateSet={(si) =>
+                setActive((prev) =>
+                  prev?.entry === originalIndex && prev?.set === si ? null : { entry: originalIndex, set: si },
+                )
+              }
             />
           ))}
         </View>
@@ -1154,6 +1165,7 @@ export default function WorkoutScreen() {
           onUpdate={updateActiveSet}
           onLogNext={logSetAndNext}
           onRemove={removeActiveSet}
+          onClose={() => setActive(null)}
         />
       )}
 
@@ -1527,6 +1539,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.gray200,
     marginBottom: 8,
   },
+  trayCollapse: { alignSelf: 'center', paddingVertical: 2, paddingHorizontal: 24, marginBottom: 4 },
   trayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   trayName: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.text },
   traySetOf: { fontSize: 12, color: colors.gray500 },
