@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  body{background:#0b0d12;padding:46px 34px 60px;}
+  .row{display:flex;gap:40px;justify-content:center;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:14px;width:330px;}
+  .cap{color:#e5e7eb;text-align:center;}
+  .cap .t{font-size:19px;font-weight:800;}
+  .cap .s{font-size:13px;color:#9ca3af;margin-top:3px;line-height:1.35;}
+  /* phone */
+  .phone{width:330px;height:680px;background:#000;border-radius:46px;padding:11px;box-shadow:0 24px 60px rgba(0,0,0,.55);}
+  .scr{width:100%;height:100%;border-radius:36px;overflow:hidden;position:relative;background:#fcfcfc;}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:128px;height:26px;background:#000;border-bottom-left-radius:14px;border-bottom-right-radius:14px;z-index:5;}
+  .status{display:flex;justify-content:space-between;align-items:center;padding:11px 22px 4px;font-size:13px;font-weight:700;color:#111827;}
+  .status.dk{color:#e5e7eb;}
+  /* generic */
+  .hd{padding:8px 18px 10px;font-size:17px;font-weight:800;color:#111827;text-align:center;border-bottom:1px solid #f3f4f6;}
+  .body{padding:16px;display:flex;flex-direction:column;gap:12px;}
+  .blue{color:#3b82f6;} .muted{color:#6b7280;} .b{font-weight:700;}
+  /* chat bubbles */
+  .dark{background:#1c1f26;}
+  .you{align-self:flex-end;max-width:78%;background:#3b82f6;color:#fff;padding:11px 14px;border-radius:16px 16px 4px 16px;font-size:14px;line-height:1.4;}
+  .ai{align-self:flex-start;max-width:88%;background:#262a33;color:#e8eaed;padding:12px 14px;border-radius:16px 16px 16px 4px;font-size:13.5px;line-height:1.5;}
+  .ai .b{color:#fff;}
+  .tool{font-size:11px;color:#7c8595;margin:2px 0 2px 4px;display:flex;align-items:center;gap:6px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;}
+  .brandbar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #2a2e37;}
+  .brandbar .logo{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#d97757,#bd5d3a);}
+  .brandbar .nm{color:#e5e7eb;font-weight:700;font-size:14px;}
+  .conn{margin-left:auto;font-size:10px;color:#22c55e;border:1px solid #214a32;background:#10231a;padding:3px 8px;border-radius:999px;}
+  /* coach card */
+  .qchip{align-self:flex-start;background:#eff6ff;color:#2563eb;border:1px solid #dbeafe;border-radius:14px;padding:9px 12px;font-size:13px;font-weight:600;}
+  .coachcard{background:#fff;border:1px solid #f3f4f6;border-radius:16px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.05);font-size:13.5px;color:#1f2937;line-height:1.5;}
+  .coachcard .b{color:#111827;}
+  .pill{display:inline-block;background:#f3f4f6;color:#374151;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:600;margin:2px 4px 0 0;}
+  /* nutrition */
+  .food{background:#fff;border:1px solid #f3f4f6;border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+  .photo{height:140px;background:linear-gradient(135deg,#f59e0b,#ea580c);position:relative;}
+  .photo .bowl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:60px;}
+  .badge{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;padding:4px 9px;border-radius:999px;}
+  .fname{padding:12px 14px 4px;font-size:15px;font-weight:800;color:#111827;}
+  .fdesc{padding:0 14px;font-size:12px;color:#6b7280;font-style:italic;line-height:1.4;}
+  .macros{display:flex;justify-content:space-between;padding:12px 14px 6px;}
+  .macros .m{text-align:center;}
+  .macros .v{font-size:18px;font-weight:800;color:#111827;}
+  .macros .v.kc{color:#3b82f6;}
+  .macros .k{font-size:10px;color:#9ca3af;}
+  .micros{display:flex;flex-wrap:wrap;gap:5px;padding:6px 14px 14px;}
+  .micros .mi{font-size:10px;color:#4b5563;background:#f9fafb;border:1px solid #f3f4f6;border-radius:6px;padding:3px 7px;}
+  .cta{margin:4px 14px 14px;background:#3b82f6;color:#fff;text-align:center;font-weight:700;font-size:14px;padding:13px;border-radius:12px;}
+</style></head>
+<body>
+  <div class="row">
+
+    <!-- 1. AI assistant connector -->
+    <div class="col">
+      <div class="phone"><div class="scr dark">
+        <div class="notch"></div>
+        <div class="status dk"><span>9:41</span><span>5G</span></div>
+        <div class="brandbar"><div class="logo"></div><div class="nm">Claude</div><div class="conn">● Fitness Tracker</div></div>
+        <div class="body">
+          <div class="you">How did my bench progress this month, and what should I train today?</div>
+          <div class="tool"><span class="dot"></span> called get_exercise_progress, get_dashboard_summary</div>
+          <div class="ai">Your <span class="b">bench is up 7.5kg</span> in 3 weeks (60 to 67.5kg top set). You've hit chest twice this week but skipped legs.<br><br><span class="b">Today: lower body.</span> Start with squats 3x5, you're due. Keep RPE around 8.</div>
+          <div class="you">Log it and start the workout.</div>
+          <div class="tool"><span class="dot"></span> called start_workout, add_to_active_workout</div>
+          <div class="ai">Done. Squats added to a new session, it's live in your app.</div>
+        </div>
+      </div></div>
+      <div class="cap"><div class="t">Lives in your AI assistant</div><div class="s">Talk to your training + nutrition from Claude or ChatGPT. Read it, log it, plan it.</div></div>
+    </div>
+
+    <!-- 2. AI coach -->
+    <div class="col">
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="status"><span>9:41</span><span>5G</span></div>
+        <div class="hd">Coach</div>
+        <div class="body">
+          <div class="qchip">Am I recovering enough for legs?</div>
+          <div class="coachcard">You trained legs hard Monday (4.2k kg volume) and your sleep dipped to 6h two nights running. <span class="b">I'd keep today moderate</span>, hold RPE at 7 and skip the heavy singles.</div>
+          <div class="qchip">How's my protein this week?</div>
+          <div class="coachcard"><span class="b">Averaging 142g/day</span> vs your 160g goal, low on Tue and Thu. Two of those days were eating out (untracked), so you're closer than it looks.
+            <div style="margin-top:8px"><span class="pill">reads workouts</span><span class="pill">reads nutrition</span><span class="pill">reads sleep</span></div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><div class="t">A coach that knows your data</div><div class="s">Grounded in your real workouts, food, and Apple Health. Not generic advice.</div></div>
+    </div>
+
+    <!-- 3. Photo nutrition -->
+    <div class="col">
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="status"><span>9:41</span><span>5G</span></div>
+        <div class="hd">Add food</div>
+        <div class="body">
+          <div class="food">
+            <div class="photo"><div class="bowl">🍛</div><div class="badge">📷 AI estimate</div></div>
+            <div class="fname">Mushroom Biryani</div>
+            <div class="fdesc">Basmati rice with mushrooms and spices, ~1 serving (300g)</div>
+            <div class="macros">
+              <div class="m"><div class="v kc">225</div><div class="k">kcal</div></div>
+              <div class="m"><div class="v">5</div><div class="k">protein</div></div>
+              <div class="m"><div class="v">37.5</div><div class="k">carbs</div></div>
+              <div class="m"><div class="v">7.5</div><div class="k">fat</div></div>
+            </div>
+            <div class="micros">
+              <span class="mi">Fiber 4g</span><span class="mi">Sugar 3g</span><span class="mi">Sodium 480mg</span><span class="mi">Iron 1.2mg</span><span class="mi">Potassium 350mg</span><span class="mi">Calcium 40mg</span>
+            </div>
+          </div>
+          <div class="cta">Add to Lunch · 225 kcal</div>
+        </div>
+      </div></div>
+      <div class="cap"><div class="t">Snap a photo, get macros</div><div class="s">Photo, barcode, label, or just type it. Full macros and micros, not just calories.</div></div>
+    </div>
+
+  </div>
+</body></html>

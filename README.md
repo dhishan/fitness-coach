@@ -1,10 +1,31 @@
 # Fitness Tracker
 
-A personal fitness tracker with workouts, nutrition, body metrics, cardio, and an AI coach that reads all of it.
+**Your training, nutrition, and recovery in one place — and inside your AI assistant.**
+
+Log workouts and food in seconds, let an AI coach that actually reads your data
+do the thinking, and talk to all of it from Claude or ChatGPT. No ads. No
+selling your data. Just a fast, private tracker built by someone who uses it
+every day.
+
+![Fitness Tracker — AI connector, coach, and photo nutrition](docs/marketing/showcase.png)
 
 **Live now**
 - Web app — https://ui.fitness-tracker.blueelephants.org
 - iOS app — install via AltStore (see below)
+
+## Why this one
+
+- **It lives in your AI assistant.** Add it as a connector in Claude or ChatGPT
+  and just ask: "How's my bench trending? What should I train today?" It reads
+  your real history, logs workouts, and builds plans. No other tracker does this.
+- **A coach that knows you.** Advice grounded in your actual workouts, food, and
+  Apple Health (sleep, HRV, steps) — not generic tips.
+- **Snap a photo, get macros.** Photo, barcode, label, or just type it. Full
+  macros *and* micros (fiber, sodium, iron, ...), not just calories.
+- **Built for fast logging.** A one-thumb set tray for weight/reps/RPE, supersets,
+  "repeat last set", and a real exercise library with form GIFs.
+- **Yours, everywhere.** iPhone (HealthKit, camera barcode) + a full web app,
+  same account, same data.
 
 ---
 
