@@ -488,6 +488,7 @@ export default function BodyScreen() {
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
       ListHeaderComponent={
         <>
           {/* Header summary */}

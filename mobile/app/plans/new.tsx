@@ -151,7 +151,8 @@ export default function NewPlanScreen() {
 
   return (
     <>
-      <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+      <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets>
         {/* Name */}
         <View style={[card, s.cardPad]}>
           <Text style={s.fieldLabel}>Plan name</Text>

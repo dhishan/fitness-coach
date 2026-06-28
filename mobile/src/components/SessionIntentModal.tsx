@@ -100,7 +100,8 @@ export default function SessionIntentModal({ visible, starting, onCancel, onStar
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleCancel}>
       <View style={s.overlay}>
         <View style={s.card}>
-          <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets>
             <View style={{ gap: 4 }}>
               <Text style={s.title}>How are you feeling?</Text>
               <Text style={s.subtitle}>Tell the coach what to aim for today. All optional.</Text>
