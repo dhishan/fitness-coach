@@ -137,6 +137,7 @@ function CardioForm({ initial, isEdit, onSave, onCancel, saving }: FormProps) {
     <ScrollView
       contentContainerStyle={s.formContainer}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
     >
       <Text style={s.sectionTitle}>{isEdit ? 'Edit session' : 'Log cardio session'}</Text>
 

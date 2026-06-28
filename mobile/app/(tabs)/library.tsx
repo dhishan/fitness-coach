@@ -335,7 +335,7 @@ export default function LibraryScreen() {
             />
           )}
           contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
           ListFooterComponent={
             hasMore ? (
               <Pressable

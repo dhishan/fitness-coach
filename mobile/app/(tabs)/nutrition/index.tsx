@@ -418,7 +418,7 @@ function PreviewModal({
         style={s.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={s.sheetScroll} contentContainerStyle={s.sheet} keyboardShouldPersistTaps="handled">
+        <ScrollView style={s.sheetScroll} contentContainerStyle={s.sheet} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <View style={s.sheetHeader}>
             <Text style={s.sheetTitle}>{state.editId ? 'Edit log' : 'Confirm entry'}</Text>
             <View style={s.confidenceChip}>
@@ -747,7 +747,7 @@ function GoalsSetModal({
         style={s.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={s.sheetScroll} contentContainerStyle={s.sheet} keyboardShouldPersistTaps="handled">
+        <ScrollView style={s.sheetScroll} contentContainerStyle={s.sheet} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <Text style={s.sheetTitle}>Set daily goals</Text>
           <View style={s.macroRow}>
             {([
@@ -1186,7 +1186,7 @@ function NutritionScreenInner() {
   // ---------------------------------------------------------------------------
 
   return (
-    <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
 
       {/* Date strip */}
       <View style={[card, s.dateStrip]}>
@@ -1947,7 +1947,7 @@ function RecipePickerModal({
             </View>
           ) : (
             <>
-              <ScrollView style={{ maxHeight: 280 }} keyboardShouldPersistTaps="handled">
+              <ScrollView style={{ maxHeight: 280 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
                 {recipes.map((r) => {
                   const isPicked = r.id === picked
                   return (

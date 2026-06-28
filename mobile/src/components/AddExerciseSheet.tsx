@@ -98,7 +98,7 @@ function CreateExerciseForm({
   }
 
   return (
-    <ScrollView style={s.createScroll} contentContainerStyle={s.createContent}>
+    <ScrollView style={s.createScroll} contentContainerStyle={s.createContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
       <Text style={s.fieldLabel}>Name</Text>
       <TextInput
         style={s.textInput}
@@ -305,7 +305,7 @@ export default function AddExerciseSheet({
             data={exercises}
             keyExtractor={(item) => item.id}
             style={s.list}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
             ListEmptyComponent={
               isLoading ? (
                 <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.lg }} />

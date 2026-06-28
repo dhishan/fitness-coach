@@ -182,6 +182,7 @@ export default function RecipeEditor() {
         style={s.screen}
         contentContainerStyle={s.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {/* Header — name + yields + notes */}
         <View style={[s.card, { gap: spacing.md }]}>

@@ -108,7 +108,7 @@ export default function FavoriteEditSheet({
       <KeyboardAvoidingView style={st.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={st.card}>
           <View style={st.handle} />
-          <ScrollView contentContainerStyle={st.content} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={st.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
             <Text style={st.title}>{isEdit ? 'Edit food' : 'New food'}</Text>
 
             <Field label="Name">

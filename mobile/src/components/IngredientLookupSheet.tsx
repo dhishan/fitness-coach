@@ -202,7 +202,7 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
           {q.trim().length > 1 ? AIRow : null}
         </View>
       ) : (
-        <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {hits.map((h, i) => (
             <Pressable key={i} style={s.hitRow} onPress={() => onPick(hitToPatch(h))}>
               <View style={{ flex: 1 }}>

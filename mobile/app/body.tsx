@@ -487,6 +487,7 @@ export default function BodyScreen() {
       style={s.scroll}
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       ListHeaderComponent={
         <>
           {/* Header summary */}

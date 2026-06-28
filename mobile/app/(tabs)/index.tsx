@@ -676,7 +676,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+    <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
       {/* 1. Start / Resume */}
       <View style={[card, s.cardPad]}>
         <Pressable style={s.startWorkoutBtn} onPress={() => router.push('/workout')}>

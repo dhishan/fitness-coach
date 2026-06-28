@@ -316,6 +316,7 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
             style={es.scroll}
             contentContainerStyle={es.scrollContent}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             {/* Title + source badge */}
             <View style={es.titleRow}>

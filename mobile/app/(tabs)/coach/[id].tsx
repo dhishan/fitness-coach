@@ -377,6 +377,8 @@ export default function CoachThread() {
         data={turns}
         keyExtractor={(t) => t.id}
         renderItem={renderTurn}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         contentContainerStyle={[styles.messageList, isEmpty && styles.messageListEmpty]}
         ListEmptyComponent={
           <View style={styles.emptyState}>
