@@ -1,6 +1,10 @@
+import logging
+
 from google.cloud import firestore
 
 from app.firestore import get_db
+
+logger = logging.getLogger(__name__)
 
 
 def rank_alternatives(target: dict, pool: list[dict]) -> list[dict]:
@@ -91,10 +95,14 @@ def _expand_query(q: str) -> list[str]:
     return out
 
 
-def _score_exercise(doc: dict, terms: list[str]) -> int:
+def _score_exercise(doc: dict, terms: list[str], original_tokens: list[str] | None = None) -> int:
     """Score how well an exercise matches the expanded query terms.
 
-    Higher = better. 0 = no match (filter out).
+    Higher = better. 0 = no match (filter out). `original_tokens` are the words
+    the user actually typed (pre-alias-expansion). An exercise whose NAME
+    contains those words is almost always what they want, so it gets a big boost
+    over alias/muscle matches (so "shoulder press" ranks "Barbell Shoulder Press"
+    above "Push Press", which only matches via the press->push alias + muscle).
     """
     name = doc.get("name", "").lower()
     primary = [m.lower() for m in doc.get("primary_muscles", []) or []]
@@ -104,6 +112,20 @@ def _score_exercise(doc: dict, terms: list[str]) -> int:
     haystack_text = f"{name} {pattern} {equipment} {' '.join(primary)} {' '.join(secondary)}"
 
     score = 0
+
+    # Name-coverage of what the user actually typed dominates alias/muscle hits.
+    orig = original_tokens or []
+    if orig:
+        name_words = set(name.split())
+        in_name = [t for t in orig if t in name_words or t in name]
+        if len(in_name) == len(orig):
+            score += 300  # name contains every word typed
+            phrase = " ".join(orig)
+            if phrase in name:
+                score += 150  # ...as a contiguous phrase ("shoulder press")
+        elif in_name:
+            score += 50 * len(in_name)
+
     for term in terms:
         if not term:
             continue
@@ -144,13 +166,47 @@ def list_exercises(user_id: str, muscle: str | None = None,
     if pattern:
         docs = [d for d in docs if d["movement_pattern"] == pattern]
     if q and q.strip():
+        orig = [t for t in q.lower().split() if t]
         terms = _expand_query(q)
-        scored = [(d, _score_exercise(d, terms)) for d in docs]
-        scored = [(d, s) for d, s in scored if s > 0]
+        recent = _recent_exercise_ids(user_id)
+        scored = []
+        for d in docs:
+            s = _score_exercise(d, terms, orig)
+            if s <= 0:
+                continue
+            # Among matches, float the user's recently-used exercises up — most
+            # recent gets the biggest nudge, decaying with age. Tuned to break
+            # ties and surface familiar lifts without overriding a clear name
+            # match (a contiguous phrase hit is worth far more).
+            rank = recent.get(d["id"])
+            if rank is not None:
+                s += max(20, 130 - 10 * rank)
+            scored.append((d, s))
         scored.sort(key=lambda ds: (-ds[1], ds[0]["name"]))
         return [d for d, _ in scored]
     docs.sort(key=lambda d: d["name"])
     return docs
+
+
+def _recent_exercise_ids(user_id: str, limit: int = 15) -> dict[str, int]:
+    """Map exercise_id -> recency index (0 = most recent workout) from the
+    user's recent workouts. Best-effort; returns {} on any error."""
+    try:
+        snaps = (
+            get_db().collection("workouts")
+            .where(filter=firestore.FieldFilter("user_id", "==", user_id))
+            .order_by("date", direction=firestore.Query.DESCENDING)
+            .limit(limit)
+            .stream()
+        )
+        order: dict[str, int] = {}
+        for i, s in enumerate(snaps):
+            for eid in (s.to_dict().get("exercise_ids") or []):
+                order.setdefault(eid, i)
+        return order
+    except Exception:
+        logger.exception("recent exercise ids lookup failed")
+        return {}
 
 
 def get_exercise(exercise_id: str, user_id: str) -> dict | None:

@@ -36,3 +36,66 @@ def test_extract_exercise_history():
     assert len(h) == 2
     assert h[0]["workout_id"] == "w2" and h[0]["date"] == "2026-06-10"
     assert h[0]["sets"][0]["weight"] == 82.5
+
+
+# ---- search ranking: name phrase beats alias/muscle, recency floats up ----
+
+def test_score_prefers_name_phrase_over_alias_expansion():
+    from app.services.exercise_service import _score_exercise, _expand_query
+    terms = _expand_query("shoulder press")
+    orig = ["shoulder", "press"]
+    shoulder_press = {
+        "name": "Barbell Shoulder Press", "primary_muscles": ["shoulders"],
+        "secondary_muscles": [], "movement_pattern": "push", "equipment": "barbell",
+    }
+    push_press = {
+        "name": "Push Press", "primary_muscles": ["shoulders"],
+        "secondary_muscles": [], "movement_pattern": "push", "equipment": "barbell",
+    }
+    # "shoulder press" appears verbatim in the first name; the second only
+    # matches via the press->push alias + the shoulders muscle.
+    assert _score_exercise(shoulder_press, terms, orig) > _score_exercise(push_press, terms, orig)
+
+
+def test_recent_exercise_ids_orders_by_workout_recency():
+    from unittest.mock import MagicMock, patch
+    from app.services import exercise_service
+
+    def _snap(ids):
+        m = MagicMock()
+        m.to_dict.return_value = {"exercise_ids": ids}
+        return m
+
+    # workout 0 (most recent) has e1; workout 1 has e1 + e2
+    stream = [_snap(["e1"]), _snap(["e1", "e2"])]
+    db = MagicMock()
+    db.collection.return_value.where.return_value.order_by.return_value.limit.return_value.stream.return_value = stream
+    with patch.object(exercise_service, "get_db", return_value=db):
+        order = exercise_service._recent_exercise_ids("u1")
+    assert order["e1"] == 0  # first seen in the most-recent workout
+    assert order["e2"] == 1
+
+
+def test_list_exercises_floats_recent_matches_up():
+    from unittest.mock import patch
+    from app.services import exercise_service
+
+    a = {"id": "a", "name": "Cable Press", "primary_muscles": ["chest"],
+         "secondary_muscles": [], "movement_pattern": "push", "equipment": "cable", "user_id": "system"}
+    b = {"id": "b", "name": "Machine Press", "primary_muscles": ["chest"],
+         "secondary_muscles": [], "movement_pattern": "push", "equipment": "machine", "user_id": "system"}
+    # Both match "press" equally; b was used recently, so it should rank first.
+    with patch.object(exercise_service, "_collect_exercise_docs", return_value=[a, b], create=True), \
+         patch.object(exercise_service, "_recent_exercise_ids", return_value={"b": 0}), \
+         patch.object(exercise_service, "get_db") as mock_db:
+        mock_db.return_value.collection.return_value.where.return_value.stream.return_value = []
+        # Feed docs directly by patching the query stream to yield a, b.
+        import types
+        def _stream():
+            for d in (a, b):
+                m = types.SimpleNamespace(to_dict=lambda d=d: {k: v for k, v in d.items() if k != "id"}, id=d["id"])
+                yield m
+        mock_db.return_value.collection.return_value.where.return_value.stream.side_effect = lambda: _stream()
+        result = exercise_service.list_exercises("u1", q="press")
+    ids = [d["id"] for d in result]
+    assert ids and ids[0] == "b"
