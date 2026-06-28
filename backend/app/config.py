@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # disables (used in tests).
     mcp_rate_limit_per_min: int = 90
     mcp_provision_limit_per_hour: int = 20
+    # Backstop on NEW funny-workout-name generations per user per hour (the LLM
+    # call). Idempotency makes re-fires free; this caps a looping client. <=0 off.
+    workout_title_limit_per_hour: int = 40
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 

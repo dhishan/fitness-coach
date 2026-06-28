@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.auth.dependencies import CurrentUser, get_current_user
 from app.schemas import WorkoutCreate, WorkoutUpdate
-from app.services import workout_ai, workout_service
+from app.services import workout_ai, workout_service, workout_title_service
 
 router = APIRouter(prefix="/api/v1/workouts", tags=["workouts"])
 
@@ -63,6 +63,23 @@ async def suggest_next(workout_id: str, user: CurrentUser = Depends(get_current_
     if result is None:
         raise HTTPException(status_code=503, detail="Could not generate a suggestion")
     return result
+
+
+@router.post("/{workout_id}/title")
+async def generate_workout_title(
+    workout_id: str, user: CurrentUser = Depends(get_current_user)
+):
+    """Generate (once) a short funny name for a finished workout. Idempotent.
+
+    The client fires this after finishing, without awaiting, so the save is never
+    delayed; the title shows up a moment later.
+    """
+    doc = await asyncio.to_thread(
+        workout_title_service.generate_and_save_title, workout_id, user.user_id
+    )
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Workout not found")
+    return {"id": workout_id, "title": doc.get("title")}
 
 
 @router.post("/{workout_id}/finish")

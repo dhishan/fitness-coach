@@ -51,6 +51,7 @@ export interface Workout {
   entries: WorkoutEntry[]
   exercise_ids: string[]
   total_volume: number
+  title?: string | null
 }
 
 export interface WorkoutListResponse { items: Workout[]; total: number }
