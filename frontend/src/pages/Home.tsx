@@ -315,8 +315,9 @@ export default function Home() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-800">{formatDate(lastWorkout.date)}</p>
+                <p className="text-sm font-medium text-gray-800">{lastWorkout.title || formatDate(lastWorkout.date)}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
+                  {lastWorkout.title ? `${formatDate(lastWorkout.date)} · ` : ''}
                   {lastWorkout.entries.length} exercise{lastWorkout.entries.length === 1 ? '' : 's'}
                 </p>
               </div>

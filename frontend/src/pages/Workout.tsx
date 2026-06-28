@@ -705,6 +705,18 @@ export default function Workout() {
         },
       )
       void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
+      // Name the session asynchronously — never blocks the finish. Fired ONCE
+      // here (not on render/refresh); the endpoint is idempotent + rate-limited
+      // server-side, so it can't burn tokens. Refresh lists once it lands.
+      void workoutsApi
+        .generateTitle(result.id)
+        .then((res) => {
+          if (res?.title) {
+            void qc.invalidateQueries({ queryKey: ['workouts'] })
+            void qc.invalidateQueries({ queryKey: ['workouts-month'] })
+          }
+        })
+        .catch(() => {})
     } catch {
       toast.error('Could not finish workout')
     } finally {

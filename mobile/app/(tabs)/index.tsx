@@ -709,8 +709,9 @@ export default function HomeScreen() {
           <Pressable onPress={() => router.push(`/history/${lastWorkout.id}`)}>
             <View style={[s.row, { marginTop: spacing.sm }]}>
               <View>
-                <Text style={s.planName}>{formatDate(lastWorkout.date)}</Text>
+                <Text style={s.planName}>{lastWorkout.title || formatDate(lastWorkout.date)}</Text>
                 <Text style={s.planMeta}>
+                  {lastWorkout.title ? `${formatDate(lastWorkout.date)} · ` : ''}
                   {lastWorkout.entries.length} exercise{lastWorkout.entries.length === 1 ? '' : 's'}
                 </Text>
               </View>

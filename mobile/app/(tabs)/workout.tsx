@@ -950,14 +950,23 @@ export default function WorkoutScreen() {
       // Refresh every cached workouts list: home "Last workout", workout-tab
       // recent list, history month view, history infinite list. Single
       // predicate avoids forgetting one.
-      void qc.invalidateQueries({
-        predicate: (q) =>
-          Array.isArray(q.queryKey) &&
-          typeof q.queryKey[0] === 'string' &&
-          (q.queryKey[0] === 'workouts' ||
-            q.queryKey[0] === 'workouts-list' ||
-            q.queryKey[0] === 'workouts-month'),
-      })
+      const refreshWorkoutLists = () =>
+        qc.invalidateQueries({
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            typeof q.queryKey[0] === 'string' &&
+            (q.queryKey[0] === 'workouts' ||
+              q.queryKey[0] === 'workouts-list' ||
+              q.queryKey[0] === 'workouts-month'),
+        })
+      void refreshWorkoutLists()
+      // Name the session asynchronously — never blocks the finish. Fired ONCE
+      // here (not on render/refresh); the endpoint is idempotent + rate-limited
+      // server-side, so this can't burn tokens. Refresh lists once it lands.
+      void workoutsApi
+        .generateTitle(result.id)
+        .then((res) => { if (res?.title) void refreshWorkoutLists() })
+        .catch(() => {})
     } catch {
       Alert.alert('Error', 'Could not finish workout')
     } finally {
@@ -1306,7 +1315,7 @@ function EmptyWorkoutScreen({
               onPress={() => router.push(`/history/${w.id}`)}
             >
               <View style={{ flex: 1 }}>
-                <Text style={s.recentDate}>{w.date}</Text>
+                <Text style={s.recentDate}>{w.title || w.date}</Text>
                 <Text style={s.recentMeta}>
                   {(() => {
                     const exs = w.entries?.length ?? 0
@@ -1315,7 +1324,8 @@ function EmptyWorkoutScreen({
                       (sum, e) => sum + (e.sets?.reduce((s, x) => s + (x.reps ?? 0), 0) ?? 0),
                       0,
                     ) ?? 0
-                    const parts = [`${exs} exercise${exs === 1 ? '' : 's'}`]
+                    const parts = w.title ? [w.date] : []
+                    parts.push(`${exs} exercise${exs === 1 ? '' : 's'}`)
                     if (sets) parts.push(`${sets} sets`)
                     if (w.total_volume) parts.push(`${Math.round(kgToDisplay(w.total_volume, unit))} ${unit}`)
                     else if (reps) parts.push(`${reps} reps`)

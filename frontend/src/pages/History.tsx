@@ -134,8 +134,10 @@ function WorkoutRow({ workout }: { workout: Workout }) {
       onClick={() => navigate(`/history/${workout.id}`)}
     >
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-gray-900">{formatDate(workout.date)}</div>
-        <div className="text-xs text-gray-500 truncate mt-0.5">{exerciseNamesLine(workout)}</div>
+        <div className="text-sm font-semibold text-gray-900">{workout.title || formatDate(workout.date)}</div>
+        <div className="text-xs text-gray-500 truncate mt-0.5">
+          {workout.title ? `${formatDate(workout.date)} · ` : ''}{exerciseNamesLine(workout)}
+        </div>
       </div>
       <div className="ml-3 text-sm font-medium text-gray-700 shrink-0">{formatVolume(workout.total_volume)}</div>
     </button>

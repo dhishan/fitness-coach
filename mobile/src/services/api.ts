@@ -106,6 +106,9 @@ export const workoutsApi = {
     api.put<Workout>(`/workouts/${id}`, body).then((r) => r.data),
   finish: (id: string) =>
     api.post<FinishResponse>(`/workouts/${id}/finish`).then((r) => r.data),
+  // Idempotent; fire-and-forget after finishing. Returns the funny name.
+  generateTitle: (id: string) =>
+    api.post<{ id: string; title: string | null }>(`/workouts/${id}/title`).then((r) => r.data),
   remove: (id: string) => api.delete(`/workouts/${id}`),
   suggestNext: (id: string) =>
     api.post<NextExerciseSuggestion>(`/workouts/${id}/suggest-next`).then((r) => r.data),

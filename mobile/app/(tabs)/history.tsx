@@ -180,7 +180,7 @@ function WorkoutRow({ workout }: { workout: Workout }) {
       onPress={() => router.push(`/history/${workout.id}`)}
     >
       <View style={styles.workoutRowMain}>
-        <Text style={styles.workoutDate}>{formatDate(workout.date)}</Text>
+        <Text style={styles.workoutDate}>{workout.title || formatDate(workout.date)}</Text>
         <Text style={styles.workoutExercises} numberOfLines={1}>
           {exerciseNamesLine(workout)}
         </Text>
