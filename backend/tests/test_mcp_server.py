@@ -14,13 +14,13 @@ from app.auth.mcp_auth import _current_user_id
 
 
 def test_tool_count():
-    """Exactly 18 tools must be registered (10 workout + 8 nutrition/body/cardio)."""
+    """Exactly 20 tools must be registered (12 workout + 8 nutrition/body/cardio)."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
-    assert len(tools) == 18
+    assert len(tools) == 20
 
 
 def test_tool_names():
-    """All 18 expected tool names are present."""
+    """All 20 expected tool names are present."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
     names = {t.name for t in tools}
     expected = {
@@ -32,8 +32,10 @@ def test_tool_names():
         "get_alternatives",
         "list_exercises",
         "log_workout",
+        "start_workout",
         "add_to_active_workout",
         "create_plan",
+        "finish_active_workout",
         "log_food",
         "get_nutrition_logs",
         "get_nutrition_summary",
@@ -153,6 +155,45 @@ def test_add_to_active_workout_errors_without_active():
         with patch.object(mcp_server.workout_service, "get_active_workout", return_value=None):
             result = mcp_server.add_to_active_workout(exercise_id="e1", sets=[])
         assert "error" in result
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_start_workout_creates_when_none_active():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=None), \
+             patch.object(mcp_server.workout_service, "create_workout", return_value={"id": "w9", "entries": []}) as mock_create:
+            result = mcp_server.start_workout(date="2026-06-28")
+        uid, payload = mock_create.call_args[0]
+        assert uid == "u1" and payload["date"] == "2026-06-28" and payload["entries"] == []
+        assert result["id"] == "w9"
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_start_workout_returns_existing_active():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value={"id": "w1", "entries": []}), \
+             patch.object(mcp_server.workout_service, "create_workout") as mock_create:
+            result = mcp_server.start_workout()
+        mock_create.assert_not_called()  # don't start a second session
+        assert result["id"] == "w1"
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_finish_active_workout_finishes_or_errors():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value={"id": "w1"}), \
+             patch.object(mcp_server.workout_service, "finish_workout", return_value={"id": "w1", "total_volume": 1000}) as mock_fin:
+            result = mcp_server.finish_active_workout()
+        mock_fin.assert_called_once_with("w1", "u1")
+        assert result["total_volume"] == 1000
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=None):
+            assert "error" in mcp_server.finish_active_workout()
     finally:
         _current_user_id.reset(token)
 

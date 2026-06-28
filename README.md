@@ -113,8 +113,10 @@ id or secret to paste. The client self-registers and sends you to Google to log
 in. Each person only ever sees their own data.
 
 **Tools available**
-- `log_workout` - record a finished workout (write)
+- `log_workout` - record an already-finished workout in one shot (write)
+- `start_workout` - start a new in-progress workout (write)
 - `add_to_active_workout` - add an exercise + sets to the in-progress workout (write)
+- `finish_active_workout` - finish the in-progress workout (write)
 - `create_plan` - create a reusable workout plan/template (write)
 - `log_food` - log a food you ate with macros + optional micros (write)
 - `get_dashboard_summary` - this week's streak, volume, sessions, muscle split

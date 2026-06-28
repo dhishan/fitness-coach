@@ -201,6 +201,28 @@ def _serialise(d: dict) -> dict[str, Any]:
 
 
 @mcp.tool()
+def start_workout(date: Optional[str] = None) -> dict[str, Any]:
+    """Start a new IN-PROGRESS (empty) workout so exercises can be added to it.
+
+    Use this before add_to_active_workout when nothing is running. If a workout
+    is already active, returns that one instead of starting a second. To log an
+    already-finished session in one shot, use log_workout.
+
+    date: YYYY-MM-DD. Defaults to today.
+
+    Returns the active workout.
+    """
+    from datetime import date as _date
+
+    uid = _uid()
+    existing = workout_service.get_active_workout(uid)
+    if existing is not None:
+        return _serialise(existing)
+    workout = workout_service.create_workout(uid, {"date": date or _date.today().isoformat(), "entries": []})
+    return _serialise(workout)
+
+
+@mcp.tool()
 def add_to_active_workout(exercise_id: str, sets: list[dict]) -> dict[str, Any]:
     """Add an exercise (with its sets) to the user's IN-PROGRESS workout.
 
@@ -273,6 +295,20 @@ def create_plan(name: str, entries: list[dict]) -> dict[str, Any]:
         return {"error": "No valid exercises. Provide entries with an exercise_id each."}
     created = template_service.create_template(uid, {"name": name, "entries": built})
     return _serialise(created)
+
+
+@mcp.tool()
+def finish_active_workout() -> dict[str, Any]:
+    """Finish the user's in-progress workout, returning total volume and any PRs.
+
+    Returns {"error": ...} if no workout is active.
+    """
+    uid = _uid()
+    active = workout_service.get_active_workout(uid)
+    if active is None:
+        return {"error": "No active workout to finish."}
+    finished = workout_service.finish_workout(active["id"], uid)
+    return _serialise(finished) if finished else {"error": "Could not finish the workout."}
 
 
 # ---------------------------------------------------------------------------
