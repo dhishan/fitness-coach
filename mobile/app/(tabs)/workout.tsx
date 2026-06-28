@@ -33,6 +33,7 @@ import { track } from '../../src/lib/observability'
 import { card, colors, radius, spacing } from '../../src/theme'
 import { startFromPlan } from '../../src/lib/startFromPlan'
 import { displayToKg, formatWeight, kgToDisplay, stepFor, useWeightUnit } from '../../src/store/units'
+import { useDecimalText } from '../../src/lib/useDecimalText'
 
 // ---------------------------------------------------------------------------
 // Autosave hook
@@ -419,6 +420,8 @@ function ActiveSetTray({
   const stepReps = (delta: number) => {
     onUpdate({ ...set, reps: Math.max(0, (set.reps ?? 0) + delta) })
   }
+  // Weight needs decimals (2.5, 102.5); hold raw text so the dot survives typing.
+  const weightField = useDecimalText(weightDisplay, (v) => onUpdate({ ...set, weight: displayToKg(v, unit) }))
 
   return (
     <View style={[s.tray, { bottom: keyboardHeight, paddingBottom: keyboardHeight > 0 ? 10 : safeBottom + 10 }]}>
@@ -443,8 +446,8 @@ function ActiveSetTray({
             </TouchableOpacity>
             <TextInput
               style={s.trayInput}
-              value={formatWeight(weightDisplay)}
-              onChangeText={(t) => onUpdate({ ...set, weight: displayToKg(parseFloat(t) || 0, unit) })}
+              value={weightField.text}
+              onChangeText={weightField.onChangeText}
               keyboardType="decimal-pad"
               selectTextOnFocus
               accessibilityLabel="weight"

@@ -18,6 +18,7 @@ import type { FoodLogCreate, Macros, MealType, Micros } from '@fitness/shared-ty
 import { nutritionApi } from '../services/api'
 import { colors, radius, spacing } from '../theme'
 import { toLocalISODate } from '../lib/dates'
+import { useDecimalText } from '../lib/useDecimalText'
 
 // ---- types ----
 
@@ -230,10 +231,9 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
     applyServings(next)
   }
 
-  const handleServingsInput = (val: string) => {
-    const n = parseFloat(val)
-    if (Number.isFinite(n) && n > 0) applyServings(round1(n))
-  }
+  const servingsField = useDecimalText(servings, (v) => {
+    if (v > 0) applyServings(round1(v))
+  })
 
   const handleResetMacros = () => {
     if (!hit) return
@@ -483,8 +483,8 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
               </Pressable>
               <TextInput
                 style={es.stepInput}
-                value={String(servings)}
-                onChangeText={handleServingsInput}
+                value={servingsField.text}
+                onChangeText={servingsField.onChangeText}
                 keyboardType="decimal-pad"
                 selectTextOnFocus
               />

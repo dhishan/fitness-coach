@@ -36,6 +36,7 @@ import { nutritionApi, uploadsApi } from '../../../src/services/api'
 import { track } from '../../../src/lib/observability'
 import { colors, spacing, radius, card } from '../../../src/theme'
 import { toLocalISODate } from '../../../src/lib/dates'
+import { useDecimalText } from '../../../src/lib/useDecimalText'
 import BarcodeScanner from '../../../components/BarcodeScanner'
 import FoodEditSheet from '../../../src/components/FoodEditSheet'
 import PhotoNoteModal from '../../../src/components/PhotoNoteModal'
@@ -313,6 +314,7 @@ function PreviewModal({
     setFat(String(Math.round(baseMacros.fat_g * next)))
     setMacroOverridden(false)
   }
+  const servingsField = useDecimalText(servings, (v) => { if (v > 0) applyServings(v) })
 
   // Time picker (defaults to now; only sent if user changes it)
   const [initialTime] = useState(() => new Date())
@@ -503,8 +505,8 @@ function PreviewModal({
                 </Pressable>
                 <TextInput
                   style={s.stepInput}
-                  value={String(servings)}
-                  onChangeText={(v) => { const n = parseFloat(v); if (Number.isFinite(n) && n > 0) applyServings(n) }}
+                  value={servingsField.text}
+                  onChangeText={servingsField.onChangeText}
                   keyboardType="decimal-pad"
                   selectTextOnFocus
                 />
