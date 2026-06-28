@@ -113,7 +113,8 @@ id or secret to paste. The client self-registers and sends you to Google to log
 in. Each person only ever sees their own data.
 
 **Tools available**
-- `log_workout` - record a finished workout (the only write tool)
+- `log_workout` - record a finished workout (write)
+- `log_food` - log a food you ate with macros + optional micros (write)
 - `get_dashboard_summary` - this week's streak, volume, sessions, muscle split
 - `get_workouts` - list past workouts in a date range
 - `get_active_workout` - the in-progress session, if one is running
@@ -126,7 +127,7 @@ in. Each person only ever sees their own data.
 - `get_body_metrics` - weight and measurements over time
 - `get_cardio_logs` - cardio sessions
 
-You can add workouts and read everything. Nutrition, body metrics, and cardio
+You can log workouts and food and read everything. Body metrics and cardio
 are read-only over MCP.
 
 ### Claude (claude.ai)

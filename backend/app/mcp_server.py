@@ -201,6 +201,63 @@ def log_workout(date: str, entries: list[dict]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Nutrition tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def log_food(
+    name: str,
+    calories: float,
+    protein_g: float = 0,
+    carbs_g: float = 0,
+    fat_g: float = 0,
+    date: Optional[str] = None,
+    serving: str = "",
+    meal_type: Optional[str] = None,
+    micros: Optional[dict] = None,
+) -> dict[str, Any]:
+    """Log a food the user ate, with macros (and optional micros).
+
+    Call once per distinct food. For "2 eggs and a banana", make two calls.
+
+    name: what was eaten, e.g. "Scrambled eggs (2)".
+    calories/protein_g/carbs_g/fat_g: totals for the whole entry as eaten.
+    date: YYYY-MM-DD. Defaults to today.
+    serving: optional human label, e.g. "1 bowl (~250g)".
+    meal_type: breakfast | lunch | dinner | snack (optional).
+    micros: optional per-entry dict; any of fiber_g, sugar_g, sodium_mg,
+      potassium_mg, calcium_mg, iron_mg, vitamin_c_mg, vitamin_d_mcg,
+      saturated_fat_g, cholesterol_mg. Omit fields you cannot estimate.
+
+    Returns the created food log document.
+    """
+    from datetime import date as _date
+
+    uid = _uid()
+    payload: dict[str, Any] = {
+        "date": date or _date.today().isoformat(),
+        "name": name,
+        "serving": serving,
+        "macros": {
+            "calories": calories,
+            "protein_g": protein_g,
+            "carbs_g": carbs_g,
+            "fat_g": fat_g,
+        },
+        "source": "mcp",
+    }
+    mt = (meal_type or "").strip().lower()
+    if mt in ("breakfast", "lunch", "dinner", "snack"):
+        payload["meal_type"] = mt
+    if micros:
+        payload["micros"] = micros
+        payload["micros_source"] = "ai"
+    result = food_service.create_log(uid, payload)
+    return {k: (str(v) if hasattr(v, "isoformat") else v) for k, v in result.items()}
+
+
+# ---------------------------------------------------------------------------
 # Nutrition tools (read-only)
 # ---------------------------------------------------------------------------
 
@@ -210,7 +267,7 @@ def get_nutrition_logs(date: Optional[str] = None) -> dict[str, Any]:
     """Return today's (or a given date's) food logs with macro/micro totals.
 
     date: YYYY-MM-DD. Defaults to today.
-    Returns {logs: [...], totals: {calories, protein_g, carbs_g, fat_g}, by_meal: {...}}.
+    Returns {items: [...], totals: {...macros}, micros_totals: {...}, incomplete}.
     """
     from datetime import date as _date
     uid = _uid()

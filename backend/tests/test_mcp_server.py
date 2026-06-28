@@ -14,13 +14,13 @@ from app.auth.mcp_auth import _current_user_id
 
 
 def test_tool_count():
-    """Exactly 15 tools must be registered (8 workout + 7 nutrition/body/cardio)."""
+    """Exactly 16 tools must be registered (8 workout + 8 nutrition/body/cardio)."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
-    assert len(tools) == 15
+    assert len(tools) == 16
 
 
 def test_tool_names():
-    """All 15 expected tool names are present."""
+    """All 16 expected tool names are present."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
     names = {t.name for t in tools}
     expected = {
@@ -32,6 +32,7 @@ def test_tool_names():
         "get_alternatives",
         "list_exercises",
         "log_workout",
+        "log_food",
         "get_nutrition_logs",
         "get_nutrition_summary",
         "get_nutrition_goals",
@@ -152,6 +153,49 @@ def test_get_nutrition_logs_passes_user_and_date():
         assert result == fake
     finally:
         _current_user_id.reset(token)
+
+
+def test_log_food_builds_payload_and_serialises():
+    from datetime import datetime, timezone
+
+    created = {
+        "id": "f1", "name": "Eggs (2)", "macros": {"calories": 140, "protein_g": 12, "carbs_g": 1, "fat_g": 10},
+        "meal_type": "breakfast", "source": "mcp", "created_at": datetime(2026, 6, 15, 8, tzinfo=timezone.utc),
+    }
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log", return_value=created) as m:
+            result = mcp_server.log_food(
+                name="Eggs (2)", calories=140, protein_g=12, carbs_g=1, fat_g=10,
+                date="2026-06-15", meal_type="Breakfast",
+                micros={"sodium_mg": 280, "cholesterol_mg": 370},
+            )
+        uid, payload = m.call_args[0]
+        assert uid == "u1"
+        assert payload["date"] == "2026-06-15"
+        assert payload["macros"] == {"calories": 140, "protein_g": 12, "carbs_g": 1, "fat_g": 10}
+        assert payload["meal_type"] == "breakfast"  # normalised to lowercase
+        assert payload["source"] == "mcp"
+        assert payload["micros"]["sodium_mg"] == 280
+        assert payload["micros_source"] == "ai"
+        # datetime serialised for JSON transport
+        assert result["created_at"] == str(created["created_at"])
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_food_ignores_invalid_meal_type_and_requires_auth():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log", return_value={"id": "f2"}) as m:
+            mcp_server.log_food(name="Apple", calories=95, meal_type="brunch")
+        _uid, payload = m.call_args[0]
+        assert "meal_type" not in payload  # "brunch" isn't a valid meal
+        assert "micros" not in payload
+    finally:
+        _current_user_id.reset(token)
+    with pytest.raises(RuntimeError, match="unauthenticated"):
+        mcp_server.log_food(name="x", calories=1)
 
 
 def test_get_nutrition_logs_defaults_to_today():
