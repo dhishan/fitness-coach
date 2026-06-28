@@ -170,8 +170,42 @@ const mcpApiHandler = {
 }
 
 // --------------------------------------------------------------------------
+// Edge rate limiting (per client IP) — runs before the OAuth provider so
+// floods and registration abuse are capped at the edge, in front of Cloud Run.
+//
+// Fixed-window counters in KV. KV is eventually consistent so counts can lag
+// slightly under burst, but it reliably caps the order of magnitude. Keyed by
+// CF-Connecting-IP (the real client IP, set by Cloudflare). Tight on /register
+// (DCR) and the login endpoints; looser on /mcp.
+// --------------------------------------------------------------------------
 
-export default new OAuthProvider({
+interface RateRule { limit: number; windowSec: number }
+
+function ruleForPath(pathname: string): RateRule {
+  if (pathname === '/register') return { limit: 5, windowSec: 3600 } // DCR: ~once per client
+  if (pathname === '/authorize' || pathname === '/token' || pathname === '/callback')
+    return { limit: 30, windowSec: 60 }
+  return { limit: 120, windowSec: 60 } // /mcp and everything else
+}
+
+async function rateLimited(env: Env, ip: string, pathname: string): Promise<RateRule | null> {
+  const rule = ruleForPath(pathname)
+  const bucket = pathname === '/register' ? 'register'
+    : pathname === '/authorize' || pathname === '/token' || pathname === '/callback' ? 'login'
+    : 'api'
+  const win = Math.floor(Date.now() / 1000 / rule.windowSec)
+  const key = `rl:${bucket}:${ip}:${win}`
+  try {
+    const cur = parseInt((await env.OAUTH_KV.get(key)) || '0', 10)
+    if (cur >= rule.limit) return rule
+    await env.OAUTH_KV.put(key, String(cur + 1), { expirationTtl: rule.windowSec + 10 })
+  } catch {
+    // Never let a KV hiccup block legitimate traffic.
+  }
+  return null
+}
+
+const provider = new OAuthProvider({
   apiRoute: '/mcp',
   apiHandler: mcpApiHandler as never,
   defaultHandler: googleHandler as never,
@@ -180,3 +214,20 @@ export default new OAuthProvider({
   clientRegistrationEndpoint: '/register', // RFC 7591 DCR
   scopesSupported: ['openid', 'email', 'profile'],
 })
+
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown'
+    const { pathname } = new URL(request.url)
+    const over = await rateLimited(env, ip, pathname)
+    if (over) {
+      return new Response('Too Many Requests', {
+        status: 429,
+        headers: { 'retry-after': String(over.windowSec), 'content-type': 'text/plain' },
+      })
+    }
+    return (provider as unknown as {
+      fetch: (req: Request, env: Env, ctx: ExecutionContext) => Promise<Response>
+    }).fetch(request, env, ctx)
+  },
+}

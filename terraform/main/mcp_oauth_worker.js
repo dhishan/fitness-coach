@@ -1052,9 +1052,9 @@ var OAuthHelpersImpl = class {
    * @param env - Cloudflare Worker environment variables
    * @param provider - Reference to the parent provider instance
    */
-  constructor(env, provider) {
+  constructor(env, provider2) {
     this.env = env;
-    this.provider = provider;
+    this.provider = provider2;
   }
   /**
    * Parses an OAuth authorization request from the HTTP request
@@ -1491,7 +1491,26 @@ var mcpApiHandler = {
     });
   }
 };
-var index_default = new oauth_provider_default({
+function ruleForPath(pathname) {
+  if (pathname === "/register") return { limit: 5, windowSec: 3600 };
+  if (pathname === "/authorize" || pathname === "/token" || pathname === "/callback")
+    return { limit: 30, windowSec: 60 };
+  return { limit: 120, windowSec: 60 };
+}
+async function rateLimited(env, ip, pathname) {
+  const rule = ruleForPath(pathname);
+  const bucket = pathname === "/register" ? "register" : pathname === "/authorize" || pathname === "/token" || pathname === "/callback" ? "login" : "api";
+  const win = Math.floor(Date.now() / 1e3 / rule.windowSec);
+  const key = `rl:${bucket}:${ip}:${win}`;
+  try {
+    const cur = parseInt(await env.OAUTH_KV.get(key) || "0", 10);
+    if (cur >= rule.limit) return rule;
+    await env.OAUTH_KV.put(key, String(cur + 1), { expirationTtl: rule.windowSec + 10 });
+  } catch {
+  }
+  return null;
+}
+var provider = new oauth_provider_default({
   apiRoute: "/mcp",
   apiHandler: mcpApiHandler,
   defaultHandler: googleHandler,
@@ -1501,6 +1520,20 @@ var index_default = new oauth_provider_default({
   // RFC 7591 DCR
   scopesSupported: ["openid", "email", "profile"]
 });
+var index_default = {
+  async fetch(request, env, ctx) {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const { pathname } = new URL(request.url);
+    const over = await rateLimited(env, ip, pathname);
+    if (over) {
+      return new Response("Too Many Requests", {
+        status: 429,
+        headers: { "retry-after": String(over.windowSec), "content-type": "text/plain" }
+      });
+    }
+    return provider.fetch(request, env, ctx);
+  }
+};
 export {
   index_default as default
 };
