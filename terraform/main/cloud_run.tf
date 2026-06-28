@@ -12,14 +12,19 @@ resource "google_cloud_run_v2_service" "backend" {
       "deployed-at" = timestamp()
     }
     scaling {
-      min_instance_count = 1
+      # Scale to zero when idle. The coach streams over an open SSE request (CPU
+      # stays allocated for the life of that request) and the workout-title job
+      # is client-triggered, so nothing relies on a post-response background task
+      # that a torn-down container would kill. Cold start adds ~1-3s on the first
+      # request after idle. Trades that latency for ~$0 idle compute.
+      min_instance_count = 0
       max_instance_count = 2
     }
     containers {
       image = local.image
       resources {
         # CPU throttled when no request is active; SSE streams keep CPU allocated
-        # during chat generation. ~$3-8/mo idle vs ~$47/mo always-allocated.
+        # during chat generation.
         cpu_idle = true
         limits = {
           cpu    = "1"
