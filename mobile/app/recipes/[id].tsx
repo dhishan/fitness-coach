@@ -323,6 +323,15 @@ function IngredientCard({
 }) {
   const [showMicros, setShowMicros] = useState(false)
   const [lookupOpen, setLookupOpen] = useState(false)
+  // Hold the quantity as raw text so partial decimals like "0." survive typing
+  // (binding value to the parsed number would strip the dot before "0.5").
+  const [qtyText, setQtyText] = useState(String(ingredient.servings_used))
+  useEffect(() => {
+    if ((parseFloat(qtyText) || 0) !== ingredient.servings_used) {
+      setQtyText(String(ingredient.servings_used))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ingredient.servings_used])
   return (
     <View style={s.ingCard}>
       <View style={s.ingHeader}>
@@ -371,11 +380,16 @@ function IngredientCard({
           <Field label="How many?">
             <TextInput
               style={s.input}
-              value={String(ingredient.servings_used)}
-              onChangeText={(t) =>
-                onChange({ servings_used: parseFloat(t) || 0 })
-              }
+              value={qtyText}
+              onChangeText={(t) => {
+                // digits + a single decimal point only
+                const cleaned = t.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+                setQtyText(cleaned)
+                onChange({ servings_used: parseFloat(cleaned) || 0 })
+              }}
               keyboardType="decimal-pad"
+              placeholder="1"
+              placeholderTextColor={colors.gray400}
             />
           </Field>
         </View>
@@ -480,13 +494,24 @@ function NumberField({
   value: number
   onChange: (v: number) => void
 }) {
+  // Local text so decimals like "12.5" can be typed (a number-derived value
+  // strips the dot before the fractional digit).
+  const [text, setText] = useState(value === 0 ? '' : String(value))
+  useEffect(() => {
+    if ((parseFloat(text) || 0) !== value) setText(value === 0 ? '' : String(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
   return (
     <View style={{ flex: 1, minWidth: 78, gap: 2 }}>
       <Text style={s.fieldLabelSm}>{label}</Text>
       <TextInput
         style={s.numInput}
-        value={value === 0 ? '' : String(value)}
-        onChangeText={(t) => onChange(parseFloat(t) || 0)}
+        value={text}
+        onChangeText={(t) => {
+          const cleaned = t.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+          setText(cleaned)
+          onChange(parseFloat(cleaned) || 0)
+        }}
         keyboardType="decimal-pad"
         placeholder="0"
         placeholderTextColor={colors.gray400}

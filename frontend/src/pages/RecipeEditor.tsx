@@ -285,6 +285,15 @@ function IngredientCard({
 }) {
   const [showMicros, setShowMicros] = useState(false)
   const [lookupOpen, setLookupOpen] = useState(false)
+  // Raw text so partial decimals like "0." survive typing (binding to the
+  // parsed number strips the dot before you can reach "0.5").
+  const [qtyText, setQtyText] = useState(String(ingredient.servings_used))
+  useEffect(() => {
+    if ((parseFloat(qtyText) || 0) !== ingredient.servings_used) {
+      setQtyText(String(ingredient.servings_used))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ingredient.servings_used])
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
       <div className="flex justify-between items-center">
@@ -337,8 +346,12 @@ function IngredientCard({
         <div className="w-28">
           <Input
             label="How many?"
-            value={String(ingredient.servings_used)}
-            onChange={(v) => onChange({ servings_used: parseFloat(v) || 0 })}
+            value={qtyText}
+            onChange={(v) => {
+              const cleaned = v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+              setQtyText(cleaned)
+              onChange({ servings_used: parseFloat(cleaned) || 0 })
+            }}
             inputMode="decimal"
           />
         </div>
@@ -416,14 +429,25 @@ function NumInput({
   value: number
   onChange: (v: number) => void
 }) {
+  // Local text so decimals like "12.5" can be typed (a number-derived value
+  // strips the dot before the fractional digit).
+  const [text, setText] = useState(value === 0 ? '' : String(value))
+  useEffect(() => {
+    if ((parseFloat(text) || 0) !== value) setText(value === 0 ? '' : String(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
   return (
     <div>
       <label className="text-[10px] text-gray-500">{label}</label>
       <input
         type="text"
         inputMode="decimal"
-        value={value === 0 ? '' : String(value)}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        value={text}
+        onChange={(e) => {
+          const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+          setText(cleaned)
+          onChange(parseFloat(cleaned) || 0)
+        }}
         placeholder="0"
         className="mt-1 w-full border border-gray-200 rounded-md px-2 py-1 text-sm text-center outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
       />
