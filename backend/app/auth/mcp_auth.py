@@ -98,12 +98,16 @@ def _resolve_or_provision(claims: dict) -> str:
     email = (claims.get("email") or "").lower()
     if not email:
         raise HTTPException(status_code=401, detail="Google token missing email claim")
+    # Require a verified email BEFORE any email->user mapping, so an unverified
+    # claim can't be used to resolve (and thus impersonate) an existing account.
+    if not claims.get("email_verified"):
+        raise HTTPException(status_code=401, detail="Google email not verified")
     uid = _lookup_uid_by_email(email)
     if uid is not None:
         return uid
 
     settings = get_settings()
-    if settings.public_signup_enabled and claims.get("email_verified") and claims.get("sub"):
+    if settings.public_signup_enabled and claims.get("sub"):
         return _provision_user(str(claims["sub"]), email)
 
     raise HTTPException(

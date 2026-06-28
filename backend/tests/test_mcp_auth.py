@@ -82,7 +82,7 @@ class TestResolveUserIdFromRequest:
         assert uid == "g-sub"
         prov.assert_called_once_with("g-sub", "user@example.com")
 
-    def test_public_signup_skips_unverified_email(self):
+    def test_unverified_email_rejected_before_lookup(self):
         from fastapi import HTTPException
         from app.auth.mcp_auth import resolve_user_id_from_request
 
@@ -95,7 +95,25 @@ class TestResolveUserIdFromRequest:
             mock_s.return_value.public_signup_enabled = True
             with pytest.raises(HTTPException) as exc:
                 resolve_user_id_from_request({"authorization": "Bearer t"})
-        assert exc.value.status_code == 403
+        assert exc.value.status_code == 401
+
+    def test_unverified_email_cannot_resolve_existing_account(self):
+        """Security: an unverified email must NOT map to an existing user_id,
+        else a forged/unverified claim could impersonate that account."""
+        from fastapi import HTTPException
+        from app.auth.mcp_auth import resolve_user_id_from_request
+
+        unverified = {"email": "victim@example.com", "sub": "attacker", "email_verified": False}
+        with (
+            patch("app.auth.mcp_auth.verify_google_oauth_bearer", return_value=unverified),
+            patch("app.auth.mcp_auth._lookup_uid_by_email", return_value="victim-uid") as mock_lookup,
+            patch("app.auth.mcp_auth.get_settings") as mock_s,
+        ):
+            mock_s.return_value.public_signup_enabled = True
+            with pytest.raises(HTTPException) as exc:
+                resolve_user_id_from_request({"authorization": "Bearer t"})
+        assert exc.value.status_code == 401
+        mock_lookup.assert_not_called()  # rejected before the email->uid lookup
 
     # --- gateway assertion path (public Worker) ---
 
