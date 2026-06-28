@@ -14,13 +14,13 @@ from app.auth.mcp_auth import _current_user_id
 
 
 def test_tool_count():
-    """Exactly 16 tools must be registered (8 workout + 8 nutrition/body/cardio)."""
+    """Exactly 18 tools must be registered (10 workout + 8 nutrition/body/cardio)."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
-    assert len(tools) == 16
+    assert len(tools) == 18
 
 
 def test_tool_names():
-    """All 16 expected tool names are present."""
+    """All 18 expected tool names are present."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
     names = {t.name for t in tools}
     expected = {
@@ -32,6 +32,8 @@ def test_tool_names():
         "get_alternatives",
         "list_exercises",
         "log_workout",
+        "add_to_active_workout",
+        "create_plan",
         "log_food",
         "get_nutrition_logs",
         "get_nutrition_summary",
@@ -123,6 +125,51 @@ def test_get_workouts_unwraps_items_and_passes_offset():
         assert result[0]["id"] == "w1"
         # datetimes are serialised to strings for JSON transport
         assert result[0]["ended_at"] == str(ended)
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_add_to_active_workout_appends_entry():
+    active = {"id": "w1", "entries": [{"exercise_id": "e0", "exercise_name": "Squat", "sets": []}]}
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=active), \
+             patch.object(mcp_server.exercise_service, "get_exercise", return_value={"id": "e1", "name": "Lat Pulldown"}), \
+             patch.object(mcp_server.workout_service, "update_workout", return_value={"id": "w1", "entries": []}) as mock_upd:
+            mcp_server.add_to_active_workout(exercise_id="e1", sets=[{"reps": 8, "weight": 50}])
+        wid, uid, payload = mock_upd.call_args[0]
+        assert wid == "w1" and uid == "u1"
+        appended = payload["entries"][-1]
+        assert appended["exercise_id"] == "e1"
+        assert appended["exercise_name"] == "Lat Pulldown"
+        assert appended["sets"][0] == {"weight": 50.0, "reps": 8, "rpe": None, "is_warmup": False}
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_add_to_active_workout_errors_without_active():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=None):
+            result = mcp_server.add_to_active_workout(exercise_id="e1", sets=[])
+        assert "error" in result
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_plan_resolves_names_and_calls_service():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "get_exercise",
+                          side_effect=lambda eid, uid: {"id": eid, "name": f"Ex-{eid}"}), \
+             patch.object(mcp_server.template_service, "create_template",
+                          return_value={"id": "t1", "name": "Push Day", "entries": []}) as mock_create:
+            mcp_server.create_plan(name="Push Day", entries=[{"exercise_id": "e1"}, {"exercise_id": "e2", "target_sets": 5}])
+        uid, payload = mock_create.call_args[0]
+        assert uid == "u1" and payload["name"] == "Push Day"
+        assert payload["entries"][0]["exercise_name"] == "Ex-e1"
+        assert payload["entries"][0]["target_sets"] == 3  # default
+        assert payload["entries"][1]["target_sets"] == 5
     finally:
         _current_user_id.reset(token)
 

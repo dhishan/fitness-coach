@@ -21,6 +21,7 @@ from app.services import (
     food_service,
     goals_service,
     recipe_service,
+    template_service,
     workout_service,
 )
 
@@ -193,6 +194,85 @@ def log_workout(date: str, entries: list[dict]) -> dict[str, Any]:
     workout = workout_service.create_workout(uid, {"date": date, "entries": entries})
     finished = workout_service.finish_workout(workout["id"], uid)
     return finished or workout
+
+
+def _serialise(d: dict) -> dict[str, Any]:
+    return {k: (str(v) if hasattr(v, "isoformat") else v) for k, v in d.items()}
+
+
+@mcp.tool()
+def add_to_active_workout(exercise_id: str, sets: list[dict]) -> dict[str, Any]:
+    """Add an exercise (with its sets) to the user's IN-PROGRESS workout.
+
+    Requires an active (started, not finished) workout. If there is none this
+    returns {"error": ...}; tell the user to start a workout in the app, or use
+    log_workout to record an already-completed session instead.
+
+    exercise_id: exercise document id (resolve a name with list_exercises).
+    sets: [{"reps": 8, "weight": 100}, ...]. weight in kg; use 0 for bodyweight.
+      Optional per-set "rpe" (1-10) and "is_warmup" (bool).
+
+    Returns the updated in-progress workout.
+    """
+    uid = _uid()
+    active = workout_service.get_active_workout(uid)
+    if active is None:
+        return {"error": "No active workout. Start one in the app, or use log_workout for a completed session."}
+    ex = exercise_service.get_exercise(exercise_id, uid)
+    if ex is None:
+        return {"error": f"Unknown exercise_id {exercise_id!r}. Use list_exercises to find it."}
+    norm_sets = [
+        {
+            "weight": float(s.get("weight") or 0),
+            "reps": int(s.get("reps") or 0),
+            "rpe": s.get("rpe"),
+            "is_warmup": bool(s.get("is_warmup", False)),
+        }
+        for s in (sets or [])
+    ]
+    entries = list(active.get("entries") or [])
+    entries.append({
+        "exercise_id": exercise_id,
+        "exercise_name": ex.get("name", ""),
+        "superset_group": None,
+        "sets": norm_sets,
+    })
+    updated = workout_service.update_workout(active["id"], uid, {"entries": entries})
+    if updated is None:
+        return {"error": "Could not update the active workout."}
+    return _serialise(updated)
+
+
+@mcp.tool()
+def create_plan(name: str, entries: list[dict]) -> dict[str, Any]:
+    """Create a reusable workout plan (template).
+
+    name: plan name, e.g. "Push Day".
+    entries: ordered exercises, each {"exercise_id": "...", "target_sets": 3,
+      "superset_group": null}. Resolve ids with list_exercises; target_sets
+      defaults to 3; exercise_name is filled in automatically.
+
+    Returns the created plan.
+    """
+    uid = _uid()
+    built: list[dict] = []
+    for e in (entries or []):
+        ex_id = e.get("exercise_id")
+        if not ex_id:
+            continue
+        ex = exercise_service.get_exercise(ex_id, uid)
+        if ex is None:
+            return {"error": f"Unknown exercise_id {ex_id!r}. Use list_exercises to find it."}
+        built.append({
+            "exercise_id": ex_id,
+            "exercise_name": ex.get("name", ""),
+            "target_sets": int(e.get("target_sets") or 3),
+            "superset_group": e.get("superset_group"),
+        })
+    if not built:
+        return {"error": "No valid exercises. Provide entries with an exercise_id each."}
+    created = template_service.create_template(uid, {"name": name, "entries": built})
+    return _serialise(created)
 
 
 # ---------------------------------------------------------------------------

@@ -114,6 +114,8 @@ in. Each person only ever sees their own data.
 
 **Tools available**
 - `log_workout` - record a finished workout (write)
+- `add_to_active_workout` - add an exercise + sets to the in-progress workout (write)
+- `create_plan` - create a reusable workout plan/template (write)
 - `log_food` - log a food you ate with macros + optional micros (write)
 - `get_dashboard_summary` - this week's streak, volume, sessions, muscle split
 - `get_workouts` - list past workouts in a date range
