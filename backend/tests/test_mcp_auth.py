@@ -309,3 +309,50 @@ def test_authorization_server_discovery(client):
     assert body["issuer"] == "https://accounts.google.com"
     assert body["token_endpoint"] == "https://oauth2.googleapis.com/token"
     assert "client_id" in body
+
+
+class TestRateLimiting:
+    """Per-user request cap + global provisioning backstop (abuse protection)."""
+
+    def test_user_rate_blocks_over_limit(self):
+        from unittest.mock import patch
+        from app.auth import mcp_auth
+
+        mcp_auth._user_hits.clear()
+        with patch("app.auth.mcp_auth.get_settings") as ms:
+            ms.return_value.mcp_rate_limit_per_min = 3
+            assert mcp_auth.check_user_rate("u1")       # 1
+            assert mcp_auth.check_user_rate("u1")       # 2
+            assert mcp_auth.check_user_rate("u1")       # 3
+            assert not mcp_auth.check_user_rate("u1")   # 4 -> over cap
+            assert mcp_auth.check_user_rate("u2")       # other users unaffected
+
+    def test_user_rate_disabled_when_zero(self):
+        from unittest.mock import patch
+        from app.auth import mcp_auth
+
+        mcp_auth._user_hits.clear()
+        with patch("app.auth.mcp_auth.get_settings") as ms:
+            ms.return_value.mcp_rate_limit_per_min = 0
+            assert all(mcp_auth.check_user_rate("u1") for _ in range(200))
+
+    def test_provision_backstop_blocks_over_limit(self):
+        from unittest.mock import patch
+        from app.auth import mcp_auth
+
+        mcp_auth._provision_hits.clear()
+        with patch("app.auth.mcp_auth.get_settings") as ms:
+            ms.return_value.mcp_provision_limit_per_hour = 2
+            assert mcp_auth.check_provision_rate()
+            assert mcp_auth.check_provision_rate()
+            assert not mcp_auth.check_provision_rate()
+
+    def test_provision_user_raises_429_when_backstopped(self):
+        from unittest.mock import patch
+        from fastapi import HTTPException
+        from app.auth import mcp_auth
+
+        with patch("app.auth.mcp_auth.check_provision_rate", return_value=False):
+            with pytest.raises(HTTPException) as exc:
+                mcp_auth._provision_user("sub", "e@example.com")
+        assert exc.value.status_code == 429

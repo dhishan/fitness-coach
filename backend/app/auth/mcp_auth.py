@@ -20,6 +20,9 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
+import time
+from collections import defaultdict, deque
 from contextvars import ContextVar
 from typing import Any
 
@@ -32,6 +35,51 @@ from app.auth.google_oauth import GoogleOAuthError, verify_google_oauth_bearer
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Rate limiting — per-user request cap + a global new-account backstop.
+#
+# In-memory sliding windows. Keyed by user_id (reliable post-auth), NOT client
+# IP, which behind Cloudflare/Cloud Run is the proxy's. Cloud Run caps instances
+# (max 2), so the effective per-user ceiling is at most ~limit * instances —
+# adequate abuse protection without a shared store. Set the limit <= 0 to
+# disable (tests/dev).
+# ---------------------------------------------------------------------------
+
+_rate_lock = threading.Lock()
+_user_hits: dict[str, deque] = defaultdict(deque)
+_provision_hits: deque = deque()
+
+
+def _sliding_ok(dq: deque, limit: int, window: float, now: float) -> bool:
+    cutoff = now - window
+    while dq and dq[0] < cutoff:
+        dq.popleft()
+    if len(dq) >= limit:
+        return False
+    dq.append(now)
+    return True
+
+
+def check_user_rate(user_id: str) -> bool:
+    """Per-user sliding-window limiter. True = allowed, False = over the cap."""
+    limit = get_settings().mcp_rate_limit_per_min
+    if limit <= 0:
+        return True
+    now = time.monotonic()
+    with _rate_lock:
+        return _sliding_ok(_user_hits[user_id], limit, 60.0, now)
+
+
+def check_provision_rate() -> bool:
+    """Global backstop on new-account creation rate (the gateway path hides the
+    client IP from the backend, so per-IP isn't reliable here). True = allowed."""
+    limit = get_settings().mcp_provision_limit_per_hour
+    if limit <= 0:
+        return True
+    now = time.monotonic()
+    with _rate_lock:
+        return _sliding_ok(_provision_hits, limit, 3600.0, now)
 
 # ---------------------------------------------------------------------------
 # ContextVar — set per-request by McpAuthMiddleware; read by MCP tools.
@@ -73,6 +121,11 @@ def _provision_user(sub: str, email: str) -> str:
     from datetime import datetime, timezone
 
     from app.firestore import get_db
+
+    # Backstop: cap how fast new accounts can be created so an attacker can't
+    # mass-provision identities (which would multiply per-user rate budgets).
+    if not check_provision_rate():
+        raise HTTPException(status_code=429, detail="Sign-up temporarily rate limited. Try again later.")
 
     get_db().collection("users").document(sub).set(
         {
@@ -248,6 +301,19 @@ class McpAuthMiddleware:
                     f'resource_metadata="{_resource_metadata_url()}"'
                 )
             await _send_json_response(send, exc.status_code, {"error": exc.detail}, extra)
+            return
+
+        # Per-user rate limit (abuse / DDoS protection on the public connector).
+        if not check_user_rate(user_id):
+            logger.warning(
+                "mcp.rate_limited user_id=%s",
+                user_id,
+                extra={"json_fields": {"event": "mcp_rate_limited", "user_id": user_id}},
+            )
+            await _send_json_response(
+                send, 429, {"error": "Rate limit exceeded. Slow down and retry shortly."},
+                {"retry-after": "30"},
+            )
             return
 
         # Attribute any captured error to this user (mirrors in-app chat).

@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     # backend. The Worker signs a short-lived assertion {sub,email}; the backend
     # trusts it via X-Mcp-Gateway-Assertion. Empty = gateway path disabled.
     mcp_gateway_secret: str = ""
+    # Abuse protection for the public MCP connector. Per-user request cap (per
+    # 60s) and a global backstop on new-account provisioning (per hour). <=0
+    # disables (used in tests).
+    mcp_rate_limit_per_min: int = 90
+    mcp_provision_limit_per_hour: int = 20
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 
