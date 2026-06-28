@@ -305,7 +305,8 @@ function PreviewModal({
   const round1 = (v: number) => Math.round(v * 10) / 10
 
   const applyServings = (n: number) => {
-    const next = Math.max(0.25, round1(n))
+    // 2-decimal precision so quarter servings (0.75) survive, not just 0.5.
+    const next = Math.max(0.25, Math.round(n * 100) / 100)
     setServings(next)
     // Explicit rescale — always recompute from base and clear any override.
     setCalories(String(Math.round(baseMacros.calories * next)))

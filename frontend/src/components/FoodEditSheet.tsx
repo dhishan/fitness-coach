@@ -420,7 +420,8 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
               value={servings}
               onChange={(e) => {
                 const n = parseFloat(e.target.value)
-                if (Number.isFinite(n) && n > 0) applyServings(round1(n))
+                // 2-decimal precision so quarter servings (0.75) survive.
+                if (Number.isFinite(n) && n > 0) applyServings(Math.round(n * 100) / 100)
               }}
               className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center font-semibold"
             />

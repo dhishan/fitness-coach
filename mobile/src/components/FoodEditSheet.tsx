@@ -232,7 +232,8 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
   }
 
   const servingsField = useDecimalText(servings, (v) => {
-    if (v > 0) applyServings(round1(v))
+    // 2-decimal precision so quarter servings (0.75) survive, not just 0.5.
+    if (v > 0) applyServings(Math.round(v * 100) / 100)
   })
 
   const handleResetMacros = () => {

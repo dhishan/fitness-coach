@@ -479,12 +479,12 @@ function ActiveSetTray({
         </View>
       </View>
 
-      {/* RPE slider (6-10, half steps) */}
+      {/* RPE slider (0-10, half steps) */}
       <View style={s.rpeRow}>
         <Text style={s.rpeRowLabel}>RPE</Text>
         <Slider
           style={s.rpeSlider}
-          minimumValue={6}
+          minimumValue={0}
           maximumValue={10}
           step={0.5}
           value={set.rpe ?? 8}
