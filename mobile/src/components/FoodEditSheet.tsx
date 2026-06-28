@@ -83,7 +83,7 @@ const SOURCE_BADGE: Record<string, { bg: string; fg: string; label: string }> = 
   favorite: { bg: '#fef2f2', fg: '#dc2626', label: 'Fav' },
 }
 
-const SERVING_QUICK_OPTIONS = [0.5, 1, 1.5, 2, 3]
+const SERVING_QUICK_OPTIONS = [0.25, 0.5, 1, 1.5, 2, 3]
 
 // ---- helpers ----
 
@@ -227,7 +227,7 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
   }
 
   const handleServingsStep = (delta: number) => {
-    const next = Math.max(0.5, round1(servings + delta))
+    const next = Math.max(0.25, Math.round((servings + delta) * 100) / 100)
     applyServings(next)
   }
 
@@ -480,7 +480,7 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
               ))}
             </View>
             <View style={es.stepperRow}>
-              <Pressable style={es.stepBtn} onPress={() => handleServingsStep(-0.5)}>
+              <Pressable style={es.stepBtn} onPress={() => handleServingsStep(-0.25)}>
                 <Text style={es.stepBtnText}>-</Text>
               </Pressable>
               <TextInput
@@ -490,7 +490,7 @@ export default function FoodEditSheet({ visible, hit, date, initialMeal, editLog
                 keyboardType="decimal-pad"
                 selectTextOnFocus
               />
-              <Pressable style={es.stepBtn} onPress={() => handleServingsStep(0.5)}>
+              <Pressable style={es.stepBtn} onPress={() => handleServingsStep(0.25)}>
                 <Text style={es.stepBtnText}>+</Text>
               </Pressable>
             </View>

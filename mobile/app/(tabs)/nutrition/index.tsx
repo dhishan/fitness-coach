@@ -301,7 +301,7 @@ function PreviewModal({
   const [saving, setSaving] = useState(false)
   const [mealType, setMealType] = useState<MealType>(defaultMealType())
 
-  const SERVING_QUICK = [0.5, 1, 1.5, 2, 3]
+  const SERVING_QUICK = [0.25, 0.5, 1, 1.5, 2, 3]
   const round1 = (v: number) => Math.round(v * 10) / 10
 
   const applyServings = (n: number) => {
@@ -501,7 +501,7 @@ function PreviewModal({
                 ))}
               </View>
               <View style={s.stepperRow}>
-                <Pressable style={s.stepBtn} onPress={() => applyServings(servings - 0.5)}>
+                <Pressable style={s.stepBtn} onPress={() => applyServings(servings - 0.25)}>
                   <Text style={s.stepBtnText}>-</Text>
                 </Pressable>
                 <TextInput
@@ -511,7 +511,7 @@ function PreviewModal({
                   keyboardType="decimal-pad"
                   selectTextOnFocus
                 />
-                <Pressable style={s.stepBtn} onPress={() => applyServings(servings + 0.5)}>
+                <Pressable style={s.stepBtn} onPress={() => applyServings(servings + 0.25)}>
                   <Text style={s.stepBtnText}>+</Text>
                 </Pressable>
               </View>

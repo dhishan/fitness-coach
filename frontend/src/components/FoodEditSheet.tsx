@@ -61,7 +61,7 @@ const SOURCE_BADGE: Record<string, { bg: string; fg: string; label: string }> = 
   favorite: { bg: '#fef2f2', fg: '#dc2626', label: 'Favorite' },
 }
 
-const SERVING_QUICK = [0.5, 1, 1.5, 2, 3]
+const SERVING_QUICK = [0.25, 0.5, 1, 1.5, 2, 3]
 
 function round1(v: number): number {
   return Math.round(v * 10) / 10
@@ -186,7 +186,7 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
   }
 
   const handleServingsStep = (delta: number) => {
-    applyServings(Math.max(0.5, round1(servings + delta)))
+    applyServings(Math.max(0.25, Math.round((servings + delta) * 100) / 100))
   }
 
   const handleResetMacros = () => {
@@ -415,8 +415,8 @@ export default function FoodEditSheet({ open, hit, date, initialMeal, onClose, o
             </button>
             <input
               type="number"
-              min="0.5"
-              step="0.5"
+              min="0.25"
+              step="0.25"
               value={servings}
               onChange={(e) => {
                 const n = parseFloat(e.target.value)
