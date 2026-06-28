@@ -68,6 +68,9 @@ jobs:
           # Workers KV Storage:Edit scope first.
           TF_VAR_mcp_oauth_enabled: ${{ vars.MCP_OAUTH_ENABLED || 'false' }}
           TF_VAR_public_signup_enabled: ${{ vars.PUBLIC_SIGNUP_ENABLED || 'false' }}
+          # WAF rate-limit rule. Needs the CF token's Rate Limiting/WAF edit
+          # permission before flipping to true, or terraform apply 401s.
+          TF_VAR_mcp_waf_enabled: ${{ vars.MCP_WAF_ENABLED || 'false' }}
         run: |
           make terraform-init
           make terraform-apply
