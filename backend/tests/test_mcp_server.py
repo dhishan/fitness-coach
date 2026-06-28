@@ -419,3 +419,332 @@ def test_all_new_tools_require_auth():
     ]:
         with pytest.raises(RuntimeError, match="unauthenticated"):
             fn()
+
+
+# ---------------------------------------------------------------------------
+# Security: log_workout input validation
+# ---------------------------------------------------------------------------
+
+_VALID_ENTRIES = [{"exercise_id": "e1", "sets": [{"reps": 8, "weight": 100}]}]
+
+
+def _ex_side_effect(eid, uid):
+    if eid == "e1":
+        return {"id": "e1", "name": "Bench Press"}
+    return None
+
+
+def test_log_workout_valid_calls_service():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "get_exercise", side_effect=_ex_side_effect), \
+             patch.object(mcp_server.workout_service, "create_workout", return_value={"id": "w1"}) as mock_create, \
+             patch.object(mcp_server.workout_service, "finish_workout", return_value={"id": "w1", "total_volume": 800}):
+            result = mcp_server.log_workout(date="2026-06-28", entries=_VALID_ENTRIES)
+        assert result["id"] == "w1"
+        _, payload = mock_create.call_args[0]
+        assert payload["entries"][0]["exercise_id"] == "e1"
+        assert payload["entries"][0]["sets"][0]["weight"] == 100.0
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_workout_too_many_entries_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        big_entries = [{"exercise_id": "e1", "sets": []} for _ in range(51)]
+        with patch.object(mcp_server.exercise_service, "get_exercise", side_effect=_ex_side_effect), \
+             patch.object(mcp_server.workout_service, "create_workout") as mock_create:
+            result = mcp_server.log_workout(date="2026-06-28", entries=big_entries)
+        assert "error" in result
+        mock_create.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_workout_too_many_sets_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        big_sets = [{"reps": 5, "weight": 100}] * 31
+        entries = [{"exercise_id": "e1", "sets": big_sets}]
+        with patch.object(mcp_server.exercise_service, "get_exercise", side_effect=_ex_side_effect), \
+             patch.object(mcp_server.workout_service, "create_workout") as mock_create:
+            result = mcp_server.log_workout(date="2026-06-28", entries=entries)
+        assert "error" in result
+        mock_create.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_workout_negative_weight_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        entries = [{"exercise_id": "e1", "sets": [{"reps": 8, "weight": -10}]}]
+        with patch.object(mcp_server.exercise_service, "get_exercise", side_effect=_ex_side_effect), \
+             patch.object(mcp_server.workout_service, "create_workout") as mock_create:
+            result = mcp_server.log_workout(date="2026-06-28", entries=entries)
+        assert "error" in result
+        mock_create.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_workout_invalid_rpe_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        entries = [{"exercise_id": "e1", "sets": [{"reps": 8, "weight": 100, "rpe": 11}]}]
+        with patch.object(mcp_server.exercise_service, "get_exercise", side_effect=_ex_side_effect), \
+             patch.object(mcp_server.workout_service, "create_workout") as mock_create:
+            result = mcp_server.log_workout(date="2026-06-28", entries=entries)
+        assert "error" in result
+        mock_create.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_workout_unknown_exercise_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        entries = [{"exercise_id": "unknown-99", "sets": [{"reps": 5, "weight": 50}]}]
+        with patch.object(mcp_server.exercise_service, "get_exercise", return_value=None), \
+             patch.object(mcp_server.workout_service, "create_workout") as mock_create:
+            result = mcp_server.log_workout(date="2026-06-28", entries=entries)
+        assert "error" in result
+        assert "unknown-99" in result["error"]
+        mock_create.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_workout_bad_date_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "create_workout") as mock_create:
+            result = mcp_server.log_workout(date="28-06-2026", entries=[])
+        assert "error" in result
+        mock_create.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# Security: log_food input validation
+# ---------------------------------------------------------------------------
+
+
+def test_log_food_valid_calls_service():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log", return_value={"id": "f1"}) as m:
+            result = mcp_server.log_food(name="Chicken", calories=200, protein_g=40, carbs_g=0, fat_g=5)
+        assert result["id"] == "f1"
+        uid, payload = m.call_args[0]
+        assert payload["macros"]["protein_g"] == 40
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_food_negative_calories_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log") as m:
+            result = mcp_server.log_food(name="Bad", calories=-100)
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_food_nan_calories_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log") as m:
+            result = mcp_server.log_food(name="Bad", calories=float("nan"))
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_food_inf_protein_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log") as m:
+            result = mcp_server.log_food(name="Bad", calories=100, protein_g=float("inf"))
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_food_unknown_micro_key_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log") as m:
+            result = mcp_server.log_food(
+                name="Apple", calories=95,
+                micros={"magic_nutrient_g": 999},
+            )
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_food_negative_micro_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log") as m:
+            result = mcp_server.log_food(
+                name="Apple", calories=95,
+                micros={"sodium_mg": -5},
+            )
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_log_food_name_too_long_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.food_service, "create_log") as m:
+            result = mcp_server.log_food(name="x" * 121, calories=100)
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# Security: add_to_active_workout input validation
+# ---------------------------------------------------------------------------
+
+
+def test_add_to_active_workout_valid_passes():
+    active = {"id": "w1", "entries": []}
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=active), \
+             patch.object(mcp_server.exercise_service, "get_exercise", return_value={"id": "e1", "name": "Squat"}), \
+             patch.object(mcp_server.workout_service, "update_workout", return_value={"id": "w1", "entries": []}) as m:
+            result = mcp_server.add_to_active_workout("e1", [{"reps": 5, "weight": 120}])
+        assert "error" not in result
+        _, _, payload = m.call_args[0]
+        assert payload["entries"][-1]["sets"][0]["weight"] == 120.0
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_add_to_active_workout_too_many_sets():
+    active = {"id": "w1", "entries": []}
+    token = _current_user_id.set("u1")
+    try:
+        big_sets = [{"reps": 5, "weight": 100}] * 31
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=active), \
+             patch.object(mcp_server.exercise_service, "get_exercise", return_value={"id": "e1", "name": "Squat"}), \
+             patch.object(mcp_server.workout_service, "update_workout") as m:
+            result = mcp_server.add_to_active_workout("e1", big_sets)
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_add_to_active_workout_negative_reps():
+    active = {"id": "w1", "entries": []}
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=active), \
+             patch.object(mcp_server.exercise_service, "get_exercise", return_value={"id": "e1", "name": "Squat"}), \
+             patch.object(mcp_server.workout_service, "update_workout") as m:
+            result = mcp_server.add_to_active_workout("e1", [{"reps": -5, "weight": 100}])
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_add_to_active_workout_unknown_exercise():
+    active = {"id": "w1", "entries": []}
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=active), \
+             patch.object(mcp_server.exercise_service, "get_exercise", return_value=None), \
+             patch.object(mcp_server.workout_service, "update_workout") as m:
+            result = mcp_server.add_to_active_workout("bad-id", [{"reps": 5, "weight": 100}])
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# Security: create_plan input validation
+# ---------------------------------------------------------------------------
+
+
+def test_create_plan_valid_calls_service():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "get_exercise",
+                          side_effect=lambda eid, uid: {"id": eid, "name": f"Ex-{eid}"}), \
+             patch.object(mcp_server.template_service, "create_template",
+                          return_value={"id": "t1", "name": "Leg Day"}) as m:
+            result = mcp_server.create_plan(name="Leg Day", entries=[{"exercise_id": "e1"}])
+        assert result["id"] == "t1"
+        _, payload = m.call_args[0]
+        assert payload["entries"][0]["target_sets"] == 3
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_plan_too_many_entries_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        big_entries = [{"exercise_id": "e1"}] * 51
+        with patch.object(mcp_server.exercise_service, "get_exercise",
+                          side_effect=lambda eid, uid: {"id": eid, "name": "Ex"}), \
+             patch.object(mcp_server.template_service, "create_template") as m:
+            result = mcp_server.create_plan(name="X", entries=big_entries)
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_plan_name_too_long_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.template_service, "create_template") as m:
+            result = mcp_server.create_plan(name="x" * 81, entries=[])
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_plan_unknown_exercise_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "get_exercise", return_value=None), \
+             patch.object(mcp_server.template_service, "create_template") as m:
+            result = mcp_server.create_plan(name="My Plan", entries=[{"exercise_id": "ghost-99"}])
+        assert "error" in result
+        assert "ghost-99" in result["error"]
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_plan_invalid_target_sets_returns_error():
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "get_exercise",
+                          side_effect=lambda eid, uid: {"id": eid, "name": "Ex"}), \
+             patch.object(mcp_server.template_service, "create_template") as m:
+            result = mcp_server.create_plan(name="X", entries=[{"exercise_id": "e1", "target_sets": 25}])
+        assert "error" in result
+        m.assert_not_called()
+    finally:
+        _current_user_id.reset(token)

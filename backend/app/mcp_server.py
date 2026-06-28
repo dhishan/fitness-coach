@@ -7,12 +7,15 @@ by McpAuthMiddleware). Tools raise RuntimeError("unauthenticated") if called
 outside an authenticated context.
 """
 import logging
+import math
 from typing import Any, Optional
 
+import pydantic
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from app.auth.mcp_auth import McpAuthMiddleware, _current_user_id, get_mcp_user_id
+from app.schemas import Macros, Micros, SetEntry as SetEntrySchema
 from app.services import (
     body_service,
     cardio_service,
@@ -24,6 +27,47 @@ from app.services import (
     template_service,
     workout_service,
 )
+
+# ---------------------------------------------------------------------------
+# Input-validation limits for write tools (public MCP connector)
+# ---------------------------------------------------------------------------
+_MAX_ENTRIES = 50       # max exercise entries per log_workout / create_plan call
+_MAX_SETS = 30          # max sets per exercise entry
+_MAX_NAME_LEN = 120     # mirrors FoodLogCreate.name max_length
+_MAX_SERVING_LEN = 120  # reasonable cap for serving strings
+
+
+def _validate_sets(sets: list[dict], label: str = "sets") -> tuple[list[dict] | None, str | None]:
+    """Validate a list of raw set dicts through SetEntry schema.
+
+    Returns (normalised_sets, None) on success, (None, error_string) on failure.
+    Caps at _MAX_SETS and rejects negative/non-finite numeric values.
+    """
+    if len(sets) > _MAX_SETS:
+        return None, f"{label}: too many sets ({len(sets)}); max is {_MAX_SETS}"
+    normalised: list[dict] = []
+    for i, s in enumerate(sets):
+        try:
+            validated = SetEntrySchema(
+                weight=s.get("weight", 0),
+                reps=s.get("reps", 0),
+                rpe=s.get("rpe"),
+                is_warmup=bool(s.get("is_warmup", False)),
+            )
+        except pydantic.ValidationError as exc:
+            return None, f"{label}[{i}]: {exc.errors()[0]['msg']}"
+        # Reject non-finite floats that pass ge=0 silently
+        if not math.isfinite(validated.weight):
+            return None, f"{label}[{i}].weight must be a finite number"
+        if validated.rpe is not None and not math.isfinite(validated.rpe):
+            return None, f"{label}[{i}].rpe must be a finite number"
+        normalised.append({
+            "weight": validated.weight,
+            "reps": validated.reps,
+            "rpe": validated.rpe,
+            "is_warmup": validated.is_warmup,
+        })
+    return normalised, None
 
 logger = logging.getLogger(__name__)
 
@@ -190,8 +234,37 @@ def log_workout(date: str, entries: list[dict]) -> dict[str, Any]:
 
     Returns the finished workout document including total_volume and prs.
     """
+    import re
     uid = _uid()
-    workout = workout_service.create_workout(uid, {"date": date, "entries": entries})
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        return {"error": "date must be YYYY-MM-DD"}
+    if not isinstance(entries, list):
+        return {"error": "entries must be a list"}
+    if len(entries) > _MAX_ENTRIES:
+        return {"error": f"Too many entries ({len(entries)}); max is {_MAX_ENTRIES}"}
+    validated_entries: list[dict] = []
+    for i, e in enumerate(entries):
+        if not isinstance(e, dict):
+            return {"error": f"entries[{i}] must be an object"}
+        ex_id = e.get("exercise_id")
+        if not ex_id or not isinstance(ex_id, str):
+            return {"error": f"entries[{i}].exercise_id is required"}
+        ex = exercise_service.get_exercise(ex_id, uid)
+        if ex is None:
+            return {"error": f"Unknown exercise_id {ex_id!r} at entries[{i}]. Use list_exercises to find it."}
+        raw_sets = e.get("sets") or []
+        if not isinstance(raw_sets, list):
+            return {"error": f"entries[{i}].sets must be a list"}
+        norm_sets, err = _validate_sets(raw_sets, label=f"entries[{i}].sets")
+        if err:
+            return {"error": err}
+        validated_entries.append({
+            "exercise_id": ex_id,
+            "exercise_name": ex.get("name", ""),
+            "superset_group": e.get("superset_group") if isinstance(e.get("superset_group"), str) else None,
+            "sets": norm_sets,
+        })
+    workout = workout_service.create_workout(uid, {"date": date, "entries": validated_entries})
     finished = workout_service.finish_workout(workout["id"], uid)
     return finished or workout
 
@@ -243,15 +316,12 @@ def add_to_active_workout(exercise_id: str, sets: list[dict]) -> dict[str, Any]:
     ex = exercise_service.get_exercise(exercise_id, uid)
     if ex is None:
         return {"error": f"Unknown exercise_id {exercise_id!r}. Use list_exercises to find it."}
-    norm_sets = [
-        {
-            "weight": float(s.get("weight") or 0),
-            "reps": int(s.get("reps") or 0),
-            "rpe": s.get("rpe"),
-            "is_warmup": bool(s.get("is_warmup", False)),
-        }
-        for s in (sets or [])
-    ]
+    raw_sets = sets or []
+    if not isinstance(raw_sets, list):
+        return {"error": "sets must be a list"}
+    norm_sets, err = _validate_sets(raw_sets, label="sets")
+    if err:
+        return {"error": err}
     entries = list(active.get("entries") or [])
     entries.append({
         "exercise_id": exercise_id,
@@ -277,19 +347,38 @@ def create_plan(name: str, entries: list[dict]) -> dict[str, Any]:
     Returns the created plan.
     """
     uid = _uid()
+    # Validate name length (mirrors TemplateCreate max_length=80)
+    if not name or len(name.strip()) == 0:
+        return {"error": "name is required"}
+    if len(name) > 80:
+        return {"error": "name is too long (max 80 chars)"}
+    if not isinstance(entries, list):
+        return {"error": "entries must be a list"}
+    if len(entries) > _MAX_ENTRIES:
+        return {"error": f"Too many entries ({len(entries)}); max is {_MAX_ENTRIES}"}
     built: list[dict] = []
-    for e in (entries or []):
+    for i, e in enumerate(entries or []):
+        if not isinstance(e, dict):
+            return {"error": f"entries[{i}] must be an object"}
         ex_id = e.get("exercise_id")
         if not ex_id:
             continue
+        if not isinstance(ex_id, str):
+            return {"error": f"entries[{i}].exercise_id must be a string"}
         ex = exercise_service.get_exercise(ex_id, uid)
         if ex is None:
             return {"error": f"Unknown exercise_id {ex_id!r}. Use list_exercises to find it."}
+        try:
+            target_sets = int(e.get("target_sets") or 3)
+        except (TypeError, ValueError):
+            return {"error": f"entries[{i}].target_sets must be an integer"}
+        if target_sets < 1 or target_sets > 20:
+            return {"error": f"entries[{i}].target_sets must be between 1 and 20"}
         built.append({
             "exercise_id": ex_id,
             "exercise_name": ex.get("name", ""),
-            "target_sets": int(e.get("target_sets") or 3),
-            "superset_group": e.get("superset_group"),
+            "target_sets": target_sets,
+            "superset_group": e.get("superset_group") if isinstance(e.get("superset_group"), str) else None,
         })
     if not built:
         return {"error": "No valid exercises. Provide entries with an exercise_id each."}
@@ -351,23 +440,64 @@ def log_food(
     from datetime import date as _date
 
     uid = _uid()
+
+    # --- validate string lengths ---
+    if len(name) > _MAX_NAME_LEN:
+        return {"error": f"name is too long (max {_MAX_NAME_LEN} chars)"}
+    if len(serving) > _MAX_SERVING_LEN:
+        return {"error": f"serving is too long (max {_MAX_SERVING_LEN} chars)"}
+
+    # --- validate macros via Pydantic (catches negative and wrong types) ---
+    try:
+        m_obj = Macros(calories=calories, protein_g=protein_g, carbs_g=carbs_g, fat_g=fat_g)
+    except pydantic.ValidationError as exc:
+        return {"error": f"macros: {exc.errors()[0]['msg']}"}
+    for field, val in [("calories", m_obj.calories), ("protein_g", m_obj.protein_g),
+                       ("carbs_g", m_obj.carbs_g), ("fat_g", m_obj.fat_g)]:
+        if not math.isfinite(val):
+            return {"error": f"macros.{field} must be a finite number"}
+
+    # --- validate micros ---
+    validated_micros: dict | None = None
+    if micros:
+        if not isinstance(micros, dict):
+            return {"error": "micros must be an object"}
+        _known_micro_keys = {
+            "fiber_g", "sugar_g", "sodium_mg", "potassium_mg", "calcium_mg",
+            "iron_mg", "vitamin_c_mg", "vitamin_d_mcg", "saturated_fat_g", "cholesterol_mg",
+        }
+        unknown = set(micros.keys()) - _known_micro_keys
+        if unknown:
+            return {"error": f"micros contains unknown keys: {sorted(unknown)}"}
+        try:
+            mi_obj = Micros(**micros)
+        except pydantic.ValidationError as exc:
+            return {"error": f"micros: {exc.errors()[0]['msg']}"}
+        # Reject non-finite
+        for k, v in mi_obj.model_dump().items():
+            if not math.isfinite(v):
+                return {"error": f"micros.{k} must be a finite number"}
+        validated_micros = mi_obj.model_dump(exclude_defaults=False)
+        # Only include keys that were explicitly provided
+        validated_micros = {k: v for k, v in validated_micros.items() if k in micros}
+
     payload: dict[str, Any] = {
         "date": date or _date.today().isoformat(),
         "name": name,
         "serving": serving,
         "macros": {
-            "calories": calories,
-            "protein_g": protein_g,
-            "carbs_g": carbs_g,
-            "fat_g": fat_g,
+            "calories": m_obj.calories,
+            "protein_g": m_obj.protein_g,
+            "carbs_g": m_obj.carbs_g,
+            "fat_g": m_obj.fat_g,
         },
         "source": "mcp",
     }
     mt = (meal_type or "").strip().lower()
     if mt in ("breakfast", "lunch", "dinner", "snack"):
         payload["meal_type"] = mt
-    if micros:
-        payload["micros"] = micros
+    if validated_micros is not None:
+        payload["micros"] = validated_micros
         payload["micros_source"] = "ai"
     result = food_service.create_log(uid, payload)
     return {k: (str(v) if hasattr(v, "isoformat") else v) for k, v in result.items()}
