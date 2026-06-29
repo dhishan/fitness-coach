@@ -20,7 +20,12 @@ _SEARCH_CACHE_TTL = timedelta(days=7)
 
 
 def _search_cache_key(q: str, limit: int) -> str:
-    return hashlib.md5(f"{q.strip().lower()}|{limit}".encode()).hexdigest()
+    # Not security-sensitive: this only derives a stable Firestore document id
+    # from the (public, static) search query. usedforsecurity=False is the
+    # correct annotation and keeps it working on FIPS builds.
+    return hashlib.md5(
+        f"{q.strip().lower()}|{limit}".encode(), usedforsecurity=False
+    ).hexdigest()
 
 
 def get_search_cache(q: str, limit: int) -> list[dict] | None:
