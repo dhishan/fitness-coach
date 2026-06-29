@@ -717,6 +717,17 @@ export default function WorkoutScreen() {
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
 
+  // A superset folds as a single unit (keyed by its stable superset_group id),
+  // so a finished superset can't be mis-tapped either.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const toggleGroupCollapsed = (groupId: string) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
+      return next
+    })
+
   // Active set being edited in the docked tray: { entry index, set index }.
   const [active, setActive] = useState<{ entry: number; set: number } | null>(null)
   const [kbHeight, setKbHeight] = useState(0)
@@ -1042,13 +1053,39 @@ export default function WorkoutScreen() {
         />
       )
     }
+    const groupCollapsed = collapsedGroups.has(item.groupId)
+    const memberNames = item.entries.map(({ entry }) => entry.exercise_name).join(' + ')
+    const groupSets = item.entries.reduce((sum, { entry }) => sum + entry.sets.length, 0)
     return (
       <View key={item.groupId} style={s.supersetGroup}>
-        <View style={s.supersetChipRow}>
+        <TouchableOpacity
+          style={s.supersetChipRow}
+          activeOpacity={0.7}
+          disabled={selectMode}
+          onPress={() => toggleGroupCollapsed(item.groupId)}
+        >
           <View style={s.supersetChip}>
             <Text style={s.supersetChipText}>SUPERSET</Text>
           </View>
-        </View>
+          {!selectMode && (
+            <View style={s.supersetCollapseHint}>
+              {groupCollapsed ? (
+                <Text style={s.supersetCount}>{item.entries.length} exercises · {groupSets} sets</Text>
+              ) : null}
+              <Ionicons name={groupCollapsed ? 'chevron-forward' : 'chevron-down'} size={18} color={colors.gray400} />
+            </View>
+          )}
+        </TouchableOpacity>
+        {groupCollapsed && !selectMode ? (
+          <TouchableOpacity
+            style={[card, s.entryCard, s.supersetCollapsed]}
+            activeOpacity={0.7}
+            onPress={() => toggleGroupCollapsed(item.groupId)}
+          >
+            <Text style={s.supersetCollapsedText} numberOfLines={2}>{memberNames}</Text>
+            <Text style={s.collapsedExpandHint}>Tap to expand</Text>
+          </TouchableOpacity>
+        ) : (
         <View style={s.supersetBracket}>
           {item.entries.map(({ entry, originalIndex }, idx) => (
             <EntryCard
@@ -1075,6 +1112,7 @@ export default function WorkoutScreen() {
             />
           ))}
         </View>
+        )}
       </View>
     )
   }
@@ -1774,6 +1812,16 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
   supersetChipText: { fontSize: 11, fontWeight: '700', color: colors.primary },
+  supersetCollapseHint: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
+  supersetCount: { fontSize: 11, color: colors.gray400, fontVariant: ['tabular-nums'] },
+  supersetCollapsed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  supersetCollapsedText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.text, marginRight: 8 },
   supersetBracket: {
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
