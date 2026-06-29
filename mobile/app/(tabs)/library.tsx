@@ -28,7 +28,7 @@ const MUSCLE_OPTIONS: Muscle[] = [
 const PATTERN_OPTIONS: MovementPattern[] = ['push', 'pull', 'squat', 'hinge', 'carry', 'core']
 
 const EQUIPMENT_OPTIONS: Equipment[] = [
-  'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other',
+  'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'trx', 'other',
 ]
 
 const DIFFICULTY_OPTIONS = ['beginner', 'intermediate', 'advanced']
@@ -268,7 +268,7 @@ export default function LibraryScreen() {
         {EQUIPMENT_OPTIONS.map((e) => (
           <FilterChip
             key={e}
-            label={e}
+            label={e === 'trx' ? 'TRX' : e}
             active={equipment === e}
             onPress={() => { setEquipment(equipment === e ? '' : e as Equipment); resetVisible() }}
           />

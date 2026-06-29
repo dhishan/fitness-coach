@@ -16,7 +16,7 @@ const MUSCLE_OPTIONS: Muscle[] = [
 const PATTERN_OPTIONS: MovementPattern[] = ['push', 'pull', 'squat', 'hinge', 'carry', 'core']
 
 const EQUIPMENT_OPTIONS: Equipment[] = [
-  'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other',
+  'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'trx', 'other',
 ]
 
 const DIFFICULTY_OPTIONS = ['beginner', 'intermediate', 'advanced']
@@ -240,7 +240,7 @@ export default function Library() {
         >
           <option value="">Any equipment</option>
           {EQUIPMENT_OPTIONS.map((e) => (
-            <option key={e} value={e} className="capitalize">{e}</option>
+            <option key={e} value={e} className="capitalize">{e === 'trx' ? 'TRX' : e}</option>
           ))}
         </select>
         <select

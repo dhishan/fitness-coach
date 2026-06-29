@@ -3,7 +3,7 @@ export type Muscle =
   | 'biceps' | 'triceps' | 'core' | 'calves' | 'forearms'
 
 export type MovementPattern = 'push' | 'pull' | 'squat' | 'hinge' | 'carry' | 'core'
-export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'other'
+export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'trx' | 'other'
 
 export interface Exercise {
   id: string
