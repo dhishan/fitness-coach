@@ -7,7 +7,7 @@ Muscle = Literal[
     "biceps", "triceps", "core", "calves", "forearms",
 ]
 MovementPattern = Literal["push", "pull", "squat", "hinge", "carry", "core"]
-Equipment = Literal["barbell", "dumbbell", "machine", "cable", "bodyweight", "other"]
+Equipment = Literal["barbell", "dumbbell", "machine", "cable", "bodyweight", "trx", "other"]
 
 
 class ExerciseCreate(BaseModel):

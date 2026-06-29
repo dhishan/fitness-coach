@@ -31,7 +31,7 @@ const MUSCLE_OPTIONS: Muscle[] = [
 ]
 
 const MOVEMENT_PATTERN_OPTIONS: MovementPattern[] = ['push', 'pull', 'squat', 'hinge', 'carry', 'core']
-const EQUIPMENT_OPTIONS: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other']
+const EQUIPMENT_OPTIONS: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'trx', 'other']
 
 const MUSCLE_COLORS: Record<string, string> = {
   chest: '#ef4444',
@@ -171,7 +171,7 @@ function CreateExerciseForm({
             style={[s.chip, equipment === eq ? s.chipPrimary : s.chipInactive]}
           >
             <Text style={[s.chipText, equipment === eq ? s.chipTextActive : s.chipTextInactive]}>
-              {eq}
+              {eq === 'trx' ? 'TRX' : eq}
             </Text>
           </Pressable>
         ))}

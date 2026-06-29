@@ -10,7 +10,7 @@ const MUSCLE_OPTIONS: Muscle[] = [
 ]
 
 const MOVEMENT_PATTERN_OPTIONS: MovementPattern[] = ['push', 'pull', 'squat', 'hinge', 'carry', 'core']
-const EQUIPMENT_OPTIONS: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other']
+const EQUIPMENT_OPTIONS: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'trx', 'other']
 
 export const MUSCLE_COLORS: Record<string, string> = {
   chest: '#ef4444',
@@ -183,7 +183,7 @@ function CreateExerciseForm({
                   : 'bg-white text-gray-600 border-gray-200'
               }`}
             >
-              {e}
+              {e === 'trx' ? 'TRX' : e}
             </button>
           ))}
         </div>
