@@ -9,7 +9,8 @@
  * ingredient form (name + serving_label + per-serving macros + per-serving
  * micros).
  */
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   ActivityIndicator,
   Alert,
@@ -28,11 +29,11 @@ import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import * as ImageManipulator from 'expo-image-manipulator'
 import * as FileSystem from 'expo-file-system/legacy'
-import type { Estimation } from '@fitness/shared-types'
+import type { Estimation, Favorite, FoodLog, Recipe, RecipeIngredient } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi, type IngredientHit } from '../services/api'
 import { colors, radius, spacing } from '../theme'
+import { toLocalISODate } from '../lib/dates'
 import BarcodeScanner from '../../components/BarcodeScanner'
-import type { RecipeIngredient } from '@fitness/shared-types'
 
 type Patch = Partial<RecipeIngredient>
 
@@ -122,30 +123,149 @@ function round1(v: number | undefined): number {
 }
 
 // ---------------------------------------------------------------------------
+// "My foods" — favorites, saved recipes, and recent logs, mapped to a hit shape
+// that hitToPatch already understands (name + serving + per-serving macros +
+// micros). Mirrors the converters in the food-logging Add screen.
+// ---------------------------------------------------------------------------
+
+type MyFoodKind = 'favorite' | 'recipe' | 'recent'
+type MyFood = { key: string; kind: MyFoodKind; hit: IngredientHit }
+
+function toIngredientHit(
+  name: string,
+  serving: string,
+  macros: IngredientHit['macros'],
+  micros: Record<string, number> | null | undefined,
+): IngredientHit {
+  return { name, serving, macros, micros: micros ?? undefined }
+}
+
+function favToMyFood(fav: Favorite): MyFood {
+  return {
+    key: `fav:${fav.id}`,
+    kind: 'favorite',
+    hit: toIngredientHit(fav.name, fav.serving || '1 serving', fav.macros, fav.micros as unknown as Record<string, number> | null),
+  }
+}
+
+function recipeToMyFood(r: Recipe): MyFood {
+  return {
+    key: `recipe:${r.id}`,
+    kind: 'recipe',
+    hit: toIngredientHit(r.name, `1 serving (of ${r.yields_servings})`, r.per_serving_macros, r.per_serving_micros as unknown as Record<string, number> | null),
+  }
+}
+
+// A logged entry stores servings-scaled macros and an "N× ..." serving label.
+// hitToPatch treats a hit as the single-serving base, so un-scale back to one
+// serving first (same logic as the Add screen's logToFoodHit).
+function logToMyFood(log: FoodLog): MyFood {
+  const r1 = (v: number) => Math.round(v * 10) / 10
+  const m = /^(\d+(?:\.\d+)?)×\s*(.*)$/.exec(log.serving || '')
+  const div = m && parseFloat(m[1]) > 0 ? parseFloat(m[1]) : 1
+  const lm = log.micros as unknown as Record<string, number> | null | undefined
+  return {
+    key: `recent:${log.id}`,
+    kind: 'recent',
+    hit: toIngredientHit(
+      log.name,
+      m ? m[2] : log.serving || '1 serving',
+      {
+        calories: Math.round(log.macros.calories / div),
+        protein_g: r1(log.macros.protein_g / div),
+        carbs_g: r1(log.macros.carbs_g / div),
+        fat_g: r1(log.macros.fat_g / div),
+      },
+      lm
+        ? (Object.fromEntries(Object.entries(lm).map(([k, v]) => [k, r1((v || 0) / div)])) as Record<string, number>)
+        : null,
+    ),
+  }
+}
+
+const MYFOOD_TAG: Record<MyFoodKind, { label: string; bg: string; fg: string }> = {
+  favorite: { label: 'Fav', bg: '#fef2f2', fg: '#dc2626' },
+  recipe: { label: 'Recipe', bg: '#ecfdf5', fg: '#16a34a' },
+  recent: { label: 'Recent', bg: '#fff7ed', fg: '#ea580c' },
+}
+
+// ---------------------------------------------------------------------------
 // Search
 // ---------------------------------------------------------------------------
 
 function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
   const [q, setQ] = useState('')
+  const [debouncedQ, setDebouncedQ] = useState('')
   const [hits, setHits] = useState<IngredientHit[]>([])
   const [loading, setLoading] = useState(false)
   const [estimating, setEstimating] = useState(false)
   const [searched, setSearched] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cacheRef = useRef<{ q: string; hits: IngredientHit[] }[]>([])
 
-  const run = async () => {
-    const query = q.trim()
-    if (!query) return
+  const today = toLocalISODate()
+  const { data: favorites = [] } = useQuery<Favorite[]>({
+    queryKey: ['favorites'],
+    queryFn: () => nutritionApi.favorites.list(),
+  })
+  const { data: recipes = [] } = useQuery<Recipe[]>({
+    queryKey: ['recipes'],
+    queryFn: () => nutritionApi.recipes.list(),
+  })
+  const { data: dayLogs } = useQuery({
+    queryKey: ['day-logs', today],
+    queryFn: () => nutritionApi.logs.list(today),
+  })
+
+  // "My foods": favorites + saved recipes + recent logs, filtered by the query
+  // and deduped by name (recipe > favorite > recent). Mirrors the Add screen.
+  const myFoods: MyFood[] = useMemo(() => {
+    const query = q.trim().toLowerCase()
+    const match = (name: string) => !query || name.toLowerCase().includes(query)
+    const favs = favorites.filter((f) => match(f.name)).map(favToMyFood)
+    const recs = recipes.filter((r) => match(r.name)).map(recipeToMyFood)
+    const recent = [...(dayLogs?.items ?? [])]
+      .reverse()
+      .filter((l) => match(l.name) || (l.description ?? '').toLowerCase().includes(query))
+      .map(logToMyFood)
+    const seen = new Set<string>()
+    const out: MyFood[] = []
+    for (const mf of [...recs, ...favs, ...recent]) {
+      const key = mf.hit.name.trim().toLowerCase()
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      out.push(mf)
+    }
+    return out.slice(0, query ? 12 : 6)
+  }, [favorites, recipes, dayLogs, q])
+
+  const runSearch = async (query: string) => {
+    if (!query) { setHits([]); setSearched(false); return }
+    const cached = cacheRef.current.find((e) => e.q === query)
+    if (cached) { setHits(cached.hits); setSearched(true); return }
     setLoading(true)
     setSearched(true)
     try {
-      const r = await nutritionApi.searchFoods(query)
+      const r = await nutritionApi.searchFoods(query, 15)
       setHits(r)
+      cacheRef.current = [{ q: query, hits: r }, ...cacheRef.current].slice(0, 5)
     } catch {
       setHits([])
     } finally {
       setLoading(false)
     }
   }
+
+  const onChange = (val: string) => {
+    setQ(val)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedQ(val.trim()), 300)
+  }
+
+  useEffect(() => {
+    void runSearch(debouncedQ)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQ])
 
   const runAI = async () => {
     const query = q.trim()
@@ -177,46 +297,71 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
     </Pressable>
   )
 
+  const showNoResults = q.trim().length > 0 && !loading && hits.length === 0 && myFoods.length === 0
+
   return (
     <View style={{ gap: spacing.sm }}>
-      <View style={s.searchRow}>
-        <TextInput
-          style={s.searchInput}
-          placeholder="e.g. chicken breast, greek yogurt"
-          placeholderTextColor={colors.gray400}
-          value={q}
-          onChangeText={setQ}
-          returnKeyType="search"
-          onSubmitEditing={() => void run()}
-        />
-        <TouchableOpacity style={s.searchBtn} onPress={() => void run()}>
-          <Text style={s.searchBtnText}>Search</Text>
-        </TouchableOpacity>
-      </View>
+      <TextInput
+        style={[s.searchInput, { width: '100%' }]}
+        placeholder="e.g. chicken breast, greek yogurt"
+        placeholderTextColor={colors.gray400}
+        value={q}
+        onChangeText={onChange}
+        returnKeyType="search"
+        onSubmitEditing={() => { if (debounceRef.current) clearTimeout(debounceRef.current); setDebouncedQ(q.trim()) }}
+      />
 
-      {loading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
-      ) : hits.length === 0 && searched ? (
-        <View style={{ gap: spacing.sm }}>
+      <ScrollView style={{ maxHeight: 340 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        {myFoods.length > 0 && (
+          <>
+            <Text style={s.sectionLabel}>From your foods</Text>
+            {myFoods.map((mf) => {
+              const tag = MYFOOD_TAG[mf.kind]
+              return (
+                <Pressable key={mf.key} style={s.hitRow} onPress={() => onPick(hitToPatch(mf.hit))}>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={s.hitName} numberOfLines={2}>{mf.hit.name}</Text>
+                      <View style={[s.tag, { backgroundColor: tag.bg }]}>
+                        <Text style={[s.tagText, { color: tag.fg }]}>{tag.label}</Text>
+                      </View>
+                    </View>
+                    <Text style={s.hitMeta}>
+                      {mf.hit.serving} · {Math.round(mf.hit.macros.calories)} kcal · {round1(mf.hit.macros.protein_g)}g P
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </Pressable>
+              )
+            })}
+          </>
+        )}
+
+        {loading && <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />}
+
+        {hits.length > 0 && (
+          <>
+            <Text style={s.sectionLabel}>Results</Text>
+            {hits.map((h, i) => (
+              <Pressable key={i} style={s.hitRow} onPress={() => onPick(hitToPatch(h))}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.hitName} numberOfLines={2}>{h.name}</Text>
+                  <Text style={s.hitMeta}>
+                    {h.serving} · {Math.round(h.macros.calories)} kcal · {round1(h.macros.protein_g)}g P
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+              </Pressable>
+            ))}
+          </>
+        )}
+
+        {showNoResults && (
           <Text style={s.empty}>No matches in our food databases.</Text>
-          {q.trim().length > 1 ? AIRow : null}
-        </View>
-      ) : (
-        <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-          {hits.map((h, i) => (
-            <Pressable key={i} style={s.hitRow} onPress={() => onPick(hitToPatch(h))}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.hitName} numberOfLines={2}>{h.name}</Text>
-                <Text style={s.hitMeta}>
-                  {h.serving} · {Math.round(h.macros.calories)} kcal · {round1(h.macros.protein_g)}g P
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-            </Pressable>
-          ))}
-          {searched && q.trim().length > 1 ? AIRow : null}
-        </ScrollView>
-      )}
+        )}
+
+        {searched && q.trim().length > 1 ? AIRow : null}
+      </ScrollView>
     </View>
   )
 }
@@ -412,9 +557,7 @@ const s = StyleSheet.create({
   tabLabel: { fontSize: 13, color: colors.gray500, fontWeight: '500' },
   tabLabelActive: { color: colors.primary, fontWeight: '700' },
   body: { padding: spacing.base },
-  searchRow: { flexDirection: 'row', gap: spacing.sm },
   searchInput: {
-    flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
@@ -423,15 +566,17 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
-  searchBtn: {
-    paddingHorizontal: spacing.md,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.gray400,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.sm,
+    marginBottom: 2,
   },
-  searchBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  tag: { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 1 },
+  tagText: { fontSize: 10, fontWeight: '700' },
   hitRow: {
     flexDirection: 'row',
     alignItems: 'center',

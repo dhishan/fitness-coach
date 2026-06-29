@@ -6,9 +6,11 @@
  * On a successful hit, calls onFill with a patch ready to apply to the
  * ingredient form.
  */
-import { useState } from 'react'
-import type { Estimation, RecipeIngredient } from '@fitness/shared-types'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { Estimation, Favorite, FoodLog, Recipe, RecipeIngredient } from '@fitness/shared-types'
 import { nutritionApi, uploadsApi, type IngredientHit } from '../services/api'
+import { toLocalISODate } from '../lib/dates'
 
 type Patch = Partial<RecipeIngredient>
 type Tab = 'search' | 'barcode' | 'photo'
@@ -41,6 +43,71 @@ function hitToPatch(hit: Estimation | IngredientHit): Patch {
     cholesterol_mg_per_serving: round1(micros.cholesterol_mg ?? 0),
     usda_fdc_id: (hit as IngredientHit).usda_fdc_id ?? null,
   }
+}
+
+// ---------------------------------------------------------------------------
+// "My foods" — favorites, saved recipes, and recent logs, mapped to a hit
+// shape hitToPatch understands. Mirrors the Add-food screen converters.
+// ---------------------------------------------------------------------------
+
+type MyFoodKind = 'favorite' | 'recipe' | 'recent'
+type MyFood = { key: string; kind: MyFoodKind; hit: IngredientHit }
+
+function toIngredientHit(
+  name: string,
+  serving: string,
+  macros: IngredientHit['macros'],
+  micros: Record<string, number> | null | undefined,
+): IngredientHit {
+  return { name, serving, macros, micros: micros ?? undefined }
+}
+
+function favToMyFood(fav: Favorite): MyFood {
+  return {
+    key: `fav:${fav.id}`,
+    kind: 'favorite',
+    hit: toIngredientHit(fav.name, fav.serving || '1 serving', fav.macros, fav.micros as unknown as Record<string, number> | null),
+  }
+}
+
+function recipeToMyFood(r: Recipe): MyFood {
+  return {
+    key: `recipe:${r.id}`,
+    kind: 'recipe',
+    hit: toIngredientHit(r.name, `1 serving (of ${r.yields_servings})`, r.per_serving_macros, r.per_serving_micros as unknown as Record<string, number> | null),
+  }
+}
+
+// A logged entry stores servings-scaled macros and an "N× ..." serving label.
+// hitToPatch treats a hit as the single-serving base, so un-scale first.
+function logToMyFood(log: FoodLog): MyFood {
+  const r1 = (v: number) => Math.round(v * 10) / 10
+  const m = /^(\d+(?:\.\d+)?)×\s*(.*)$/.exec(log.serving || '')
+  const div = m && parseFloat(m[1]) > 0 ? parseFloat(m[1]) : 1
+  const lm = log.micros as unknown as Record<string, number> | null | undefined
+  return {
+    key: `recent:${log.id}`,
+    kind: 'recent',
+    hit: toIngredientHit(
+      log.name,
+      m ? m[2] : log.serving || '1 serving',
+      {
+        calories: Math.round(log.macros.calories / div),
+        protein_g: r1(log.macros.protein_g / div),
+        carbs_g: r1(log.macros.carbs_g / div),
+        fat_g: r1(log.macros.fat_g / div),
+      },
+      lm
+        ? (Object.fromEntries(Object.entries(lm).map(([k, v]) => [k, r1((v || 0) / div)])) as Record<string, number>)
+        : null,
+    ),
+  }
+}
+
+const MYFOOD_TAG: Record<MyFoodKind, { label: string; cls: string }> = {
+  favorite: { label: 'Fav', cls: 'bg-red-50 text-red-600' },
+  recipe: { label: 'Recipe', cls: 'bg-emerald-50 text-emerald-600' },
+  recent: { label: 'Recent', cls: 'bg-orange-50 text-orange-600' },
 }
 
 export default function IngredientLookupSheet({
@@ -113,25 +180,49 @@ function TabBtn({
 
 function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
   const [q, setQ] = useState('')
-  const [hits, setHits] = useState<IngredientHit[]>([])
-  const [loading, setLoading] = useState(false)
+  const [debouncedQ, setDebouncedQ] = useState('')
   const [estimating, setEstimating] = useState(false)
-  const [searched, setSearched] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const run = async () => {
-    const query = q.trim()
-    if (!query) return
-    setLoading(true)
-    setSearched(true)
-    try {
-      const r = await nutritionApi.searchFoods(query)
-      setHits(r)
-    } catch {
-      setHits([])
-    } finally {
-      setLoading(false)
+  const today = toLocalISODate()
+  const { data: favorites = [] } = useQuery({ queryKey: ['favorites'], queryFn: () => nutritionApi.favorites.list() })
+  const { data: recipes = [] } = useQuery({ queryKey: ['recipes'], queryFn: () => nutritionApi.recipes.list() })
+  const { data: dayLogs } = useQuery({ queryKey: ['day-logs', today], queryFn: () => nutritionApi.logs.list(today) })
+  const { data: hits = [], isFetching: loading } = useQuery({
+    queryKey: ['food-search', debouncedQ],
+    queryFn: () => nutritionApi.searchFoods(debouncedQ, 15),
+    enabled: debouncedQ.length >= 2,
+    staleTime: 5 * 60_000,
+  })
+  const searched = debouncedQ.length >= 2
+
+  // "My foods": favorites + saved recipes + recent logs, filtered by the query
+  // and deduped by name (recipe > favorite > recent). Mirrors the Add screen.
+  const myFoods: MyFood[] = useMemo(() => {
+    const query = q.trim().toLowerCase()
+    const match = (name: string) => !query || name.toLowerCase().includes(query)
+    const favs = favorites.filter((f) => match(f.name)).map(favToMyFood)
+    const recs = recipes.filter((r) => match(r.name)).map(recipeToMyFood)
+    const recent = [...(dayLogs?.items ?? [])]
+      .reverse()
+      .filter((l) => match(l.name) || (l.description ?? '').toLowerCase().includes(query))
+      .map(logToMyFood)
+    const seen = new Set<string>()
+    const out: MyFood[] = []
+    for (const mf of [...recs, ...favs, ...recent]) {
+      const key = mf.hit.name.trim().toLowerCase()
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      out.push(mf)
     }
-  }
+    return out.slice(0, query ? 12 : 6)
+  }, [favorites, recipes, dayLogs, q])
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedQ(q.trim()), 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [q])
 
   const runAI = async () => {
     const query = q.trim()
@@ -165,37 +256,53 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
     </button>
   )
 
+  const showNoResults = q.trim().length > 0 && !loading && hits.length === 0 && myFoods.length === 0
+
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void run()
-          }}
-          placeholder="e.g. chicken breast, greek yogurt"
-          className="flex-1 border border-gray-200 rounded-md px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-        />
-        <button
-          onClick={() => void run()}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-md hover:bg-blue-700"
-        >
-          Search
-        </button>
-      </div>
+      <input
+        type="text"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="e.g. chicken breast, greek yogurt"
+        className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+      />
 
-      {loading ? (
-        <p className="text-sm text-gray-400 text-center py-4">Searching…</p>
-      ) : hits.length === 0 && searched ? (
-        <div className="space-y-3">
-          <p className="text-sm text-gray-400 text-center pt-2">No matches in our food databases.</p>
-          {aiRow}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+      <div className="space-y-1 max-h-80 overflow-y-auto">
+        {myFoods.length > 0 && (
+          <>
+            <div className="text-[11px] font-bold uppercase tracking-wide text-gray-400 pt-1">From your foods</div>
+            {myFoods.map((mf) => {
+              const tag = MYFOOD_TAG[mf.kind]
+              return (
+                <button
+                  key={mf.key}
+                  onClick={() => onPick(hitToPatch(mf.hit))}
+                  className="w-full text-left py-2.5 px-1 flex items-center gap-3 hover:bg-gray-50 rounded"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold text-gray-900 truncate">{mf.hit.name}</span>
+                      <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${tag.cls}`}>{tag.label}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 tabular-nums">
+                      {mf.hit.serving} · {Math.round(mf.hit.macros.calories)} kcal · {round1(mf.hit.macros.protein_g)}g P
+                    </div>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 shrink-0">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              )
+            })}
+          </>
+        )}
+
+        {loading && <p className="text-sm text-gray-400 text-center py-4">Searching…</p>}
+
+        {hits.length > 0 && (
+          <>
+            <div className="text-[11px] font-bold uppercase tracking-wide text-gray-400 pt-2">Results</div>
             {hits.map((h, i) => (
               <button
                 key={i}
@@ -205,19 +312,23 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-gray-900 truncate">{h.name}</div>
                   <div className="text-xs text-gray-500 tabular-nums">
-                    {h.serving} · {Math.round(h.macros.calories)} kcal ·{' '}
-                    {round1(h.macros.protein_g)}g P
+                    {h.serving} · {Math.round(h.macros.calories)} kcal · {round1(h.macros.protein_g)}g P
                   </div>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 shrink-0">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
               </button>
             ))}
-          </div>
-          {searched && aiRow}
-        </div>
-      )}
+          </>
+        )}
+
+        {showNoResults && (
+          <p className="text-sm text-gray-400 text-center pt-2">No matches in our food databases.</p>
+        )}
+
+        {searched && aiRow}
+      </div>
     </div>
   )
 }
