@@ -189,6 +189,14 @@ function EntryCard({
     onActivateSet(sets.length - 1)
   }
 
+  // Collapsing a finished exercise hides its set rows and the "+ Add set"
+  // button, so it can't be mis-tapped while you work the next exercise.
+  const [collapsed, setCollapsed] = useState(false)
+  const topSet = entry.sets.reduce<SetEntry | null>(
+    (best, x) => (!best || (x.weight ?? 0) > (best.weight ?? 0) ? x : best),
+    null,
+  )
+
   return (
     <View style={[card, s.entryCard, isInSuperset && s.entryCardSuperset, isSelected && s.entryCardSelected]}>
       {/* Header */}
@@ -200,6 +208,16 @@ function EntryCard({
               style={[s.selectBox, isSelected && s.selectBoxActive]}
               accessibilityLabel="select entry"
             />
+          )}
+          {!inSelectMode && (
+            <TouchableOpacity
+              onPress={() => setCollapsed((c) => !c)}
+              hitSlop={10}
+              style={s.collapseBtn}
+              accessibilityLabel={collapsed ? 'expand exercise' : 'collapse exercise'}
+            >
+              <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={18} color={colors.gray400} />
+            </TouchableOpacity>
           )}
           <Pressable
             style={s.entryNameBlock}
@@ -245,27 +263,42 @@ function EntryCard({
         </View>
       </View>
 
-      {/* Sets */}
-      <View style={s.setsList}>
-        {entry.sets.length === 0 ? (
-          <Text style={s.noSets}>No sets yet — tap "+ Add set"</Text>
-        ) : (
-          entry.sets.map((set, i) => (
-            <SetSummaryRow
-              key={i}
-              set={set}
-              index={i}
-              unit={unit}
-              active={activeSetIndex === i}
-              onPress={() => onActivateSet(i)}
-            />
-          ))
-        )}
-      </View>
+      {collapsed ? (
+        <TouchableOpacity style={s.collapsedSummary} activeOpacity={0.7} onPress={() => setCollapsed(false)}>
+          <Text style={s.collapsedSummaryText}>
+            {entry.sets.length === 0
+              ? 'No sets'
+              : `${entry.sets.length} set${entry.sets.length === 1 ? '' : 's'}${
+                  topSet ? ` · top ${formatWeight(kgToDisplay(topSet.weight ?? 0, unit))} ${unit} × ${topSet.reps ?? 0}` : ''
+                }`}
+          </Text>
+          <Text style={s.collapsedExpandHint}>Tap to expand</Text>
+        </TouchableOpacity>
+      ) : (
+        <>
+          {/* Sets */}
+          <View style={s.setsList}>
+            {entry.sets.length === 0 ? (
+              <Text style={s.noSets}>No sets yet — tap "+ Add set"</Text>
+            ) : (
+              entry.sets.map((set, i) => (
+                <SetSummaryRow
+                  key={i}
+                  set={set}
+                  index={i}
+                  unit={unit}
+                  active={activeSetIndex === i}
+                  onPress={() => onActivateSet(i)}
+                />
+              ))
+            )}
+          </View>
 
-      <TouchableOpacity onPress={addSet} style={s.addSetBtn}>
-        <Text style={s.addSetText}>+ Add set</Text>
-      </TouchableOpacity>
+          <TouchableOpacity onPress={addSet} style={s.addSetBtn}>
+            <Text style={s.addSetText}>+ Add set</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   )
 }
@@ -1489,6 +1522,15 @@ const s = StyleSheet.create({
   addSetBtn: { marginTop: 8 },
   addSetText: { fontSize: 13, fontWeight: '600', color: colors.primary },
   noSets: { fontSize: 13, color: colors.gray400, paddingVertical: 8 },
+  collapseBtn: { paddingRight: 4, paddingVertical: 2 },
+  collapsedSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  collapsedSummaryText: { fontSize: 13, color: colors.gray500, fontVariant: ['tabular-nums'] },
+  collapsedExpandHint: { fontSize: 11, color: colors.gray400 },
 
   // Set summary row (tap to edit in the tray)
   summaryRow: {
