@@ -213,10 +213,14 @@ function EntryCard({
             <TouchableOpacity
               onPress={() => setCollapsed((c) => !c)}
               hitSlop={10}
-              style={s.collapseBtn}
+              style={[s.collapseBtn, collapsed && s.collapseBtnCollapsed]}
               accessibilityLabel={collapsed ? 'expand exercise' : 'collapse exercise'}
             >
-              <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={18} color={colors.gray400} />
+              <Ionicons
+                name={collapsed ? 'chevron-forward' : 'chevron-down'}
+                size={18}
+                color={collapsed ? colors.primary : colors.gray600}
+              />
             </TouchableOpacity>
           )}
           <Pressable
@@ -262,6 +266,8 @@ function EntryCard({
           </TouchableOpacity>
         </View>
       </View>
+
+      <View style={s.entryDivider} />
 
       {collapsed ? (
         <TouchableOpacity style={s.collapsedSummary} activeOpacity={0.7} onPress={() => setCollapsed(false)}>
@@ -1072,7 +1078,13 @@ export default function WorkoutScreen() {
               {groupCollapsed ? (
                 <Text style={s.supersetCount}>{item.entries.length} exercises · {groupSets} sets</Text>
               ) : null}
-              <Ionicons name={groupCollapsed ? 'chevron-forward' : 'chevron-down'} size={18} color={colors.gray400} />
+              <View style={[s.collapseBtn, { marginRight: 0 }, groupCollapsed && s.collapseBtnCollapsed]}>
+                <Ionicons
+                  name={groupCollapsed ? 'chevron-forward' : 'chevron-down'}
+                  size={18}
+                  color={groupCollapsed ? colors.primary : colors.gray600}
+                />
+              </View>
             </View>
           )}
         </TouchableOpacity>
@@ -1529,6 +1541,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
+  entryDivider: { height: 1, backgroundColor: colors.gray100, marginBottom: spacing.sm },
   entryHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 },
   entryNameBlock: { flex: 1, minWidth: 0 },
   entryNameRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
@@ -1560,7 +1573,16 @@ const s = StyleSheet.create({
   addSetBtn: { marginTop: 8 },
   addSetText: { fontSize: 13, fontWeight: '600', color: colors.primary },
   noSets: { fontSize: 13, color: colors.gray400, paddingVertical: 8 },
-  collapseBtn: { paddingRight: 4, paddingVertical: 2 },
+  collapseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  collapseBtnCollapsed: { backgroundColor: colors.primaryLight + '22' },
   collapsedSummary: {
     flexDirection: 'row',
     alignItems: 'center',
