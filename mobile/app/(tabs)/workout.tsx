@@ -1432,12 +1432,48 @@ function EmptyWorkoutScreen({
 }) {
   const router = useRouter()
   const unit = useWeightUnit()
+  const qc = useQueryClient()
   const { data, isLoading } = useQuery({
     queryKey: ['workouts', 'recent'],
     queryFn: () => workoutsApi.list({ limit: 20 }),
     staleTime: 60_000,
   })
   const recent = (data?.items ?? []).filter((w) => w.ended_at)
+
+  // Self-heal missing workout names. Naming normally fires once client-side on
+  // Finish, but that call can be lost (app backgrounded mid-request, finished on
+  // a stale build, cold-start timeout). Here we retry any finished-but-untitled
+  // workout on list load. The endpoint is idempotent + server rate-limited, so
+  // already-named workouts cost nothing and this can't burn tokens. Each id is
+  // attempted once per mount to avoid a refetch loop.
+  const healedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const untitled = (data?.items ?? []).filter(
+      (w) => w.ended_at && !w.title && !healedRef.current.has(w.id),
+    )
+    if (untitled.length === 0) return
+    untitled.forEach((w) => healedRef.current.add(w.id))
+    let named = false
+    void Promise.all(
+      untitled.map((w) =>
+        workoutsApi
+          .generateTitle(w.id)
+          .then((res) => { if (res?.title) named = true })
+          .catch(() => {}),
+      ),
+    ).then(() => {
+      if (named) {
+        void qc.invalidateQueries({
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            typeof q.queryKey[0] === 'string' &&
+            (q.queryKey[0] === 'workouts' ||
+              q.queryKey[0] === 'workouts-list' ||
+              q.queryKey[0] === 'workouts-month'),
+        })
+      }
+    })
+  }, [data, qc])
 
   return (
     <View style={s.screen}>

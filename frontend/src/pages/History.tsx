@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { workoutsApi } from '../services/api'
 import { toLocalISODate } from '../lib/dates'
@@ -193,6 +193,41 @@ export default function History() {
 
   const total = data?.pages[0]?.total ?? 0
   const allWorkouts = data?.pages.flatMap((p) => p.items) ?? []
+
+  // Self-heal missing workout names. Naming normally fires once on Finish, but
+  // that client call can be lost (tab closed mid-request, finished on a stale
+  // build, cold-start timeout). Retry any finished-but-untitled workout on load.
+  // The endpoint is idempotent + server rate-limited, so already-named workouts
+  // cost nothing. Each id is attempted once per mount to avoid a refetch loop.
+  const qc = useQueryClient()
+  const healedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const untitled = allWorkouts.filter(
+      (w) => w.ended_at && !w.title && !healedRef.current.has(w.id),
+    )
+    if (untitled.length === 0) return
+    untitled.forEach((w) => healedRef.current.add(w.id))
+    let named = false
+    void Promise.all(
+      untitled.map((w) =>
+        workoutsApi
+          .generateTitle(w.id)
+          .then((res) => { if (res?.title) named = true })
+          .catch(() => {}),
+      ),
+    ).then(() => {
+      if (named) {
+        void qc.invalidateQueries({
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            typeof q.queryKey[0] === 'string' &&
+            (q.queryKey[0] === 'workouts' ||
+              q.queryKey[0] === 'workouts-month'),
+        })
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allWorkouts.length])
 
   const prevMonth = () => {
     if (calMonth === 0) { setCalYear(calYear - 1); setCalMonth(11) }
