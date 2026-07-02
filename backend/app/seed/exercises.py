@@ -31,7 +31,7 @@ SEED_EXERCISES = [
     {"id": "sys-face-pull", "name": "Face Pull", "primary_muscles": ["shoulders", "back"], "secondary_muscles": [], "movement_pattern": "pull", "equipment": "cable"},
     {"id": "sys-barbell-curl", "name": "Barbell Curl", "primary_muscles": ["biceps"], "secondary_muscles": ["forearms"], "movement_pattern": "pull", "equipment": "barbell"},
     {"id": "sys-db-curl", "name": "Dumbbell Curl", "primary_muscles": ["biceps"], "secondary_muscles": ["forearms"], "movement_pattern": "pull", "equipment": "dumbbell"},
-    {"id": "sys-farmers-carry", "name": "Farmer's Carry", "primary_muscles": ["forearms", "core"], "secondary_muscles": ["shoulders"], "movement_pattern": "carry", "equipment": "dumbbell"},
+    {"id": "sys-farmers-carry", "name": "Farmer's Carry", "primary_muscles": ["forearms", "core"], "secondary_muscles": ["shoulders"], "movement_pattern": "carry", "equipment": "dumbbell", "tracking": "time"},
     {"id": "sys-plank", "name": "Plank", "primary_muscles": ["core"], "secondary_muscles": [], "movement_pattern": "core", "equipment": "bodyweight", "tracking": "time"},
     {"id": "sys-side-plank", "name": "Side Plank", "primary_muscles": ["core"], "secondary_muscles": ["shoulders"], "movement_pattern": "core", "equipment": "bodyweight", "tracking": "time"},
     {"id": "sys-wall-sit", "name": "Wall Sit", "primary_muscles": ["quads"], "secondary_muscles": ["glutes"], "movement_pattern": "squat", "equipment": "bodyweight", "tracking": "time"},
