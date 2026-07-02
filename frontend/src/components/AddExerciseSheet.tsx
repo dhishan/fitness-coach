@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import type { Equipment, Exercise, ExerciseCreate, ExerciseHistoryItem, Muscle, MovementPattern } from '@fitness/shared-types'
+import type { Equipment, Exercise, ExerciseCreate, ExerciseHistoryItem, Muscle, MovementPattern, Tracking } from '@fitness/shared-types'
 import { exercisesApi } from '../services/api'
 
 const MUSCLE_OPTIONS: Muscle[] = [
@@ -41,6 +41,7 @@ function CreateExerciseForm({
   const [secondaryMuscles, setSecondaryMuscles] = useState<Muscle[]>([])
   const [pattern, setPattern] = useState<MovementPattern | ''>('')
   const [equipment, setEquipment] = useState<Equipment | ''>('')
+  const [tracking, setTracking] = useState<Tracking>('reps')
   const [saving, setSaving] = useState(false)
 
   const togglePrimary = (m: Muscle) => {
@@ -67,6 +68,7 @@ function CreateExerciseForm({
         secondary_muscles: secondaryMuscles,
         movement_pattern: pattern as MovementPattern,
         equipment: equipment as Equipment,
+        tracking,
       }
       const created = await exercisesApi.create(body)
       void qc.invalidateQueries({ queryKey: ['exercises'] })
@@ -184,6 +186,28 @@ function CreateExerciseForm({
               }`}
             >
               {e === 'trx' ? 'TRX' : e}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+          Tracking
+        </label>
+        <div className="flex gap-2">
+          {(['reps', 'time'] as Tracking[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTracking(t)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border capitalize ${
+                tracking === t
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-gray-600 border-gray-200'
+              }`}
+            >
+              {t === 'reps' ? 'Reps' : 'Time (hold)'}
             </button>
           ))}
         </div>

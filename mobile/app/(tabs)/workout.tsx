@@ -24,7 +24,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Exercise, FinishResponse, SetEntry, Workout, WorkoutEntry, WorkoutTemplate } from '@fitness/shared-types'
 import { exercisesApi, templatesApi, workoutsApi } from '../../src/services/api'
 import { toLocalISODate } from '../../src/lib/dates'
-import { nextSupersetGroup, reorderEntries } from '../../src/lib/workoutHelpers'
+import { formatDuration, nextSupersetGroup, reorderEntries } from '../../src/lib/workoutHelpers'
 import { buildEntryFromHistory } from '../../src/lib/addExercise'
 import type { EntryWithHistory } from '../../src/lib/addExercise'
 import AddExerciseSheet from '../../src/components/AddExerciseSheet'
@@ -114,6 +114,7 @@ function SetSummaryRow({
   onPress: () => void
 }) {
   const isWarmup = !!set.is_warmup
+  const isTimeSet = set.duration_s != null
   const weightDisplay = kgToDisplay(set.weight ?? 0, unit)
   return (
     <TouchableOpacity
@@ -127,15 +128,35 @@ function SetSummaryRow({
           {isWarmup ? 'W' : index + 1}
         </Text>
       </View>
-      <View style={s.summaryValGroup}>
-        <Text style={s.summaryVal}>{formatWeight(weightDisplay)}</Text>
-        <Text style={s.summaryUnit}>{unit}</Text>
-      </View>
-      <Text style={s.summaryTimes}>×</Text>
-      <View style={s.summaryValGroup}>
-        <Text style={s.summaryVal}>{set.reps ?? 0}</Text>
-        <Text style={s.summaryUnit}>reps</Text>
-      </View>
+      {isTimeSet ? (
+        <>
+          {(set.weight ?? 0) > 0 && (
+            <>
+              <View style={s.summaryValGroup}>
+                <Text style={s.summaryVal}>+{formatWeight(weightDisplay)}</Text>
+                <Text style={s.summaryUnit}>{unit}</Text>
+              </View>
+              <Text style={s.summaryTimes}>·</Text>
+            </>
+          )}
+          <View style={s.summaryValGroup}>
+            <Text style={s.summaryVal}>{formatDuration(set.duration_s ?? 0)}</Text>
+            <Text style={s.summaryUnit}>hold</Text>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={s.summaryValGroup}>
+            <Text style={s.summaryVal}>{formatWeight(weightDisplay)}</Text>
+            <Text style={s.summaryUnit}>{unit}</Text>
+          </View>
+          <Text style={s.summaryTimes}>×</Text>
+          <View style={s.summaryValGroup}>
+            <Text style={s.summaryVal}>{set.reps ?? 0}</Text>
+            <Text style={s.summaryUnit}>reps</Text>
+          </View>
+        </>
+      )}
       <View style={{ flex: 1 }} />
       {set.rpe != null ? <Text style={s.summaryRpe}>@{set.rpe}</Text> : null}
       {active ? <Text style={s.summaryEditHint}>Editing</Text> : <Text style={s.summaryChevron}>›</Text>}
@@ -192,10 +213,14 @@ function EntryCard({
   // Collapsing a finished exercise hides its set rows and the "+ Add set"
   // button, so it can't be mis-tapped while you work the next exercise.
   const [collapsed, setCollapsed] = useState(false)
-  const topSet = entry.sets.reduce<SetEntry | null>(
-    (best, x) => (!best || (x.weight ?? 0) > (best.weight ?? 0) ? x : best),
-    null,
-  )
+  const isTimeEntry = entry.tracking === 'time'
+  const topSet = entry.sets.reduce<SetEntry | null>((best, x) => {
+    if (!best) return x
+    if (isTimeEntry) {
+      return (x.duration_s ?? 0) > (best.duration_s ?? 0) ? x : best
+    }
+    return (x.weight ?? 0) > (best.weight ?? 0) ? x : best
+  }, null)
 
   return (
     <View style={[card, s.entryCard, isInSuperset && s.entryCardSuperset, isSelected && s.entryCardSelected]}>
@@ -275,7 +300,15 @@ function EntryCard({
             {entry.sets.length === 0
               ? 'No sets'
               : `${entry.sets.length} set${entry.sets.length === 1 ? '' : 's'}${
-                  topSet ? ` · top ${formatWeight(kgToDisplay(topSet.weight ?? 0, unit))} ${unit} × ${topSet.reps ?? 0}` : ''
+                  topSet
+                    ? isTimeEntry
+                      ? (() => {
+                          const addedW = kgToDisplay(topSet.weight ?? 0, unit)
+                          const prefix = addedW > 0 ? ` · top +${formatWeight(addedW)}${unit} · ` : ' · top '
+                          return `${prefix}${formatDuration(topSet.duration_s ?? 0)}`
+                        })()
+                      : ` · top ${formatWeight(kgToDisplay(topSet.weight ?? 0, unit))} ${unit} × ${topSet.reps ?? 0}`
+                    : ''
                 }`}
           </Text>
           <Text style={s.collapsedExpandHint}>Tap to expand</Text>
@@ -404,7 +437,9 @@ function FinishModal({
               <Text style={s.prsLabel}>PERSONAL RECORDS</Text>
               {data.prs.map((pr) => (
                 <Text key={pr.exercise_id} style={s.prLine}>
-                  New PR: {pr.exercise_name} {pr.weight}kg (previous {pr.previous_best}kg)
+                  {pr.duration_s != null
+                    ? `New PR: ${pr.exercise_name} ${formatDuration(pr.duration_s)}${pr.previous_best_duration_s != null ? ` (previous ${formatDuration(pr.previous_best_duration_s)})` : ''}`
+                    : `New PR: ${pr.exercise_name} ${pr.weight ?? 0}kg (previous ${pr.previous_best ?? 0}kg)`}
                 </Text>
               ))}
             </View>
@@ -430,6 +465,7 @@ function ActiveSetTray({
   setIndex,
   setCount,
   unit,
+  tracking,
   keyboardHeight,
   safeBottom,
   onUpdate,
@@ -442,6 +478,7 @@ function ActiveSetTray({
   setIndex: number
   setCount: number
   unit: 'kg' | 'lb'
+  tracking: 'reps' | 'time'
   keyboardHeight: number
   safeBottom: number
   onUpdate: (s: SetEntry) => void
@@ -449,6 +486,7 @@ function ActiveSetTray({
   onRemove: () => void
   onClose: () => void
 }) {
+  const isTime = tracking === 'time'
   const weightDisplay = kgToDisplay(set.weight ?? 0, unit)
   const weightStep = stepFor(unit)
 
@@ -458,6 +496,9 @@ function ActiveSetTray({
   }
   const stepReps = (delta: number) => {
     onUpdate({ ...set, reps: Math.max(0, (set.reps ?? 0) + delta) })
+  }
+  const stepDuration = (delta: number) => {
+    onUpdate({ ...set, duration_s: Math.max(0, (set.duration_s ?? 0) + delta) })
   }
   // Weight needs decimals (2.5, 102.5); hold raw text so the dot survives typing.
   const weightField = useDecimalText(weightDisplay, (v) => onUpdate({ ...set, weight: displayToKg(v, unit) }))
@@ -478,7 +519,7 @@ function ActiveSetTray({
       <View style={s.trayFields}>
         {/* Weight */}
         <View style={s.trayField}>
-          <Text style={s.trayLabel}>WEIGHT ({unit})</Text>
+          <Text style={s.trayLabel}>{isTime ? `ADDED WEIGHT (${unit})` : `WEIGHT (${unit})`}</Text>
           <View style={s.trayStepper}>
             <TouchableOpacity style={s.trayStepBtn} onPress={() => stepWeight(-weightStep)} accessibilityLabel="decrease weight">
               <Text style={s.trayStepText}>−</Text>
@@ -496,26 +537,58 @@ function ActiveSetTray({
             </TouchableOpacity>
           </View>
         </View>
-        {/* Reps */}
-        <View style={s.trayField}>
-          <Text style={s.trayLabel}>REPS</Text>
-          <View style={s.trayStepper}>
-            <TouchableOpacity style={s.trayStepBtn} onPress={() => stepReps(-1)} accessibilityLabel="decrease reps">
-              <Text style={s.trayStepText}>−</Text>
-            </TouchableOpacity>
-            <TextInput
-              style={s.trayInput}
-              value={String(set.reps ?? 0)}
-              onChangeText={(t) => onUpdate({ ...set, reps: parseInt(t, 10) || 0 })}
-              keyboardType="number-pad"
-              selectTextOnFocus
-              accessibilityLabel="reps"
-            />
-            <TouchableOpacity style={s.trayStepBtn} onPress={() => stepReps(1)} accessibilityLabel="increase reps">
-              <Text style={s.trayStepText}>+</Text>
-            </TouchableOpacity>
+        {/* Reps or Duration */}
+        {isTime ? (
+          <View style={s.trayField}>
+            <Text style={s.trayLabel}>DURATION</Text>
+            <View style={s.trayStepper}>
+              <TouchableOpacity style={s.trayStepBtn} onPress={() => stepDuration(-15)} accessibilityLabel="decrease duration">
+                <Text style={s.trayStepText}>−</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={s.trayInput}
+                value={formatDuration(set.duration_s ?? 0)}
+                onChangeText={(t) => {
+                  // Accept either mm:ss or a plain number (interpreted as seconds)
+                  if (t.includes(':')) {
+                    const parts = t.split(':')
+                    const mins = parseInt(parts[0] ?? '0', 10) || 0
+                    const secs = parseInt(parts[1] ?? '0', 10) || 0
+                    onUpdate({ ...set, duration_s: Math.max(0, mins * 60 + secs) })
+                  } else {
+                    onUpdate({ ...set, duration_s: Math.max(0, parseInt(t, 10) || 0) })
+                  }
+                }}
+                keyboardType="number-pad"
+                selectTextOnFocus
+                accessibilityLabel="duration"
+              />
+              <TouchableOpacity style={s.trayStepBtn} onPress={() => stepDuration(15)} accessibilityLabel="increase duration">
+                <Text style={s.trayStepText}>+</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={s.trayField}>
+            <Text style={s.trayLabel}>REPS</Text>
+            <View style={s.trayStepper}>
+              <TouchableOpacity style={s.trayStepBtn} onPress={() => stepReps(-1)} accessibilityLabel="decrease reps">
+                <Text style={s.trayStepText}>−</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={s.trayInput}
+                value={String(set.reps ?? 0)}
+                onChangeText={(t) => onUpdate({ ...set, reps: parseInt(t, 10) || 0 })}
+                keyboardType="number-pad"
+                selectTextOnFocus
+                accessibilityLabel="reps"
+              />
+              <TouchableOpacity style={s.trayStepBtn} onPress={() => stepReps(1)} accessibilityLabel="increase reps">
+                <Text style={s.trayStepText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* RPE slider (0-10, half steps) */}
@@ -1255,6 +1328,7 @@ export default function WorkoutScreen() {
           setIndex={active!.set}
           setCount={activeEntry.sets.length}
           unit={userUnit}
+          tracking={activeEntry.tracking ?? 'reps'}
           keyboardHeight={kbHeight}
           safeBottom={insets.bottom}
           onUpdate={updateActiveSet}

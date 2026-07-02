@@ -16,17 +16,28 @@ def _slim_workout(w: dict) -> dict:
     slim_entries = []
     for e in entries:
         sets = e.get("sets") or []
+        is_time = e.get("tracking") == "time"
         top = None
         for st in sets:
             if st.get("is_warmup"):
                 continue
-            if top is None or float(st.get("weight") or 0) >= float(top.get("weight") or 0):
+            if is_time:
+                if top is None or float(st.get("duration_s") or 0) >= float(top.get("duration_s") or 0):
+                    top = st
+            elif top is None or float(st.get("weight") or 0) >= float(top.get("weight") or 0):
                 top = st
+        if top is None:
+            top_set = None
+        elif is_time:
+            top_set = {"duration_s": top.get("duration_s"), "weight": top.get("weight")}
+        else:
+            top_set = {"weight": top.get("weight"), "reps": top.get("reps")}
         slim_entries.append({
             "exercise_id": e.get("exercise_id"),
             "exercise_name": e.get("exercise_name"),
+            "tracking": e.get("tracking", "reps"),
             "set_count": len(sets),
-            "top_set": {"weight": (top or {}).get("weight"), "reps": (top or {}).get("reps")} if top else None,
+            "top_set": top_set,
         })
     return {
         "id": w.get("id"),

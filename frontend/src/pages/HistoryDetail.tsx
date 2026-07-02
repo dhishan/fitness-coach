@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { workoutsApi } from '../services/api'
-import type { Workout } from '@fitness/shared-types'
+import type { Workout, WorkoutEntry } from '@fitness/shared-types'
+import { formatDuration } from '../lib/workoutHelpers'
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
@@ -188,7 +189,16 @@ export default function HistoryDetail() {
   )
 }
 
-function EntryCard({ entry }: { entry: { exercise_name: string; sets: { weight: number; reps: number; rpe?: number | null; is_warmup?: boolean }[] } }) {
+function formatSetSummary(s: WorkoutEntry['sets'][number]): string {
+  if (s.duration_s != null) {
+    // Time-tracked set: show duration, prefix added weight if > 0
+    const dur = formatDuration(s.duration_s)
+    return s.weight > 0 ? `+${s.weight}kg · ${dur}` : dur
+  }
+  return `${s.weight} kg x ${s.reps}`
+}
+
+function EntryCard({ entry }: { entry: WorkoutEntry }) {
   const workingSets = entry.sets.filter((s) => !s.is_warmup)
   const warmupSets = entry.sets.filter((s) => s.is_warmup)
   return (
@@ -198,14 +208,14 @@ function EntryCard({ entry }: { entry: { exercise_name: string; sets: { weight: 
         {warmupSets.map((s, i) => (
           <div key={i} className="flex items-center gap-3 text-xs text-gray-400">
             <span className="w-16">Warmup {i + 1}</span>
-            <span>{s.weight} kg x {s.reps}</span>
+            <span>{formatSetSummary(s)}</span>
             {s.rpe != null && <span className="text-gray-300">RPE {s.rpe}</span>}
           </div>
         ))}
         {workingSets.map((s, i) => (
           <div key={i} className="flex items-center gap-3 text-xs text-gray-700">
             <span className="w-16 font-medium">Set {i + 1}</span>
-            <span className="font-medium">{s.weight} kg x {s.reps}</span>
+            <span className="font-medium">{formatSetSummary(s)}</span>
             {s.rpe != null && <span className="text-gray-400">RPE {s.rpe}</span>}
           </div>
         ))}

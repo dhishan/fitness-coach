@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import type { Exercise, ExerciseHistoryItem, FinishResponse, SetEntry, Workout, WorkoutEntry, WorkoutTemplate } from '@fitness/shared-types'
+import type { Exercise, ExerciseHistoryItem, FinishResponse, SetEntry, Tracking, Workout, WorkoutEntry, WorkoutTemplate } from '@fitness/shared-types'
 import { exercisesApi, templatesApi, workoutsApi } from '../services/api'
 import { toLocalISODate } from '../lib/dates'
-import { nextSupersetGroup } from '../lib/workoutHelpers'
+import { formatDuration, nextSupersetGroup } from '../lib/workoutHelpers'
 import { buildEntryFromHistory } from '../lib/addExercise'
 import type { EntryWithHistory } from '../lib/addExercise'
 import AddExerciseSheet from '../components/AddExerciseSheet'
@@ -65,22 +65,59 @@ function useAutosave(
 // Set row
 // ---------------------------------------------------------------------------
 
+/**
+ * Parse a duration string of the form "m:ss", "mm:ss", or plain seconds.
+ * Returns total seconds, or null if unparseable.
+ */
+function parseDurationInput(val: string): number | null {
+  const trimmed = val.trim()
+  if (trimmed.includes(':')) {
+    const parts = trimmed.split(':')
+    if (parts.length !== 2) return null
+    const m = parseInt(parts[0], 10)
+    const s = parseInt(parts[1], 10)
+    if (isNaN(m) || isNaN(s)) return null
+    return Math.max(0, m * 60 + s)
+  }
+  const n = parseFloat(trimmed)
+  if (isNaN(n)) return null
+  return Math.max(0, Math.round(n))
+}
+
 function SetRow({
   set,
   index,
+  tracking,
   onUpdate,
   onRemove,
 }: {
   set: SetEntry
   index: number
+  tracking: Tracking
   onUpdate: (s: SetEntry) => void
   onRemove: () => void
 }) {
   const isWarmup = !!set.is_warmup
+  const isTime = tracking === 'time'
 
-  const step = (field: 'weight' | 'reps', delta: number) => {
-    const val = Math.max(0, (set[field] ?? 0) + delta)
-    onUpdate({ ...set, [field]: val })
+  // Local text state for duration input to allow free-form typing
+  const [durationText, setDurationText] = useState<string | null>(null)
+
+  const stepWeight = (delta: number) => {
+    const val = Math.max(0, (set.weight ?? 0) + delta)
+    onUpdate({ ...set, weight: val })
+  }
+
+  const stepDuration = (delta: number) => {
+    const current = set.duration_s ?? 0
+    const next = Math.max(0, current + delta)
+    onUpdate({ ...set, duration_s: next, reps: 0 })
+    setDurationText(null)
+  }
+
+  const stepReps = (delta: number) => {
+    const val = Math.max(0, (set.reps ?? 0) + delta)
+    onUpdate({ ...set, reps: val })
   }
 
   return (
@@ -102,7 +139,7 @@ function SetRow({
       {/* Weight */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => step('weight', -2.5)}
+          onClick={() => stepWeight(-2.5)}
           className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
           aria-label="decrease weight"
         >
@@ -116,40 +153,76 @@ function SetRow({
           aria-label={`set ${index + 1} weight`}
         />
         <button
-          onClick={() => step('weight', 2.5)}
+          onClick={() => stepWeight(2.5)}
           className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
           aria-label="increase weight"
         >
           +
         </button>
-        <span className="text-xs text-gray-400">kg</span>
+        <span className="text-xs text-gray-400">{isTime ? 'added kg' : 'kg'}</span>
       </div>
 
-      {/* Reps */}
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => step('reps', -1)}
-          className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
-          aria-label="decrease reps"
-        >
-          -
-        </button>
-        <input
-          type="number"
-          value={set.reps}
-          onChange={(e) => onUpdate({ ...set, reps: parseInt(e.target.value, 10) || 0 })}
-          className="w-12 text-center border border-gray-200 rounded-lg h-7 text-sm focus:outline-none focus:border-blue-400"
-          aria-label={`set ${index + 1} reps`}
-        />
-        <button
-          onClick={() => step('reps', 1)}
-          className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
-          aria-label="increase reps"
-        >
-          +
-        </button>
-        <span className="text-xs text-gray-400">reps</span>
-      </div>
+      {/* Duration (time exercises) or Reps (reps exercises) */}
+      {isTime ? (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => stepDuration(-15)}
+            className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
+            aria-label="decrease duration"
+          >
+            -
+          </button>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={durationText ?? formatDuration(set.duration_s ?? 0)}
+            onChange={(e) => setDurationText(e.target.value)}
+            onBlur={(e) => {
+              const parsed = parseDurationInput(e.target.value)
+              if (parsed !== null) {
+                onUpdate({ ...set, duration_s: parsed, reps: 0 })
+              }
+              setDurationText(null)
+            }}
+            className="w-14 text-center border border-gray-200 rounded-lg h-7 text-sm focus:outline-none focus:border-blue-400"
+            aria-label={`set ${index + 1} duration`}
+            placeholder="0:00"
+          />
+          <button
+            onClick={() => stepDuration(15)}
+            className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
+            aria-label="increase duration"
+          >
+            +
+          </button>
+          <span className="text-xs text-gray-400">m:ss</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => stepReps(-1)}
+            className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
+            aria-label="decrease reps"
+          >
+            -
+          </button>
+          <input
+            type="number"
+            value={set.reps}
+            onChange={(e) => onUpdate({ ...set, reps: parseInt(e.target.value, 10) || 0 })}
+            className="w-12 text-center border border-gray-200 rounded-lg h-7 text-sm focus:outline-none focus:border-blue-400"
+            aria-label={`set ${index + 1} reps`}
+          />
+          <button
+            onClick={() => stepReps(1)}
+            className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
+            aria-label="increase reps"
+          >
+            +
+          </button>
+          <span className="text-xs text-gray-400">reps</span>
+        </div>
+      )}
 
       {/* RPE */}
       <input
@@ -209,8 +282,11 @@ function EntryCard({
     onUpdate({ ...entry, sets })
   }
 
+  const isTimeEntry = (entry.tracking ?? 'reps') === 'time'
+
   const addSet = () => {
-    const last = entry.sets[entry.sets.length - 1] ?? { weight: 0, reps: 0 }
+    const last = entry.sets[entry.sets.length - 1]
+      ?? (isTimeEntry ? { weight: 0, reps: 0, duration_s: 0 } : { weight: 0, reps: 0 })
     onUpdate({ ...entry, sets: [...entry.sets, { ...last, is_warmup: false }] })
   }
 
@@ -274,6 +350,7 @@ function EntryCard({
             key={i}
             set={s}
             index={i}
+            tracking={entry.tracking ?? 'reps'}
             onUpdate={(updated) => updateSet(i, updated)}
             onRemove={() => removeSet(i)}
           />
@@ -384,7 +461,9 @@ function FinishModal({
             <div className="space-y-1">
               {data.prs.map((pr) => (
                 <p key={pr.exercise_id} className="text-sm text-gray-800">
-                  New PR: {pr.exercise_name} {pr.weight}kg (previous {pr.previous_best}kg)
+                  {pr.duration_s != null
+                    ? `New PR: ${pr.exercise_name} ${formatDuration(pr.duration_s)}${pr.previous_best_duration_s != null ? ` (previous ${formatDuration(pr.previous_best_duration_s)})` : ''}`
+                    : `New PR: ${pr.exercise_name} ${pr.weight}kg (previous ${pr.previous_best}kg)`}
                 </p>
               ))}
             </div>

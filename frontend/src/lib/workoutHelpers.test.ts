@@ -1,6 +1,41 @@
 import { describe, it, expect } from 'vitest'
-import { formatLastTime, nextSupersetGroup, reorderEntries } from './workoutHelpers'
+import { formatDuration, formatLastTime, nextSupersetGroup, reorderEntries } from './workoutHelpers'
 import type { SetEntry, WorkoutEntry } from '@fitness/shared-types'
+
+// ---------------------------------------------------------------------------
+// formatDuration
+// ---------------------------------------------------------------------------
+
+describe('formatDuration', () => {
+  it('formats 0 seconds as 0:00', () => {
+    expect(formatDuration(0)).toBe('0:00')
+  })
+
+  it('formats 60 seconds as 1:00', () => {
+    expect(formatDuration(60)).toBe('1:00')
+  })
+
+  it('formats 75 seconds as 1:15', () => {
+    expect(formatDuration(75)).toBe('1:15')
+  })
+
+  it('formats 90 seconds as 1:30', () => {
+    expect(formatDuration(90)).toBe('1:30')
+  })
+
+  it('pads seconds below 10 with a leading zero', () => {
+    expect(formatDuration(65)).toBe('1:05')
+  })
+
+  it('clamps negative values to 0:00', () => {
+    expect(formatDuration(-5)).toBe('0:00')
+  })
+
+  it('rounds fractional seconds', () => {
+    expect(formatDuration(59.6)).toBe('1:00')
+    expect(formatDuration(59.4)).toBe('0:59')
+  })
+})
 
 // ---------------------------------------------------------------------------
 // formatLastTime
@@ -61,6 +96,33 @@ describe('formatLastTime', () => {
     const result = formatLastTime(workingSets, '2026-06-09')
     expect(typeof result).toBe('string')
     expect(result).toContain('80kg 5/5/4')
+  })
+})
+
+describe('formatLastTime (time-tracked sets)', () => {
+  const timeSets: SetEntry[] = [
+    { weight: 0, reps: 0, duration_s: 60, is_warmup: false },
+    { weight: 0, reps: 0, duration_s: 75, is_warmup: false },
+  ]
+
+  it('formats time sets as durations', () => {
+    const result = formatLastTime(timeSets, '2026-06-09', '2026-06-12')
+    expect(result).toBe('1:00/1:15, 3d ago')
+  })
+
+  it('prefixes added weight when weight > 0', () => {
+    const weighted: SetEntry[] = [{ weight: 10, reps: 0, duration_s: 90, is_warmup: false }]
+    const result = formatLastTime(weighted, '2026-06-09', '2026-06-12')
+    expect(result).toBe('+10kg 1:30, 3d ago')
+  })
+
+  it('excludes warmup time sets', () => {
+    const withWarmupTime: SetEntry[] = [
+      { weight: 0, reps: 0, duration_s: 30, is_warmup: true },
+      { weight: 0, reps: 0, duration_s: 60, is_warmup: false },
+    ]
+    const result = formatLastTime(withWarmupTime, '2026-06-09', '2026-06-12')
+    expect(result).toBe('1:00, 3d ago')
   })
 })
 

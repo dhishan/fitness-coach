@@ -21,6 +21,7 @@ import type {
   ExerciseHistoryItem,
   Muscle,
   MovementPattern,
+  Tracking,
 } from '@fitness/shared-types'
 import { exercisesApi } from '../services/api'
 import { colors, spacing, radius, card } from '../theme'
@@ -32,6 +33,7 @@ const MUSCLE_OPTIONS: Muscle[] = [
 
 const MOVEMENT_PATTERN_OPTIONS: MovementPattern[] = ['push', 'pull', 'squat', 'hinge', 'carry', 'core']
 const EQUIPMENT_OPTIONS: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'trx', 'other']
+const TRACKING_OPTIONS: Tracking[] = ['reps', 'time']
 
 const MUSCLE_COLORS: Record<string, string> = {
   chest: '#ef4444',
@@ -66,6 +68,7 @@ function CreateExerciseForm({
   const [secondaryMuscles, setSecondaryMuscles] = useState<Muscle[]>([])
   const [pattern, setPattern] = useState<MovementPattern | ''>('')
   const [equipment, setEquipment] = useState<Equipment | ''>('')
+  const [tracking, setTracking] = useState<Tracking>('reps')
   const [saving, setSaving] = useState(false)
 
   const togglePrimary = (m: Muscle) =>
@@ -86,6 +89,7 @@ function CreateExerciseForm({
         secondary_muscles: secondaryMuscles,
         movement_pattern: pattern as MovementPattern,
         equipment: equipment as Equipment,
+        tracking,
       }
       const created = await exercisesApi.create(body)
       void qc.invalidateQueries({ queryKey: ['exercises'] })
@@ -172,6 +176,21 @@ function CreateExerciseForm({
           >
             <Text style={[s.chipText, equipment === eq ? s.chipTextActive : s.chipTextInactive]}>
               {eq === 'trx' ? 'TRX' : eq}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Text style={s.fieldLabel}>Tracking</Text>
+      <View style={s.chipRow}>
+        {TRACKING_OPTIONS.map((t) => (
+          <Pressable
+            key={t}
+            onPress={() => setTracking(t)}
+            style={[s.chip, tracking === t ? s.chipPrimary : s.chipInactive]}
+          >
+            <Text style={[s.chipText, tracking === t ? s.chipTextActive : s.chipTextInactive]}>
+              {t === 'reps' ? 'Reps' : 'Time'}
             </Text>
           </Pressable>
         ))}

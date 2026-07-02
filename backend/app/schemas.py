@@ -8,6 +8,7 @@ Muscle = Literal[
 ]
 MovementPattern = Literal["push", "pull", "squat", "hinge", "carry", "core"]
 Equipment = Literal["barbell", "dumbbell", "machine", "cable", "bodyweight", "trx", "other"]
+Tracking = Literal["reps", "time"]
 
 
 class ExerciseCreate(BaseModel):
@@ -16,6 +17,7 @@ class ExerciseCreate(BaseModel):
     secondary_muscles: list[Muscle] = []
     movement_pattern: MovementPattern
     equipment: Equipment
+    tracking: Tracking = "reps"
 
 
 class Exercise(ExerciseCreate):
@@ -28,8 +30,9 @@ class Exercise(ExerciseCreate):
 
 
 class SetEntry(BaseModel):
-    weight: float = Field(ge=0)
-    reps: int = Field(ge=0)
+    weight: float = Field(default=0, ge=0)  # 0 = bodyweight; >0 = added weight
+    reps: int = Field(default=0, ge=0)  # 0 for time-tracked sets
+    duration_s: int | None = Field(default=None, ge=0)  # set for time-tracked sets
     rpe: float | None = Field(default=None, ge=1, le=10)
     is_warmup: bool = False
 
@@ -37,6 +40,7 @@ class SetEntry(BaseModel):
 class WorkoutEntry(BaseModel):
     exercise_id: str
     exercise_name: str
+    tracking: Tracking = "reps"  # denormalized from the exercise at log time
     superset_group: str | None = None
     sets: list[SetEntry] = []
 

@@ -32,7 +32,12 @@ SEED_EXERCISES = [
     {"id": "sys-barbell-curl", "name": "Barbell Curl", "primary_muscles": ["biceps"], "secondary_muscles": ["forearms"], "movement_pattern": "pull", "equipment": "barbell"},
     {"id": "sys-db-curl", "name": "Dumbbell Curl", "primary_muscles": ["biceps"], "secondary_muscles": ["forearms"], "movement_pattern": "pull", "equipment": "dumbbell"},
     {"id": "sys-farmers-carry", "name": "Farmer's Carry", "primary_muscles": ["forearms", "core"], "secondary_muscles": ["shoulders"], "movement_pattern": "carry", "equipment": "dumbbell"},
-    {"id": "sys-plank", "name": "Plank", "primary_muscles": ["core"], "secondary_muscles": [], "movement_pattern": "core", "equipment": "bodyweight"},
+    {"id": "sys-plank", "name": "Plank", "primary_muscles": ["core"], "secondary_muscles": [], "movement_pattern": "core", "equipment": "bodyweight", "tracking": "time"},
+    {"id": "sys-side-plank", "name": "Side Plank", "primary_muscles": ["core"], "secondary_muscles": ["shoulders"], "movement_pattern": "core", "equipment": "bodyweight", "tracking": "time"},
+    {"id": "sys-wall-sit", "name": "Wall Sit", "primary_muscles": ["quads"], "secondary_muscles": ["glutes"], "movement_pattern": "squat", "equipment": "bodyweight", "tracking": "time"},
+    {"id": "sys-dead-hang", "name": "Dead Hang", "primary_muscles": ["forearms", "back"], "secondary_muscles": ["shoulders"], "movement_pattern": "pull", "equipment": "bodyweight", "tracking": "time"},
+    {"id": "sys-hollow-hold", "name": "Hollow Body Hold", "primary_muscles": ["core"], "secondary_muscles": [], "movement_pattern": "core", "equipment": "bodyweight", "tracking": "time"},
+    {"id": "sys-l-sit", "name": "L-Sit", "primary_muscles": ["core"], "secondary_muscles": ["triceps", "quads"], "movement_pattern": "core", "equipment": "bodyweight", "tracking": "time"},
     {"id": "sys-hanging-leg-raise", "name": "Hanging Leg Raise", "primary_muscles": ["core"], "secondary_muscles": ["forearms"], "movement_pattern": "core", "equipment": "bodyweight"},
     {"id": "sys-cable-crunch", "name": "Cable Crunch", "primary_muscles": ["core"], "secondary_muscles": [], "movement_pattern": "core", "equipment": "cable"},
 ]

@@ -6,11 +6,15 @@ from app.firestore import get_db
 
 
 def compute_total_volume(entries: list[dict]) -> float:
-    return sum(
-        s["weight"] * s["reps"]
-        for e in entries for s in e.get("sets", [])
-        if not s.get("is_warmup", False)
-    )
+    # weight x reps over working sets. Time-tracked sets (duration_s set) have no
+    # meaningful weight x reps product, so they are excluded from volume.
+    total = 0.0
+    for e in entries:
+        for s in e.get("sets", []):
+            if s.get("is_warmup", False) or s.get("duration_s") is not None:
+                continue
+            total += s.get("weight", 0) * s.get("reps", 0)
+    return total
 
 
 def exercise_ids_from_entries(entries: list[dict]) -> list[str]:
@@ -21,18 +25,30 @@ def exercise_ids_from_entries(entries: list[dict]) -> list[str]:
     return seen
 
 
-def detect_prs(entries: list[dict], history_max: dict[str, float]) -> list[dict]:
-    """history_max: exercise_id -> best working-set weight before this workout."""
+def detect_prs(entries: list[dict], history_best: dict[str, dict]) -> list[dict]:
+    """history_best: exercise_id -> {"weight": float, "duration": float} best
+    working-set values before this workout. Time-tracked entries PR on the
+    longest hold; everything else PRs on the heaviest working set."""
     prs = []
     for e in entries:
-        working = [s["weight"] for s in e.get("sets", []) if not s.get("is_warmup", False)]
+        working = [s for s in e.get("sets", []) if not s.get("is_warmup", False)]
         if not working:
             continue
-        top = max(working)
-        prev = history_max.get(e["exercise_id"])
-        if prev is not None and top > prev:
-            prs.append({"exercise_id": e["exercise_id"], "exercise_name": e.get("exercise_name", ""),
-                        "weight": top, "previous_best": prev})
+        prev = history_best.get(e["exercise_id"], {})
+        if e.get("tracking") == "time":
+            top = max((s.get("duration_s") or 0) for s in working)
+            if top <= 0:
+                continue
+            prev_d = prev.get("duration")
+            if prev_d is not None and top > prev_d:
+                prs.append({"exercise_id": e["exercise_id"], "exercise_name": e.get("exercise_name", ""),
+                            "duration_s": top, "previous_best_duration_s": prev_d})
+        else:
+            top = max(s.get("weight", 0) for s in working)
+            prev_w = prev.get("weight")
+            if prev_w is not None and top > prev_w:
+                prs.append({"exercise_id": e["exercise_id"], "exercise_name": e.get("exercise_name", ""),
+                            "weight": top, "previous_best": prev_w})
     return prs
 
 
@@ -114,8 +130,11 @@ def update_workout(workout_id: str, user_id: str, payload: dict) -> dict | None:
     return doc
 
 
-def history_max_for(user_id: str, exercise_ids: list[str], exclude_workout_id: str) -> dict[str, float]:
-    best: dict[str, float] = {}
+def history_max_for(user_id: str, exercise_ids: list[str], exclude_workout_id: str) -> dict[str, dict]:
+    """exercise_id -> {"weight": best working weight, "duration": best working
+    hold} across prior workouts. Only the key relevant to the exercise's
+    tracking type is populated in practice."""
+    best: dict[str, dict] = {}
     db = get_db()
     for ex_id in exercise_ids:
         query = (
@@ -132,8 +151,13 @@ def history_max_for(user_id: str, exercise_ids: list[str], exclude_workout_id: s
                 if e["exercise_id"] != ex_id:
                     continue
                 for s in e.get("sets", []):
-                    if not s.get("is_warmup", False):
-                        best[ex_id] = max(best.get(ex_id, 0.0), s["weight"])
+                    if s.get("is_warmup", False):
+                        continue
+                    b = best.setdefault(ex_id, {})
+                    if s.get("duration_s") is not None:
+                        b["duration"] = max(b.get("duration", 0.0), s["duration_s"])
+                    else:
+                        b["weight"] = max(b.get("weight", 0.0), s.get("weight", 0))
     return best
 
 
