@@ -20,20 +20,28 @@ export function buildEntryFromHistory(
   let prefilled: SetEntry[]
   let lastTime: string | undefined
 
+  const isTime = exercise.tracking === 'time'
+
   if (lastSession && lastSession.sets.length > 0) {
     prefilled = lastSession.sets
       .filter((s) => !s.is_warmup)
-      .map((s) => ({ weight: s.weight, reps: s.reps, is_warmup: false as const }))
-    if (prefilled.length === 0) prefilled = [{ weight: 0, reps: 0 }]
+      .map((s) =>
+        isTime
+          ? { weight: s.weight, reps: 0, duration_s: s.duration_s ?? 0, is_warmup: false as const }
+          : { weight: s.weight, reps: s.reps, is_warmup: false as const },
+      )
+    if (prefilled.length === 0)
+      prefilled = [isTime ? { weight: 0, reps: 0, duration_s: 0 } : { weight: 0, reps: 0 }]
     lastTime = formatLastTime(lastSession.sets, lastSession.date, undefined, unit)
   } else {
-    prefilled = [{ weight: 0, reps: 0 }]
+    prefilled = [isTime ? { weight: 0, reps: 0, duration_s: 0 } : { weight: 0, reps: 0 }]
     lastTime = undefined
   }
 
   return {
     exercise_id: exercise.id,
     exercise_name: exercise.name,
+    tracking: exercise.tracking ?? 'reps',
     superset_group: null,
     sets: prefilled,
     lastTime,

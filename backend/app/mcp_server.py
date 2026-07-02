@@ -51,6 +51,7 @@ def _validate_sets(sets: list[dict], label: str = "sets") -> tuple[list[dict] | 
             validated = SetEntrySchema(
                 weight=s.get("weight", 0),
                 reps=s.get("reps", 0),
+                duration_s=s.get("duration_s"),
                 rpe=s.get("rpe"),
                 is_warmup=bool(s.get("is_warmup", False)),
             )
@@ -64,6 +65,7 @@ def _validate_sets(sets: list[dict], label: str = "sets") -> tuple[list[dict] | 
         normalised.append({
             "weight": validated.weight,
             "reps": validated.reps,
+            "duration_s": validated.duration_s,
             "rpe": validated.rpe,
             "is_warmup": validated.is_warmup,
         })
@@ -261,6 +263,7 @@ def log_workout(date: str, entries: list[dict]) -> dict[str, Any]:
         validated_entries.append({
             "exercise_id": ex_id,
             "exercise_name": ex.get("name", ""),
+            "tracking": ex.get("tracking", "reps"),
             "superset_group": e.get("superset_group") if isinstance(e.get("superset_group"), str) else None,
             "sets": norm_sets,
         })
@@ -326,6 +329,7 @@ def add_to_active_workout(exercise_id: str, sets: list[dict]) -> dict[str, Any]:
     entries.append({
         "exercise_id": exercise_id,
         "exercise_name": ex.get("name", ""),
+        "tracking": ex.get("tracking", "reps"),
         "superset_group": None,
         "sets": norm_sets,
     })

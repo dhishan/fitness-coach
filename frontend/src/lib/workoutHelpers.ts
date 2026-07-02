@@ -2,11 +2,25 @@ import type { SetEntry, WorkoutEntry } from '@fitness/shared-types'
 import { toLocalISODate } from './dates'
 
 /**
+ * Format a duration in seconds as m:ss (e.g. 75 -> "1:15").
+ */
+export function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds))
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${String(sec).padStart(2, '0')}`
+}
+
+/**
  * Format the "last time" summary line shown under an exercise name.
  *
- * Shows: "{weight}kg {reps/reps/...}, {N}d ago"
+ * For reps exercises:
+ *   Shows: "{weight}kg {reps/reps/...}, {N}d ago"
+ * For time exercises (first working set has duration_s != null):
+ *   Shows: "{duration/duration/...}, {N}d ago"
+ *   Prefix "+{weight}kg " only when added weight > 0.
+ *
  * - Only working sets (is_warmup !== true) are included.
- * - Weight shown is the weight of the first working set.
  * - Returns empty string when there are no sets.
  *
  * @param sets   SetEntry array from the last session
@@ -21,11 +35,19 @@ export function formatLastTime(
   const working = sets.filter((s) => !s.is_warmup)
   if (working.length === 0) return ''
 
-  const weight = working[0].weight
-  const reps = working.map((s) => s.reps).join('/')
-
   const daysDiff = dateDiffDays(date, today)
   const ago = daysDiff === 0 ? 'today' : `${daysDiff}d ago`
+
+  // Time-tracked: first working set has duration_s set
+  if (working[0].duration_s != null) {
+    const durations = working.map((s) => formatDuration(s.duration_s ?? 0)).join('/')
+    const weight = working[0].weight
+    const prefix = weight > 0 ? `+${weight}kg ` : ''
+    return `${prefix}${durations}, ${ago}`
+  }
+
+  const weight = working[0].weight
+  const reps = working.map((s) => s.reps).join('/')
 
   return `${weight}kg ${reps}, ${ago}`
 }

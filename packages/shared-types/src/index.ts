@@ -4,6 +4,7 @@ export type Muscle =
 
 export type MovementPattern = 'push' | 'pull' | 'squat' | 'hinge' | 'carry' | 'core'
 export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'trx' | 'other'
+export type Tracking = 'reps' | 'time'
 
 export interface Exercise {
   id: string
@@ -13,6 +14,7 @@ export interface Exercise {
   secondary_muscles: Muscle[]
   movement_pattern: MovementPattern
   equipment: Equipment
+  tracking?: Tracking // defaults to 'reps' when absent
   is_custom: boolean
   images?: string[]
   instructions?: string[]
@@ -25,11 +27,13 @@ export interface ExerciseCreate {
   secondary_muscles?: Muscle[]
   movement_pattern: MovementPattern
   equipment: Equipment
+  tracking?: Tracking
 }
 
 export interface SetEntry {
   weight: number
   reps: number
+  duration_s?: number | null // set for time-tracked sets
   rpe?: number | null
   is_warmup?: boolean
 }
@@ -37,6 +41,7 @@ export interface SetEntry {
 export interface WorkoutEntry {
   exercise_id: string
   exercise_name: string
+  tracking?: Tracking // denormalized from the exercise at log time; defaults 'reps'
   superset_group?: string | null
   sets: SetEntry[]
 }
@@ -59,8 +64,10 @@ export interface WorkoutListResponse { items: Workout[]; total: number }
 export interface PR {
   exercise_id: string
   exercise_name: string
-  weight: number
-  previous_best: number
+  weight?: number
+  previous_best?: number
+  duration_s?: number // present for time-tracked PRs (longest hold)
+  previous_best_duration_s?: number
 }
 
 export interface FinishResponse extends Workout { prs: PR[] }

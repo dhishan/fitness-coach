@@ -144,7 +144,27 @@ def test_add_to_active_workout_appends_entry():
         appended = payload["entries"][-1]
         assert appended["exercise_id"] == "e1"
         assert appended["exercise_name"] == "Lat Pulldown"
-        assert appended["sets"][0] == {"weight": 50.0, "reps": 8, "rpe": None, "is_warmup": False}
+        assert appended["tracking"] == "reps"
+        assert appended["sets"][0] == {"weight": 50.0, "reps": 8, "duration_s": None, "rpe": None, "is_warmup": False}
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_add_to_active_workout_time_exercise():
+    from app.mcp_server import _current_user_id
+    import app.mcp_server as mcp_server
+    token = _current_user_id.set("u1")
+    try:
+        active = {"id": "w1", "entries": []}
+        with patch.object(mcp_server.workout_service, "get_active_workout", return_value=active), \
+             patch.object(mcp_server.exercise_service, "get_exercise",
+                          return_value={"id": "sys-plank", "name": "Plank", "tracking": "time"}), \
+             patch.object(mcp_server.workout_service, "update_workout", return_value={"id": "w1", "entries": []}) as mock_upd:
+            mcp_server.add_to_active_workout(exercise_id="sys-plank", sets=[{"duration_s": 60}])
+        appended = mock_upd.call_args[0][2]["entries"][-1]
+        assert appended["tracking"] == "time"
+        assert appended["sets"][0]["duration_s"] == 60
+        assert appended["sets"][0]["reps"] == 0
     finally:
         _current_user_id.reset(token)
 
