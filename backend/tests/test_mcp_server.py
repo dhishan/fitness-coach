@@ -14,18 +14,19 @@ from app.auth.mcp_auth import _current_user_id
 
 
 def test_tool_count():
-    """Exactly 21 tools must be registered (12 workout + 8 nutrition/body/cardio + 1 create_exercise)."""
+    """Exactly 22 tools must be registered (13 workout + 8 nutrition/body/cardio + 1 create_exercise)."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
-    assert len(tools) == 21
+    assert len(tools) == 22
 
 
 def test_tool_names():
-    """All 21 expected tool names are present."""
+    """All 22 expected tool names are present."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
     names = {t.name for t in tools}
     expected = {
         "get_dashboard_summary",
         "get_workouts",
+        "get_workout",
         "get_active_workout",
         "get_exercise_progress",
         "get_exercise_history",
@@ -128,6 +129,40 @@ def test_get_workouts_unwraps_items_and_passes_offset():
         assert result[0]["id"] == "w1"
         # datetimes are serialised to strings for JSON transport
         assert result[0]["ended_at"] == str(ended)
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_workouts_completed_only_skips_in_progress():
+    """completed_only over-fetches by one and drops workouts without ended_at."""
+    page = {"items": [
+        {"id": "active", "date": "2026-07-03", "ended_at": None},
+        {"id": "done", "date": "2026-07-01", "ended_at": "2026-07-01T10:00:00Z"},
+    ], "total": 2}
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(
+            mcp_server.workout_service, "list_workouts", return_value=page
+        ) as mock_list:
+            result = mcp_server.get_workouts(limit=1, completed_only=True)
+        mock_list.assert_called_once_with("u1", None, None, 2, 0)  # limit + 1
+        assert [w["id"] for w in result] == ["done"]
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_get_workout_by_id():
+    token = _current_user_id.set("u1")
+    try:
+        doc = {"id": "w9", "date": "2026-07-01", "entries": [], "user_id": "u1"}
+        with patch.object(mcp_server.workout_service, "get_workout", return_value=doc) as mock_get:
+            result = mcp_server.get_workout(workout_id="w9")
+        mock_get.assert_called_once_with("w9", "u1")
+        assert result["id"] == "w9"
+        # cross-user / missing id -> error shape, not an exception
+        with patch.object(mcp_server.workout_service, "get_workout", return_value=None):
+            missing = mcp_server.get_workout(workout_id="nope")
+        assert "error" in missing
     finally:
         _current_user_id.reset(token)
 
