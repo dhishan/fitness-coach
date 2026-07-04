@@ -148,22 +148,47 @@ def get_workouts(
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
     limit: int = 10,
+    completed_only: bool = False,
 ) -> list[dict]:
-    """List recent workouts for the calling user.
+    """List recent workouts for the calling user, newest first.
 
-    from_date / to_date: optional YYYY-MM-DD bounds.
+    from_date / to_date: optional YYYY-MM-DD bounds. A single day's workout is
+    from_date == to_date. The latest workout is limit=1.
     limit: max number of workouts to return (default 10).
+    completed_only: when true, skip any in-progress workout (no ended_at) —
+    e.g. the last finished session is limit=1, completed_only=true.
     """
     uid = _uid()
-    page = workout_service.list_workouts(uid, from_date, to_date, limit, 0)
+    # Over-fetch slightly when filtering so completed_only can't come up short
+    # just because the newest workout is still in progress.
+    fetch = limit + 1 if completed_only else limit
+    page = workout_service.list_workouts(uid, from_date, to_date, fetch, 0)
+    items = page["items"]
+    if completed_only:
+        items = [w for w in items if w.get("ended_at")][:limit]
     # list_workouts returns {"items": [...], "total": n}; serialise the items.
     result = []
-    for w in page["items"]:
+    for w in items:
         row = {}
         for k, v in w.items():
             row[k] = str(v) if hasattr(v, "isoformat") else v
         result.append(row)
     return result
+
+
+@mcp.tool()
+def get_workout(workout_id: str) -> dict[str, Any]:
+    """Fetch a single workout by id, with all entries and sets.
+
+    workout_id: the workout document id (as returned by get_workouts,
+    get_exercise_history, or log_workout). Returns {"error": ...} if the id
+    doesn't exist or belongs to another user.
+    """
+    uid = _uid()
+    w = workout_service.get_workout(workout_id, uid)
+    if w is None:
+        return {"error": f"No workout with id {workout_id!r}."}
+    return _serialise(w)
 
 
 # ---------------------------------------------------------------------------
