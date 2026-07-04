@@ -270,8 +270,11 @@ var OAuthProviderImpl = class {
     if (!origin) {
       return response;
     }
+    const ALLOWED_ORIGINS = ["https://claude.ai", "https://chatgpt.com", "https://chat.openai.com"];
     const newResponse = new Response(response.body, response);
-    newResponse.headers.set("Access-Control-Allow-Origin", origin);
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      newResponse.headers.set("Access-Control-Allow-Origin", origin);
+    }
     newResponse.headers.set("Access-Control-Allow-Methods", "*");
     newResponse.headers.set("Access-Control-Allow-Headers", "Authorization, *");
     newResponse.headers.set("Access-Control-Max-Age", "86400");

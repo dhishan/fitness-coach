@@ -22,6 +22,7 @@ import * as HealthKit from '../../src/services/healthkit'
 import { colors, spacing, radius, card, shadow } from '../../src/theme'
 import { toLocalISODate } from '../../src/lib/dates'
 import { startFromPlan } from '../../src/lib/startFromPlan'
+import { kgToDisplay, useWeightUnit } from '../../src/store/units'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 
@@ -52,6 +53,7 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 function WeekStrip({ summary }: { summary: DashboardSummary }) {
   const weekStart = new Date(summary.week_start + 'T00:00:00')
   const trainedSet = new Set(summary.trained_dates)
+  const unit = useWeightUnit()
 
   const dots = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart)
@@ -60,10 +62,11 @@ function WeekStrip({ summary }: { summary: DashboardSummary }) {
     return { label: DAY_LABELS[i], iso, trained: trainedSet.has(iso) }
   })
 
+  const displayVol = kgToDisplay(summary.week_volume, unit)
   const volumeLabel =
-    summary.week_volume >= 1000
-      ? `${(summary.week_volume / 1000).toFixed(1)}k kg`
-      : `${summary.week_volume} kg`
+    displayVol >= 1000
+      ? `${(displayVol / 1000).toFixed(1)}k ${unit}`
+      : `${Math.round(displayVol)} ${unit}`
 
   return (
     <View style={[card, s.cardPad]}>
@@ -635,6 +638,7 @@ export default function HomeScreen() {
   const router = useRouter()
   const qc = useQueryClient()
   const today = toLocalISODate()
+  const homeUnit = useWeightUnit()
 
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ['dashboard-summary', today],
@@ -717,10 +721,12 @@ export default function HomeScreen() {
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={s.volumeText}>
-                  {lastWorkout.total_volume >= 1000
-                    ? `${(lastWorkout.total_volume / 1000).toFixed(1)}k`
-                    : lastWorkout.total_volume}{' '}
-                  kg
+                  {(() => {
+                    const d = kgToDisplay(lastWorkout.total_volume, homeUnit)
+                    return d >= 1000
+                      ? `${(d / 1000).toFixed(1)}k ${homeUnit}`
+                      : `${Math.round(d)} ${homeUnit}`
+                  })()}
                 </Text>
                 <Text style={s.planMeta}>volume</Text>
               </View>

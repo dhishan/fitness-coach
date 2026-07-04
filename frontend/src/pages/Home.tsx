@@ -9,6 +9,8 @@ import { startFromPlan } from '../lib/startFromPlan'
 import WeekStrip from '../components/home/WeekStrip'
 import ProgressChart from '../components/home/ProgressChart'
 import MuscleSplit from '../components/home/MuscleSplit'
+import { useUnitsStore } from '../store/units'
+import { kgToDisplay, weightLabel } from '../lib/units'
 
 function Skeleton({ className = '' }: { className?: string }) {
   return <div className={`bg-gray-100 rounded-xl animate-pulse ${className}`} />
@@ -232,6 +234,8 @@ export default function Home() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const today = toLocalISODate()
+  const unit = useUnitsStore((s) => s.unit)
+  const unitLabel = weightLabel(unit)
 
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ['dashboard-summary', today],
@@ -323,9 +327,10 @@ export default function Home() {
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold text-primary-600">
-                  {lastWorkout.total_volume >= 1000
-                    ? `${(lastWorkout.total_volume / 1000).toFixed(1)}k`
-                    : lastWorkout.total_volume} kg
+                  {(() => {
+                    const v = kgToDisplay(lastWorkout.total_volume, unit)
+                    return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Math.round(v).toString()
+                  })()} {unitLabel}
                 </p>
                 <p className="text-xs text-gray-400">volume</p>
               </div>

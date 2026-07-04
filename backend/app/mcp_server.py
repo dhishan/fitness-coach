@@ -15,7 +15,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from app.auth.mcp_auth import McpAuthMiddleware, _current_user_id, get_mcp_user_id
-from app.schemas import Macros, Micros, SetEntry as SetEntrySchema
+from app.schemas import ExerciseCreate, Macros, Micros, SetEntry as SetEntrySchema
 from app.services import (
     body_service,
     cardio_service,
@@ -221,6 +221,45 @@ def list_exercises(
     return exercise_service.list_exercises(uid, muscle=muscle, pattern=pattern, q=q)
 
 
+@mcp.tool()
+def create_exercise(
+    name: str,
+    primary_muscles: list[str],
+    secondary_muscles: Optional[list[str]] = None,
+    movement_pattern: str = "push",
+    equipment: str = "other",
+    tracking: str = "reps",
+) -> dict[str, Any]:
+    """Create a custom exercise in the user's library.
+
+    name: exercise name (1-120 chars).
+    primary_muscles: one or more primary muscle groups (at least one required).
+      Valid values: chest, back, quads, hamstrings, glutes, shoulders, biceps,
+      triceps, core, calves, forearms.
+    secondary_muscles: optional additional muscles (same valid values as primary).
+    movement_pattern: push | pull | squat | hinge | carry | core.
+    equipment: barbell | dumbbell | machine | cable | bodyweight | trx | other.
+    tracking: reps | time. Use "time" for holds and isometrics logged by duration
+      (e.g. planks, hangs); use "reps" for everything else.
+
+    Returns the created exercise document, or {"error": "..."} on validation failure.
+    """
+    uid = _uid()
+    try:
+        payload = ExerciseCreate(
+            name=name,
+            primary_muscles=primary_muscles,
+            secondary_muscles=secondary_muscles or [],
+            movement_pattern=movement_pattern,
+            equipment=equipment,
+            tracking=tracking,
+        )
+    except pydantic.ValidationError as exc:
+        return {"error": exc.errors()[0]["msg"]}
+    created = exercise_service.create_exercise(uid, payload.model_dump())
+    return created
+
+
 # ---------------------------------------------------------------------------
 # Workout logging tool
 # ---------------------------------------------------------------------------
@@ -381,6 +420,7 @@ def create_plan(name: str, entries: list[dict]) -> dict[str, Any]:
         built.append({
             "exercise_id": ex_id,
             "exercise_name": ex.get("name", ""),
+            "tracking": ex.get("tracking", "reps"),
             "target_sets": target_sets,
             "superset_group": e.get("superset_group") if isinstance(e.get("superset_group"), str) else None,
         })
@@ -543,12 +583,15 @@ def get_nutrition_summary(reference_date: Optional[str] = None, days: int = 7) -
     ref_str = reference_date or _date.today().isoformat()
     ref = _date.fromisoformat(ref_str)
     days = max(1, min(int(days), 30))
+    # One range query + batched day-status fetch (2 round-trips total).
+    date_from = (ref - timedelta(days=days - 1)).isoformat()
+    by_date = food_service.list_by_date_range(uid, date_from, ref_str)
     out: list[dict] = []
     for i in range(days - 1, -1, -1):
         d = (ref - timedelta(days=i)).isoformat()
-        day = food_service.list_by_date(uid, d)
-        totals = (day or {}).get("totals") or {}
-        out.append({"date": d, **totals, "incomplete": bool((day or {}).get("incomplete"))})
+        day_data = by_date.get(d, {})
+        totals = day_data.get("totals") or {}
+        out.append({"date": d, **totals, "incomplete": bool(day_data.get("incomplete"))})
     return out
 
 

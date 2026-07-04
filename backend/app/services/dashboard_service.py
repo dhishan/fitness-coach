@@ -116,5 +116,20 @@ def muscle_split_for(user_id: str, reference_date: str, weeks: int) -> dict[str,
     start = end - timedelta(weeks=weeks)
     workouts = _workouts_between(user_id, start.isoformat(), end.isoformat())
     db = get_db()
-    ex_map = {d.id: d.to_dict() for d in db.collection("exercises").stream()}
+    # Filter to system exercises + this user's custom exercises instead of
+    # streaming the entire exercises collection.
+    ex_map = {
+        d.id: d.to_dict()
+        for d in db.collection("exercises")
+        .where(filter=firestore.FieldFilter("user_id", "in", ["system", user_id]))
+        .stream()
+    }
     return muscle_split(workouts, ex_map)
+
+
+# Decision: summary() makes two sequential Firestore fetches (week workouts +
+# recent-all-dates). The function is synchronous and the callers (MCP tool,
+# dashboard router) already run it inside asyncio.to_thread. Adding
+# ThreadPoolExecutor parallelism inside a function that is itself running in a
+# thread pool would add complexity for marginal gain (2 round-trips, each fast).
+# Left sequential.

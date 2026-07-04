@@ -1,11 +1,30 @@
 import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
+from pydantic import BaseModel, Field
 
 from app.auth.dependencies import CurrentUser, get_current_user
+from app.config import get_settings
 from app.schemas import DayStatusUpdate, FavoriteCreate, FoodLogCreate, FoodLogUpdate, GoalsUpdate, RecipeCreate, RecipeLogRequest, RecipeUpdate
 from app.security.validators import _check_food_image_url, sanitize_hint
 from app.services import food_service, goals_service, ifct, nutrition_ai, off_search, openfoodfacts, recipe_service, usda
+from app.services.rate_limit import within_budget
+
+
+# ---- Request models for LLM-backed endpoints ----
+
+class EstimateTextRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+
+
+class EstimateLabelRequest(BaseModel):
+    image_url: str = Field(max_length=2000)
+
+
+class SuggestGoalsRequest(BaseModel):
+    bodyweight_kg: float | None = None
+    goal_text: str = Field(default="", max_length=500)
+
 
 router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
 
@@ -50,11 +69,10 @@ async def barcode_lookup(
 # ---- AI estimation ----
 
 @router.post("/estimate/text")
-async def estimate_text(body: dict, user: CurrentUser = Depends(get_current_user)):
-    text = body.get("text", "")
-    if not text or not str(text).strip():
-        raise HTTPException(status_code=422, detail="text is required")
-    result = await asyncio.to_thread(nutrition_ai.estimate_from_text, user.user_id, str(text).strip())
+async def estimate_text(body: EstimateTextRequest, user: CurrentUser = Depends(get_current_user)):
+    if not within_budget("llm", user.user_id, get_settings().llm_rate_limit_per_min):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded, try again in a minute")
+    result = await asyncio.to_thread(nutrition_ai.estimate_from_text, user.user_id, body.text.strip())
     if "error" in result:
         raise HTTPException(status_code=422, detail=result["error"])
     from app.observability import track
@@ -63,20 +81,21 @@ async def estimate_text(body: dict, user: CurrentUser = Depends(get_current_user
 
 
 @router.post("/estimate/label")
-async def estimate_label(body: dict, user: CurrentUser = Depends(get_current_user)):
+async def estimate_label(body: EstimateLabelRequest, user: CurrentUser = Depends(get_current_user)):
     """Read a Nutrition Facts label photo. Returns per-serving values verbatim.
 
     Same image-URL rules as /estimate/photo — must be a GCS object the user
     uploaded under their own food/ prefix.
     """
-    image_url = body.get("image_url", "")
-    if not image_url:
+    if not within_budget("llm", user.user_id, get_settings().llm_rate_limit_per_min):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded, try again in a minute")
+    if not body.image_url:
         raise HTTPException(status_code=422, detail="image_url is required")
-    reason = _check_food_image_url(image_url, user.user_id)
+    reason = _check_food_image_url(body.image_url, user.user_id)
     if reason is not None:
         raise HTTPException(status_code=422, detail=f"invalid image_url: {reason}")
     result = await asyncio.to_thread(
-        nutrition_ai.estimate_from_label, user.user_id, image_url
+        nutrition_ai.estimate_from_label, user.user_id, body.image_url
     )
     if "error" in result:
         raise HTTPException(status_code=422, detail=result["error"])
@@ -143,6 +162,8 @@ async def search_foods(
 
 @router.post("/estimate/photo")
 async def estimate_photo(body: dict, user: CurrentUser = Depends(get_current_user)):
+    if not within_budget("llm", user.user_id, get_settings().llm_rate_limit_per_min):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded, try again in a minute")
     image_url = body.get("image_url", "")
     if not image_url:
         raise HTTPException(status_code=422, detail="image_url is required")
@@ -273,11 +294,11 @@ async def set_goals(body: GoalsUpdate, user: CurrentUser = Depends(get_current_u
 
 
 @router.post("/goals/suggest")
-async def suggest_goals(body: dict, user: CurrentUser = Depends(get_current_user)):
-    bodyweight_kg = body.get("bodyweight_kg")
-    goal_text = body.get("goal_text", "")
+async def suggest_goals(body: SuggestGoalsRequest, user: CurrentUser = Depends(get_current_user)):
+    if not within_budget("llm", user.user_id, get_settings().llm_rate_limit_per_min):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded, try again in a minute")
     result = await asyncio.to_thread(
-        goals_service.suggest_goals, user.user_id, bodyweight_kg, goal_text
+        goals_service.suggest_goals, user.user_id, body.bodyweight_kg, body.goal_text
     )
     if "error" in result:
         raise HTTPException(status_code=422, detail=result["error"])

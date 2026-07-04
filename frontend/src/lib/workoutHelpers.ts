@@ -1,5 +1,7 @@
 import type { SetEntry, WorkoutEntry } from '@fitness/shared-types'
 import { toLocalISODate } from './dates'
+import type { WeightUnit } from './units'
+import { kgToDisplay, formatWeight } from './units'
 
 /**
  * Format a duration in seconds as m:ss (e.g. 75 -> "1:15").
@@ -15,10 +17,10 @@ export function formatDuration(totalSeconds: number): string {
  * Format the "last time" summary line shown under an exercise name.
  *
  * For reps exercises:
- *   Shows: "{weight}kg {reps/reps/...}, {N}d ago"
+ *   Shows: "{weight}{unit} {reps/reps/...}, {N}d ago"
  * For time exercises (first working set has duration_s != null):
  *   Shows: "{duration/duration/...}, {N}d ago"
- *   Prefix "+{weight}kg " only when added weight > 0.
+ *   Prefix "+{weight}{unit} " only when added weight > 0.
  *
  * - Only working sets (is_warmup !== true) are included.
  * - Returns empty string when there are no sets.
@@ -26,11 +28,13 @@ export function formatDuration(totalSeconds: number): string {
  * @param sets   SetEntry array from the last session
  * @param date   ISO date string of that session (e.g. "2026-06-09")
  * @param today  ISO date string for today; defaults to actual today (injectable for tests)
+ * @param unit   Display unit; defaults to 'kg'
  */
 export function formatLastTime(
   sets: SetEntry[],
   date: string,
   today: string = toLocalISODate(),
+  unit: WeightUnit = 'kg',
 ): string {
   const working = sets.filter((s) => !s.is_warmup)
   if (working.length === 0) return ''
@@ -41,15 +45,21 @@ export function formatLastTime(
   // Time-tracked: first working set has duration_s set
   if (working[0].duration_s != null) {
     const durations = working.map((s) => formatDuration(s.duration_s ?? 0)).join('/')
-    const weight = working[0].weight
-    const prefix = weight > 0 ? `+${weight}kg ` : ''
-    return `${prefix}${durations}, ${ago}`
+    const kg = working[0].weight ?? 0
+    if (kg > 0) {
+      const display = kgToDisplay(kg, unit)
+      const weightStr = formatWeight(display)
+      return `+${weightStr}${unit} ${durations}, ${ago}`
+    }
+    return `${durations}, ${ago}`
   }
 
-  const weight = working[0].weight
+  const kg = working[0].weight ?? 0
+  const display = kgToDisplay(kg, unit)
+  const weightStr = formatWeight(display)
   const reps = working.map((s) => s.reps).join('/')
 
-  return `${weight}kg ${reps}, ${ago}`
+  return `${weightStr}${unit} ${reps}, ${ago}`
 }
 
 function dateDiffDays(from: string, to: string): number {

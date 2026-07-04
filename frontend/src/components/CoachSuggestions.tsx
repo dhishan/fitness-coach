@@ -228,6 +228,7 @@ function PlanCard({ s }: { s: PlanSuggestion }) {
       const entries = resolved.map(({ e, ex }) => ({
         exercise_id: ex!.id,
         exercise_name: ex!.name,
+        tracking: ex!.tracking ?? 'reps',
         target_sets: e.sets ?? 3,
         target_reps: e.reps != null ? String(e.reps) : '',
         rest_s: e.rest_s ?? 90,

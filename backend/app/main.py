@@ -133,10 +133,12 @@ def sentry_test(token: str = ""):
     response says only whether an event was captured — the user should
     look in Sentry to confirm it arrived.
     """
-    expected = settings.jwt_secret_key  # reuse: not a real secret, just a tag
+    import hmac
+    if not settings.sentry_test_token:
+        return {"captured": False, "reason": "disabled"}
     if not settings.sentry_dsn:
         return {"captured": False, "reason": "SENTRY_DSN not configured"}
-    if token != expected[:12] or len(token) < 8:
+    if not hmac.compare_digest(token, settings.sentry_test_token):
         return {"captured": False, "reason": "unauthorized"}
     try:
         import sentry_sdk

@@ -23,6 +23,8 @@ _WORKOUT_TYPE_MAP = {
     "Other": "other",
 }
 
+_BATCH_SIZE = 400  # stay safely under Firestore's 500-op batch limit
+
 
 def ingest_batch(uid: str, samples: list[dict]) -> dict:
     counts = {"weight": 0, "steps": 0, "workouts": 0, "hrv": 0, "sleep": 0}
@@ -38,40 +40,59 @@ def ingest_batch(uid: str, samples: list[dict]) -> dict:
     # re-syncing the same sample updates in place rather than creating a new doc.
     try:
         db = get_db()
+        batch = db.batch()
+        pending = 0
         for s in by_kind.get("weight", []):
-            (
-                db.collection("body_metrics")
-                .document(s["external_id"])
-                .set({
-                    "user_id": uid,
-                    "date": s["date"],
-                    "weight_kg": s["value"],
-                    "source": "healthkit",
-                    "external_id": s["external_id"],
-                    "notes": "",
-                    "created_at": datetime.now(timezone.utc),
-                }, merge=True)
-            )
-            counts["weight"] += 1
+            ref = db.collection("body_metrics").document(s["external_id"])
+            batch.set(ref, {
+                "user_id": uid,
+                "date": s["date"],
+                "weight_kg": s["value"],
+                "source": "healthkit",
+                "external_id": s["external_id"],
+                "notes": "",
+                "created_at": datetime.now(timezone.utc),
+            }, merge=True)
+            pending += 1
+            if pending >= _BATCH_SIZE:
+                batch.commit()
+                counts["weight"] += pending
+                batch = db.batch()
+                pending = 0
+        if pending:
+            batch.commit()
+            counts["weight"] += pending
     except Exception:
         logger.exception("healthkit weight ingestion failed for uid=%s", uid)
 
     # ---- steps ----
     try:
         db = get_db()
+        batch = db.batch()
+        pending = 0
         for s in by_kind.get("steps", []):
-            (
+            ref = (
                 db.collection("daily_metrics")
                 .document(uid)
                 .collection("days")
                 .document(s["date"])
-                .set({"steps": s["value"], "date": s["date"], "updated_at": datetime.now(timezone.utc)}, merge=True)
             )
-            counts["steps"] += 1
+            batch.set(ref, {"steps": s["value"], "date": s["date"], "updated_at": datetime.now(timezone.utc)}, merge=True)
+            pending += 1
+            if pending >= _BATCH_SIZE:
+                batch.commit()
+                counts["steps"] += pending
+                batch = db.batch()
+                pending = 0
+        if pending:
+            batch.commit()
+            counts["steps"] += pending
     except Exception:
         logger.exception("healthkit steps ingestion failed for uid=%s", uid)
 
     # ---- workouts ----
+    # cardio_service.create_log() manages its own Firestore writes (handles
+    # dedup via external_id). Not batched here.
     try:
         for s in by_kind.get("workout", []):
             cardio_type = _WORKOUT_TYPE_MAP.get(s.get("workout_type", ""))
@@ -96,42 +117,62 @@ def ingest_batch(uid: str, samples: list[dict]) -> dict:
     # ---- hrv ----
     try:
         db = get_db()
+        batch = db.batch()
+        pending = 0
         for s in by_kind.get("hrv", []):
-            (
+            ref = (
                 db.collection("health_signals")
                 .document(uid)
                 .collection("hrv")
                 .document(s["external_id"])
-                .set({
-                    "user_id": uid,
-                    "date": s["date"],
-                    "value_ms": s["value"],
-                    "source": "healthkit",
-                    "created_at": datetime.now(timezone.utc),
-                }, merge=True)
             )
-            counts["hrv"] += 1
+            batch.set(ref, {
+                "user_id": uid,
+                "date": s["date"],
+                "value_ms": s["value"],
+                "source": "healthkit",
+                "created_at": datetime.now(timezone.utc),
+            }, merge=True)
+            pending += 1
+            if pending >= _BATCH_SIZE:
+                batch.commit()
+                counts["hrv"] += pending
+                batch = db.batch()
+                pending = 0
+        if pending:
+            batch.commit()
+            counts["hrv"] += pending
     except Exception:
         logger.exception("healthkit hrv ingestion failed for uid=%s", uid)
 
     # ---- sleep ----
     try:
         db = get_db()
+        batch = db.batch()
+        pending = 0
         for s in by_kind.get("sleep", []):
-            (
+            ref = (
                 db.collection("health_signals")
                 .document(uid)
                 .collection("sleep")
                 .document(s["external_id"])
-                .set({
-                    "user_id": uid,
-                    "date": s["date"],
-                    "duration_min": s["value"],
-                    "source": "healthkit",
-                    "created_at": datetime.now(timezone.utc),
-                }, merge=True)
             )
-            counts["sleep"] += 1
+            batch.set(ref, {
+                "user_id": uid,
+                "date": s["date"],
+                "duration_min": s["value"],
+                "source": "healthkit",
+                "created_at": datetime.now(timezone.utc),
+            }, merge=True)
+            pending += 1
+            if pending >= _BATCH_SIZE:
+                batch.commit()
+                counts["sleep"] += pending
+                batch = db.batch()
+                pending = 0
+        if pending:
+            batch.commit()
+            counts["sleep"] += pending
     except Exception:
         logger.exception("healthkit sleep ingestion failed for uid=%s", uid)
 

@@ -15,6 +15,7 @@ import type { Workout } from '@fitness/shared-types'
 import { workoutsApi } from '../../src/services/api'
 import { toLocalISODate } from '../../src/lib/dates'
 import { colors, spacing, radius, card, shadow } from '../../src/theme'
+import { kgToDisplay, useWeightUnit } from '../../src/store/units'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -25,19 +26,20 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function formatVolume(v: number): string {
-  if (v >= 1000) return (v / 1000).toFixed(1) + 'k kg'
-  return v + ' kg'
+function formatVolume(v: number, unit: 'kg' | 'lb'): string {
+  const d = kgToDisplay(v, unit)
+  if (d >= 1000) return (d / 1000).toFixed(1) + 'k ' + unit
+  return Math.round(d) + ' ' + unit
 }
 
-function workoutStatLine(w: Workout): string {
+function workoutStatLine(w: Workout, unit: 'kg' | 'lb'): string {
   const sets = w.entries.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)
   const reps = w.entries.reduce(
     (sum, e) => sum + (e.sets?.reduce((s, x) => s + (x.reps ?? 0), 0) ?? 0),
     0,
   )
   // Volume only matters when something was actually loaded
-  if (w.total_volume > 0) return `${sets} sets · ${formatVolume(w.total_volume)}`
+  if (w.total_volume > 0) return `${sets} sets · ${formatVolume(w.total_volume, unit)}`
   if (sets > 0) return `${sets} sets · ${reps} reps`
   return ''
 }
@@ -172,7 +174,7 @@ function CalendarView({
 // Workout row
 // ---------------------------------------------------------------------------
 
-function WorkoutRow({ workout }: { workout: Workout }) {
+function WorkoutRow({ workout, unit }: { workout: Workout; unit: 'kg' | 'lb' }) {
   const router = useRouter()
   return (
     <Pressable
@@ -185,7 +187,7 @@ function WorkoutRow({ workout }: { workout: Workout }) {
           {exerciseNamesLine(workout)}
         </Text>
       </View>
-      <Text style={styles.workoutVolume}>{workoutStatLine(workout)}</Text>
+      <Text style={styles.workoutVolume}>{workoutStatLine(workout, unit)}</Text>
     </Pressable>
   )
 }
@@ -196,6 +198,7 @@ function WorkoutRow({ workout }: { workout: Workout }) {
 
 export default function HistoryScreen() {
   const [view, setView] = useState<'list' | 'calendar'>('list')
+  const unit = useWeightUnit()
   const today = toLocalISODate()
   const [todayYear, todayMonthNum] = today.split('-').map(Number)
   const [calYear, setCalYear] = useState(todayYear)
@@ -288,7 +291,7 @@ export default function HistoryScreen() {
         <FlatList
           data={allWorkouts}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <WorkoutRow workout={item} />}
+          renderItem={({ item }) => <WorkoutRow workout={item} unit={unit} />}
           contentContainerStyle={styles.listContent}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}

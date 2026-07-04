@@ -14,13 +14,13 @@ from app.auth.mcp_auth import _current_user_id
 
 
 def test_tool_count():
-    """Exactly 20 tools must be registered (12 workout + 8 nutrition/body/cardio)."""
+    """Exactly 21 tools must be registered (12 workout + 8 nutrition/body/cardio + 1 create_exercise)."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
-    assert len(tools) == 20
+    assert len(tools) == 21
 
 
 def test_tool_names():
-    """All 20 expected tool names are present."""
+    """All 21 expected tool names are present."""
     tools = asyncio.run(mcp_server.mcp.list_tools())
     names = {t.name for t in tools}
     expected = {
@@ -31,6 +31,7 @@ def test_tool_names():
         "get_exercise_history",
         "get_alternatives",
         "list_exercises",
+        "create_exercise",
         "log_workout",
         "start_workout",
         "add_to_active_workout",
@@ -323,13 +324,19 @@ def test_get_nutrition_logs_unauthenticated():
 
 
 def test_get_nutrition_summary_aggregates_days():
-    fake_day = {"totals": {"calories": 1800, "protein_g": 120, "carbs_g": 200, "fat_g": 60}}
+    """get_nutrition_summary uses list_by_date_range (1 call) and returns correct shape."""
+    fake_range = {
+        "2026-06-15": {"totals": {"calories": 1800, "protein_g": 120, "carbs_g": 200, "fat_g": 60}, "incomplete": False},
+        "2026-06-16": {"totals": {"calories": 1800, "protein_g": 120, "carbs_g": 200, "fat_g": 60}, "incomplete": False},
+        "2026-06-17": {"totals": {"calories": 1800, "protein_g": 120, "carbs_g": 200, "fat_g": 60}, "incomplete": False},
+    }
     token = _current_user_id.set("u1")
     try:
-        with patch.object(mcp_server.food_service, "list_by_date", return_value=fake_day) as m:
+        with patch.object(mcp_server.food_service, "list_by_date_range", return_value=fake_range) as m:
             result = mcp_server.get_nutrition_summary(reference_date="2026-06-17", days=3)
+        # One range query replaces N per-day queries.
+        m.assert_called_once_with("u1", "2026-06-15", "2026-06-17")
         assert len(result) == 3
-        assert m.call_count == 3
         # Returned chronologically ascending, ending at reference_date
         assert result[-1]["date"] == "2026-06-17"
         assert result[0]["date"] == "2026-06-15"
@@ -341,9 +348,10 @@ def test_get_nutrition_summary_aggregates_days():
 def test_get_nutrition_summary_clamps_days():
     token = _current_user_id.set("u1")
     try:
-        with patch.object(mcp_server.food_service, "list_by_date", return_value={"totals": {}}) as m:
+        with patch.object(mcp_server.food_service, "list_by_date_range", return_value={}) as m:
             mcp_server.get_nutrition_summary(reference_date="2026-06-17", days=100)
-        assert m.call_count == 30
+        # 100 clamped to 30; list_by_date_range is still called exactly once.
+        m.assert_called_once()
     finally:
         _current_user_id.reset(token)
 
@@ -768,3 +776,117 @@ def test_create_plan_invalid_target_sets_returns_error():
         m.assert_not_called()
     finally:
         _current_user_id.reset(token)
+
+
+def test_create_plan_fills_tracking():
+    """create_plan must denormalize tracking from the exercise doc into each entry."""
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "get_exercise",
+                          side_effect=lambda eid, uid: {"id": eid, "name": f"Ex-{eid}", "tracking": "time"}), \
+             patch.object(mcp_server.template_service, "create_template",
+                          return_value={"id": "t1", "name": "Holds", "entries": []}) as mock_create:
+            mcp_server.create_plan(name="Holds", entries=[{"exercise_id": "plank"}])
+        _, payload = mock_create.call_args[0]
+        assert payload["entries"][0]["tracking"] == "time"
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_plan_tracking_defaults_to_reps():
+    """create_plan defaults tracking to 'reps' when the exercise doc has no tracking field."""
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "get_exercise",
+                          side_effect=lambda eid, uid: {"id": eid, "name": f"Ex-{eid}"}), \
+             patch.object(mcp_server.template_service, "create_template",
+                          return_value={"id": "t1", "name": "Push", "entries": []}) as mock_create:
+            mcp_server.create_plan(name="Push", entries=[{"exercise_id": "bench"}])
+        _, payload = mock_create.call_args[0]
+        assert payload["entries"][0]["tracking"] == "reps"
+    finally:
+        _current_user_id.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# create_exercise tool
+# ---------------------------------------------------------------------------
+
+
+def test_create_exercise_happy_path():
+    """create_exercise calls exercise_service.create_exercise with validated payload."""
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(
+            mcp_server.exercise_service, "create_exercise",
+            return_value={"id": "ex1", "name": "Face Pull", "user_id": "u1"},
+        ) as mock_create:
+            result = mcp_server.create_exercise(
+                name="Face Pull",
+                primary_muscles=["shoulders"],
+                secondary_muscles=["triceps"],
+                movement_pattern="pull",
+                equipment="cable",
+                tracking="reps",
+            )
+        uid, payload = mock_create.call_args[0]
+        assert uid == "u1"
+        assert payload["name"] == "Face Pull"
+        assert "shoulders" in payload["primary_muscles"]
+        assert payload["tracking"] == "reps"
+        assert result["id"] == "ex1"
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_exercise_invalid_muscle_returns_error():
+    """create_exercise returns {"error": ...} when an unknown muscle is passed."""
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "create_exercise") as mock_create:
+            result = mcp_server.create_exercise(
+                name="Mystery Move",
+                primary_muscles=["lats"],  # not a valid Muscle literal
+                movement_pattern="pull",
+                equipment="cable",
+            )
+        assert "error" in result
+        mock_create.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_exercise_invalid_tracking_returns_error():
+    """create_exercise returns {"error": ...} for an unknown tracking value."""
+    token = _current_user_id.set("u1")
+    try:
+        with patch.object(mcp_server.exercise_service, "create_exercise") as mock_create:
+            result = mcp_server.create_exercise(
+                name="Plank Hold",
+                primary_muscles=["core"],
+                movement_pattern="core",
+                equipment="bodyweight",
+                tracking="distance",  # not valid
+            )
+        assert "error" in result
+        mock_create.assert_not_called()
+    finally:
+        _current_user_id.reset(token)
+
+
+def test_create_exercise_requires_auth():
+    """create_exercise raises RuntimeError when unauthenticated."""
+    with pytest.raises(RuntimeError, match="unauthenticated"):
+        mcp_server.create_exercise(
+            name="Squat", primary_muscles=["quads"], movement_pattern="squat", equipment="barbell"
+        )
+
+
+def test_all_tools_require_auth():
+    """Every tool (including create_exercise) raises when unauthenticated."""
+    for fn, kwargs in [
+        (mcp_server.create_exercise, {"name": "X", "primary_muscles": ["core"],
+                                      "movement_pattern": "core", "equipment": "bodyweight"}),
+    ]:
+        with pytest.raises(RuntimeError, match="unauthenticated"):
+            fn(**kwargs)

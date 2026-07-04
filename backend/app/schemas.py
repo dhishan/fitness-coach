@@ -69,6 +69,7 @@ class WorkoutUpdate(BaseModel):
 class TemplateEntry(BaseModel):
     exercise_id: str
     exercise_name: str
+    tracking: Tracking = "reps"  # denormalized from the exercise at plan-creation time
     target_sets: int = Field(ge=1, le=20, default=3)
     superset_group: str | None = None
 
@@ -125,7 +126,7 @@ class FoodLogCreate(BaseModel):
 
 class FoodLogUpdate(BaseModel):
     date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = None
     serving: str | None = None
     macros: Macros | None = None
@@ -143,8 +144,8 @@ class DayStatusUpdate(BaseModel):
 
 
 class FavoriteCreate(BaseModel):
-    name: str
-    serving: str = ""
+    name: str = Field(min_length=1, max_length=120)
+    serving: str = Field(default="", max_length=80)
     macros: Macros
     # Per-serving micros, stored so re-logging a saved food keeps its micros.
     micros: Micros | None = None
@@ -266,7 +267,9 @@ class CardioLogUpdate(BaseModel):
 class HealthKitSample(BaseModel):
     """Single normalized sample posted by the mobile app."""
     kind: Literal["weight", "steps", "workout", "hrv", "sleep"]
-    external_id: str
+    # Used as a Firestore document id: no '/', bounded length (HealthKit UUIDs
+    # are ~36 chars; 200 leaves room for prefixed ids).
+    external_id: str = Field(min_length=1, max_length=200, pattern=r"^[^/]+$")
     date: str
     started_at: str | None = None
     ended_at: str | None = None
@@ -279,4 +282,6 @@ class HealthKitSample(BaseModel):
 
 
 class HealthKitBatch(BaseModel):
-    samples: list[HealthKitSample]
+    # Apple Health syncs are at most a few hundred samples/day in practice;
+    # the cap stops a rogue client from triggering unbounded Firestore writes.
+    samples: list[HealthKitSample] = Field(max_length=2000)

@@ -5,21 +5,27 @@ import toast from 'react-hot-toast'
 import { workoutsApi } from '../services/api'
 import type { Workout, WorkoutEntry } from '@fitness/shared-types'
 import { formatDuration } from '../lib/workoutHelpers'
+import { useUnitsStore } from '../store/units'
+import { kgToDisplay, weightLabel, formatWeight } from '../lib/units'
+import type { WeightUnit } from '../lib/units'
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-function formatVolume(v: number): string {
-  if (v >= 1000) return (v / 1000).toFixed(1) + 'k kg'
-  return v + ' kg'
+function formatVolume(v: number, unit: WeightUnit): string {
+  const display = kgToDisplay(v, unit)
+  const label = weightLabel(unit)
+  if (display >= 1000) return (display / 1000).toFixed(1) + 'k ' + label
+  return Math.round(display) + ' ' + label
 }
 
 export default function HistoryDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const unit = useUnitsStore((s) => s.unit)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -117,7 +123,7 @@ export default function HistoryDetail() {
         <div className="text-base font-semibold text-gray-900">{formatDate(workout.date)}</div>
         <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
           <span>{workout.entries.length} exercise{workout.entries.length === 1 ? '' : 's'}</span>
-          <span>{formatVolume(workout.total_volume)} total volume</span>
+          <span>{formatVolume(workout.total_volume, unit)} total volume</span>
         </div>
         {workout.notes && (
           <p className="text-sm text-gray-600 mt-2 border-t border-gray-100 pt-2">{workout.notes}</p>
@@ -189,16 +195,23 @@ export default function HistoryDetail() {
   )
 }
 
-function formatSetSummary(s: WorkoutEntry['sets'][number]): string {
+function formatSetSummary(s: WorkoutEntry['sets'][number], unit: WeightUnit): string {
+  const lbl = weightLabel(unit)
   if (s.duration_s != null) {
     // Time-tracked set: show duration, prefix added weight if > 0
     const dur = formatDuration(s.duration_s)
-    return s.weight > 0 ? `+${s.weight}kg · ${dur}` : dur
+    if (s.weight > 0) {
+      const displayW = formatWeight(kgToDisplay(s.weight, unit))
+      return `+${displayW}${lbl} · ${dur}`
+    }
+    return dur
   }
-  return `${s.weight} kg x ${s.reps}`
+  const displayW = formatWeight(kgToDisplay(s.weight, unit))
+  return `${displayW} ${lbl} x ${s.reps}`
 }
 
 function EntryCard({ entry }: { entry: WorkoutEntry }) {
+  const unit = useUnitsStore((s) => s.unit)
   const workingSets = entry.sets.filter((s) => !s.is_warmup)
   const warmupSets = entry.sets.filter((s) => s.is_warmup)
   return (
@@ -208,14 +221,14 @@ function EntryCard({ entry }: { entry: WorkoutEntry }) {
         {warmupSets.map((s, i) => (
           <div key={i} className="flex items-center gap-3 text-xs text-gray-400">
             <span className="w-16">Warmup {i + 1}</span>
-            <span>{formatSetSummary(s)}</span>
+            <span>{formatSetSummary(s, unit)}</span>
             {s.rpe != null && <span className="text-gray-300">RPE {s.rpe}</span>}
           </div>
         ))}
         {workingSets.map((s, i) => (
           <div key={i} className="flex items-center gap-3 text-xs text-gray-700">
             <span className="w-16 font-medium">Set {i + 1}</span>
-            <span className="font-medium">{formatSetSummary(s)}</span>
+            <span className="font-medium">{formatSetSummary(s, unit)}</span>
             {s.rpe != null && <span className="text-gray-400">RPE {s.rpe}</span>}
           </div>
         ))}
