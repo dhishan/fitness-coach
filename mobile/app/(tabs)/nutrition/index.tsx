@@ -833,7 +833,14 @@ function FavoritesModal({
               renderItem={({ item }) => (
                 <Pressable style={s.favRow} onPress={() => onLog(item.id)}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.favName}>{item.name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={s.favName}>{item.name}</Text>
+                      {item.source === 'ingredient' ? (
+                        <View style={s.ingredientTag}>
+                          <Text style={s.ingredientTagText}>Ingredient</Text>
+                        </View>
+                      ) : null}
+                    </View>
                     {item.serving ? (
                       <Text style={s.favMeta}>{item.serving}</Text>
                     ) : null}
@@ -1751,8 +1758,15 @@ const s = StyleSheet.create({
 
   // Favorites
   favRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm },
-  favName: { fontSize: 14, fontWeight: '500', color: colors.text },
+  favName: { fontSize: 14, fontWeight: '500', color: colors.text, flexShrink: 1 },
   favMeta: { fontSize: 12, color: colors.gray400, marginTop: 1 },
+  ingredientTag: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  ingredientTagText: { fontSize: 10, fontWeight: '700', color: '#2563eb' },
   favKcal: { fontSize: 13, color: colors.primary, fontWeight: '500' },
   separator: { height: 1, backgroundColor: colors.gray100 },
 

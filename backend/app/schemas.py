@@ -150,6 +150,9 @@ class FavoriteCreate(BaseModel):
     # Per-serving micros, stored so re-logging a saved food keeps its micros.
     micros: Micros | None = None
     micros_source: Optional[Literal["ai", "usda", "label"]] = None
+    # Where the favorite came from: saved by hand vs auto-captured from a
+    # recipe ingredient scan/lookup. Drives the "Ingredient" tag in the UI.
+    source: Literal["manual", "ingredient"] = "manual"
 
 
 class RecipeIngredient(BaseModel):

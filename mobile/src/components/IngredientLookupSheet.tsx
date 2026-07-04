@@ -146,6 +146,7 @@ function round1(v: number | undefined): number {
 function patchToFavorite(patch: Patch) {
   return {
     name: (patch.name || '').trim(),
+    source: 'ingredient' as const,
     serving: patch.serving_label || '1 serving',
     macros: {
       calories: patch.calories_per_serving || 0,
@@ -189,7 +190,7 @@ function toIngredientHit(
 function favToMyFood(fav: Favorite): MyFood {
   return {
     key: `fav:${fav.id}`,
-    kind: 'favorite',
+    kind: fav.source === 'ingredient' ? 'ingredient' : 'favorite',
     hit: toIngredientHit(fav.name, fav.serving || '1 serving', fav.macros, fav.micros as unknown as Record<string, number> | null),
   }
 }

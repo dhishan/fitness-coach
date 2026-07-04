@@ -322,7 +322,14 @@ export default function AddFood({ open, date, initialMeal, onClose, onLogged }: 
                       className="w-full text-left flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{fav.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{fav.name}</p>
+                          {fav.source === 'ingredient' ? (
+                            <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+                              Ingredient
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="text-xs text-gray-400 tabular-nums">
                           {fav.serving} - {Math.round(fav.macros.calories)} kcal
                         </p>

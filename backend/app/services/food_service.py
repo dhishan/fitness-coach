@@ -281,6 +281,7 @@ def create_favorite(user_id: str, payload: dict) -> dict:
         "macros": payload["macros"],
         "micros": payload.get("micros"),
         "micros_source": payload.get("micros_source"),
+        "source": payload.get("source", "manual"),
         "last_used_at": None,
         "created_at": datetime.now(timezone.utc),
     }
