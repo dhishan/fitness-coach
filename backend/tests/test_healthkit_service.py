@@ -72,12 +72,16 @@ def test_ingest_weight_writes_body_metrics_with_external_id(mock_db):
     mock_db.collection.assert_any_call("body_metrics")
     doc_ref = mock_db.collection.return_value.document
     doc_ref.assert_any_call("hk-w-1")
-    set_call = mock_db.collection.return_value.document.return_value.set.call_args
-    payload = set_call.args[0]
+    # With batching, set() is called on the batch object, not the doc ref directly
+    batch_mock = mock_db.batch.return_value
+    batch_set_calls = batch_mock.set.call_args_list
+    weight_calls = [c for c in batch_set_calls if len(c.args) >= 2 and isinstance(c.args[1], dict) and c.args[1].get("weight_kg") == 80.5]
+    assert len(weight_calls) == 1
+    payload = weight_calls[0].args[1]
     assert payload["user_id"] == "u1"
     assert payload["weight_kg"] == 80.5
     assert payload["source"] == "healthkit"
-    assert set_call.kwargs.get("merge") is True
+    assert weight_calls[0].kwargs.get("merge") is True
     assert result["imported"]["weight"] == 1
 
 
@@ -90,9 +94,12 @@ def test_ingest_weight_idempotent_same_external_id(mock_db):
     doc_ref = mock_db.collection.return_value.document
     ext_id_calls = [c for c in doc_ref.call_args_list if c.args == ("hk-w-1",)]
     assert len(ext_id_calls) == 2
-    set_calls = mock_db.collection.return_value.document.return_value.set.call_args_list
-    # Only set() calls on the body_metrics doc (filter by merge=True payload shape)
-    weight_sets = [c for c in set_calls if c.args and c.args[0].get("weight_kg") == 80.5]
+    # With batching, set() is called on the batch — check batch.set calls
+    batch_mock = mock_db.batch.return_value
+    weight_sets = [
+        c for c in batch_mock.set.call_args_list
+        if len(c.args) >= 2 and isinstance(c.args[1], dict) and c.args[1].get("weight_kg") == 80.5
+    ]
     assert len(weight_sets) == 2
     for c in weight_sets:
         assert c.kwargs.get("merge") is True
@@ -194,21 +201,18 @@ def test_ingest_mixed_batch_returns_correct_counts(mock_db):
 # ---- per-kind isolation (partial failure) ----
 
 def test_weight_failure_does_not_block_steps(mock_db):
-    """If weight subset raises, steps are still imported."""
+    """If weight batch commit raises, steps are still imported."""
+    from unittest.mock import MagicMock
     from app.services.healthkit_service import ingest_batch
     samples = [WEIGHT_SAMPLE, STEPS_SAMPLE]
-    # Make ONLY the body_metrics doc set() raise; steps use a different collection path
-    original_collection = mock_db.collection.side_effect
-
-    def collection_router(name):
-        col = MagicMock()
-        if name == "body_metrics":
-            col.document.return_value.set.side_effect = Exception("firestore error")
-        return col
-
-    mock_db.collection.side_effect = collection_router
+    # Give each db.batch() call a fresh mock so weight and steps get independent batches.
+    # The weight batch's commit raises; the steps batch succeeds.
+    weight_batch = MagicMock()
+    weight_batch.commit.side_effect = Exception("firestore error")
+    steps_batch = MagicMock()
+    mock_db.batch.side_effect = [weight_batch, steps_batch]
     result = ingest_batch("u1", samples)
-    mock_db.collection.side_effect = original_collection
+    mock_db.batch.side_effect = None  # restore
     assert result["imported"]["weight"] == 0
     assert result["imported"]["steps"] == 1
 

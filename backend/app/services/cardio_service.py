@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timezone
 
 from google.cloud import firestore
+from google.cloud.firestore_v1 import FieldFilter
 
 from app.firestore import get_db
 
@@ -64,12 +65,12 @@ def list_logs(
     offset: int = 0,
 ) -> list[dict]:
     db = get_db()
-    q = (
-        db.collection("cardio_logs")
-        .where("user_id", "==", user_id)
-        .order_by("date", direction=firestore.Query.DESCENDING)
-        .limit(limit)
-    )
+    q = db.collection("cardio_logs").where(filter=FieldFilter("user_id", "==", user_id))
+    if date_from:
+        q = q.where(filter=FieldFilter("date", ">=", date_from))
+    if date_to:
+        q = q.where(filter=FieldFilter("date", "<=", date_to))
+    q = q.order_by("date", direction=firestore.Query.DESCENDING).offset(offset).limit(limit)
     return [_doc(s) for s in q.stream()]
 
 

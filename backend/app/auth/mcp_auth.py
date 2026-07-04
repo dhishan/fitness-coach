@@ -18,6 +18,7 @@ protected-resource metadata so clients can discover how to authenticate.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import threading
@@ -290,8 +291,10 @@ class McpAuthMiddleware:
             k.decode("latin-1").lower(): v.decode("latin-1") for k, v in raw_headers
         }
 
+        # resolve_user_id_from_request blocks on httpx + Firestore; run it in a
+        # thread so it does not stall the event loop.
         try:
-            user_id = resolve_user_id_from_request(headers)
+            user_id = await asyncio.to_thread(resolve_user_id_from_request, headers)
         except HTTPException as exc:
             extra: dict[str, str] = {}
             if exc.status_code == 401:

@@ -6,20 +6,27 @@ const entry = (
   exercise_id: string,
   target_sets = 3,
   superset_group?: string | null,
+  tracking?: 'reps' | 'time',
 ): TemplateEntry => ({
   exercise_id,
   exercise_name: `Exercise ${exercise_id}`,
   target_sets,
   superset_group: superset_group ?? null,
+  ...(tracking ? { tracking } : {}),
 })
 
 const histItem = (
   _exercise_id: string,
-  sets: { weight: number; reps: number; is_warmup?: boolean }[],
+  sets: { weight: number; reps: number; is_warmup?: boolean; duration_s?: number }[],
 ): ExerciseHistoryItem => ({
   workout_id: 'wk-1',
   date: '2026-06-01',
-  sets: sets.map((s) => ({ weight: s.weight, reps: s.reps, is_warmup: s.is_warmup ?? false })),
+  sets: sets.map((s) => ({
+    weight: s.weight,
+    reps: s.reps,
+    is_warmup: s.is_warmup ?? false,
+    ...(s.duration_s !== undefined ? { duration_s: s.duration_s } : {}),
+  })),
 })
 
 describe('buildWorkoutEntries', () => {
@@ -111,5 +118,55 @@ describe('buildWorkoutEntries', () => {
     expect(entries[1].sets).toEqual([{ weight: 0, reps: 0 }, { weight: 0, reps: 0 }])
     expect(entries[2].sets).toHaveLength(1)
     expect(entries[2].sets[0]).toEqual({ weight: 0, reps: 15, is_warmup: false })
+  })
+
+  it('time exercise via entry.tracking: sets have duration_s, reps=0, tracking="time"', () => {
+    const entries = buildWorkoutEntries(
+      [entry('ex1', 3, null, 'time')],
+      {
+        ex1: [histItem('ex1', [
+          { weight: 10, reps: 0, duration_s: 60 },
+          { weight: 10, reps: 0, duration_s: 55 },
+        ])],
+      },
+    )
+    expect(entries).toHaveLength(1)
+    expect(entries[0].tracking).toBe('time')
+    expect(entries[0].sets).toEqual([
+      { weight: 10, reps: 0, duration_s: 60, is_warmup: false },
+      { weight: 10, reps: 0, duration_s: 55, is_warmup: false },
+    ])
+  })
+
+  it('time exercise inferred from history: sets have duration_s, tracking="time"', () => {
+    // entry.tracking is not set but history contains duration_s > 0
+    const entries = buildWorkoutEntries(
+      [entry('ex1', 3)],
+      {
+        ex1: [histItem('ex1', [
+          { weight: 0, reps: 0, duration_s: 90 },
+          { weight: 0, reps: 0, duration_s: 85 },
+        ])],
+      },
+    )
+    expect(entries[0].tracking).toBe('time')
+    expect(entries[0].sets).toHaveLength(2)
+    expect(entries[0].sets[0]).toEqual({ weight: 0, reps: 0, duration_s: 90, is_warmup: false })
+    expect(entries[0].sets[1]).toEqual({ weight: 0, reps: 0, duration_s: 85, is_warmup: false })
+  })
+
+  it('time exercise with no history falls back to single empty time set', () => {
+    const entries = buildWorkoutEntries(
+      [entry('ex1', 3, null, 'time')],
+      {},
+    )
+    expect(entries[0].tracking).toBe('time')
+    expect(entries[0].sets).toHaveLength(1)
+    expect(entries[0].sets[0]).toEqual({ weight: 0, reps: 0, duration_s: 0, is_warmup: false })
+  })
+
+  it('reps exercise returns tracking="reps"', () => {
+    const entries = buildWorkoutEntries([entry('ex1', 3)], {})
+    expect(entries[0].tracking).toBe('reps')
   })
 })

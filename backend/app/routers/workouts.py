@@ -3,8 +3,10 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.auth.dependencies import CurrentUser, get_current_user
+from app.config import get_settings
 from app.schemas import WorkoutCreate, WorkoutUpdate
 from app.services import workout_ai, workout_service, workout_title_service
+from app.services.rate_limit import within_budget
 
 router = APIRouter(prefix="/api/v1/workouts", tags=["workouts"])
 
@@ -59,6 +61,8 @@ async def suggest_next(workout_id: str, user: CurrentUser = Depends(get_current_
 
     User reviews and either Adds (which calls PUT /workouts/{id}) or cancels.
     """
+    if not within_budget("llm", user.user_id, get_settings().llm_rate_limit_per_min):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded, try again in a minute")
     result = await asyncio.to_thread(workout_ai.suggest_next_exercise, user.user_id, workout_id)
     if result is None:
         raise HTTPException(status_code=503, detail="Could not generate a suggestion")

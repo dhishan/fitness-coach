@@ -123,6 +123,7 @@ export default function EditPlanScreen() {
       exercise_id: built.exercise_id,
       exercise_name: built.exercise_name,
       target_sets: built.sets.filter((s) => !s.is_warmup).length || 3,
+      tracking: _exercise.tracking ?? 'reps',
       superset_group: null,
     }
     setEntries((prev) => [...prev, templateEntry])

@@ -91,13 +91,18 @@ def get_workout(workout_id: str, user_id: str) -> dict | None:
 def list_workouts(user_id: str, date_from: str | None, date_to: str | None,
                   limit: int, offset: int) -> dict:
     db = get_db()
-    query = db.collection("workouts").where(filter=firestore.FieldFilter("user_id", "==", user_id))
+    base = db.collection("workouts").where(filter=firestore.FieldFilter("user_id", "==", user_id))
     if date_from:
-        query = query.where(filter=firestore.FieldFilter("date", ">=", date_from))
+        base = base.where(filter=firestore.FieldFilter("date", ">=", date_from))
     if date_to:
-        query = query.where(filter=firestore.FieldFilter("date", "<=", date_to))
-    docs = [_doc(d) for d in query.order_by("date", direction=firestore.Query.DESCENDING).stream()]
-    return {"items": docs[offset:offset + limit], "total": len(docs)}
+        base = base.where(filter=firestore.FieldFilter("date", "<=", date_to))
+    # Total via Firestore count aggregation — avoids streaming all docs.
+    count_result = base.count().get()
+    total = int(count_result[0][0].value)
+    # Fetch the requested page via server-side offset + limit.
+    ordered = base.order_by("date", direction=firestore.Query.DESCENDING)
+    items = [_doc(d) for d in ordered.offset(offset).limit(limit).stream()]
+    return {"items": items, "total": total}
 
 
 def get_active_workout(user_id: str) -> dict | None:
@@ -133,14 +138,23 @@ def update_workout(workout_id: str, user_id: str, payload: dict) -> dict | None:
 def history_max_for(user_id: str, exercise_ids: list[str], exclude_workout_id: str) -> dict[str, dict]:
     """exercise_id -> {"weight": best working weight, "duration": best working
     hold} across prior workouts. Only the key relevant to the exercise's
-    tracking type is populated in practice."""
+    tracking type is populated in practice.
+
+    Uses array_contains_any (cap: 30) so the N queries become ceil(N/30)
+    queries — one per chunk — instead of one per exercise.
+    """
     best: dict[str, dict] = {}
+    if not exercise_ids:
+        return best
     db = get_db()
-    for ex_id in exercise_ids:
+    id_set = set(exercise_ids)
+    # Firestore caps array_contains_any at 30 values; chunk accordingly.
+    for i in range(0, len(exercise_ids), 30):
+        chunk = exercise_ids[i:i + 30]
         query = (
             db.collection("workouts")
             .where(filter=firestore.FieldFilter("user_id", "==", user_id))
-            .where(filter=firestore.FieldFilter("exercise_ids", "array_contains", ex_id))
+            .where(filter=firestore.FieldFilter("exercise_ids", "array_contains_any", chunk))
             .order_by("date", direction=firestore.Query.DESCENDING)
             .limit(50)
         )
@@ -148,7 +162,8 @@ def history_max_for(user_id: str, exercise_ids: list[str], exclude_workout_id: s
             if d.id == exclude_workout_id:
                 continue
             for e in d.to_dict().get("entries", []):
-                if e["exercise_id"] != ex_id:
+                ex_id = e["exercise_id"]
+                if ex_id not in id_set:
                     continue
                 for s in e.get("sets", []):
                     if s.get("is_warmup", False):

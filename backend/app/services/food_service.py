@@ -128,6 +128,65 @@ def list_by_date(user_id: str, date: str) -> dict:
     }
 
 
+def list_by_date_range(user_id: str, date_from: str, date_to: str) -> dict[str, dict]:
+    """Return {date: {"totals": {...macros}, "incomplete": bool}} for a date range.
+
+    Uses one food_logs range query and a single batched get_all for day-status
+    docs — 2 round-trips regardless of the number of days in the range.
+    The composite index (user_id ASC, date ASC) must exist in Firestore.
+    """
+    from datetime import date as _date, timedelta
+
+    db = get_db()
+
+    # One range query for all food log items.
+    snaps = (
+        db.collection("food_logs")
+        .where(filter=firestore.FieldFilter("user_id", "==", user_id))
+        .where(filter=firestore.FieldFilter("date", ">=", date_from))
+        .where(filter=firestore.FieldFilter("date", "<=", date_to))
+        .stream()
+    )
+    by_date: dict[str, list[dict]] = {}
+    for s in snaps:
+        item = _doc(s)
+        d = item.get("date", "")
+        if d:
+            by_date.setdefault(d, []).append(item)
+
+    # Enumerate every calendar date in the range so callers get a complete map.
+    all_dates: list[str] = []
+    cursor = _date.fromisoformat(date_from)
+    end = _date.fromisoformat(date_to)
+    while cursor <= end:
+        all_dates.append(cursor.isoformat())
+        cursor += timedelta(days=1)
+
+    # Batch-fetch day-status docs in one RPC.
+    status_refs = [
+        db.collection("nutrition_day_status").document(_day_status_id(user_id, d))
+        for d in all_dates
+    ]
+    incomplete_by_date: dict[str, bool] = {}
+    try:
+        for snap in db.get_all(status_refs):
+            if snap.exists:
+                d_data = snap.to_dict() or {}
+                date_val = d_data.get("date", "")
+                if date_val:
+                    incomplete_by_date[date_val] = bool(d_data.get("incomplete", False))
+    except Exception:
+        logger.exception("list_by_date_range day-status batch fetch failed")
+
+    return {
+        d: {
+            "totals": _sum_macros(by_date.get(d, [])),
+            "incomplete": incomplete_by_date.get(d, False),
+        }
+        for d in all_dates
+    }
+
+
 # ---- Day status (mark a day as untracked / "eating out") ----
 
 def _day_status_id(user_id: str, date: str) -> str:
@@ -346,35 +405,8 @@ def suggest_foods(uid: str, q: str, limit: int = 10) -> list[dict]:
     else:
         filtered = candidate_list
 
-    # Sort: favorites first, then by last_used_at desc (None last), then by name
-    def sort_key(c: dict):
-        source_rank = 0 if c["source"] == "favorite" else 1
-        ts = c["last_used_at"] or ""
-        return (source_rank, "" if not ts else ts, c["name"].lower())
-
-    filtered.sort(key=lambda c: (
-        0 if c["source"] == "favorite" else 1,
-        # negate recency: newer timestamps are lexicographically larger, we want desc
-        "" if not c["last_used_at"] else "\xff" + c["last_used_at"],
-        c["name"].lower(),
-    ))
-    # Reverse the timestamp part: favorites first (0), then by timestamp desc
-    # Re-sort with proper descending timestamp handling
-    filtered.sort(key=lambda c: (
-        0 if c["source"] == "favorite" else 1,
-        c["name"].lower(),
-    ))
-    # Actually do a clean sort: favorites first by last_used_at desc, then recents by last_used_at desc
-    def _sort(c: dict):
-        s = 0 if c["source"] == "favorite" else 1
-        ts = c["last_used_at"] or ""
-        # We want descending timestamp, so negate via string trick: use inverse
-        # Use empty string for missing (sorts last when reversed below)
-        return (s, ts, c["name"].lower())
-
-    filtered.sort(key=_sort, reverse=False)
-    # Fix: favorites (s=0) come first but within each group we want newest first
-    # Split into favorites and recents, sort each by timestamp desc, then concat
+    # Sort: favorites first by last_used_at desc, then recents by last_used_at desc.
+    # Split into two groups and sort each independently so each group is newest-first.
     favs_group = sorted(
         [c for c in filtered if c["source"] == "favorite"],
         key=lambda c: c["last_used_at"] or "",

@@ -145,6 +145,7 @@ export default function PlanEditor() {
     const templateEntry: TemplateEntry = {
       exercise_id: built.exercise_id,
       exercise_name: built.exercise_name,
+      tracking: _exercise.tracking ?? 'reps',
       target_sets: built.sets.filter((s) => !s.is_warmup).length || 3,
       superset_group: null,
     }

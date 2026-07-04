@@ -8,9 +8,13 @@ import { toLocalISODate } from './dates'
  *
  * - If history exists: use the working sets (is_warmup === false/undefined)
  *   from the most recent session.  If those are all warmups, fall back to
- *   target_sets empty rows.
- * - If no history: target_sets empty rows {weight:0, reps:0}.
+ *   target_sets empty rows (or a single time-set for time exercises).
+ * - If no history: target_sets empty rows {weight:0, reps:0} for reps, or a
+ *   single {weight:0, reps:0, duration_s:0} for time exercises.
+ * - isTime is true when entry.tracking === 'time' OR the last session's working
+ *   sets have duration_s set (inferred from history).
  * - superset_group is carried over as-is.
+ * - Returned entry includes tracking: 'time' | 'reps'.
  */
 export function buildWorkoutEntries(
   templateEntries: TemplateEntry[],
@@ -22,20 +26,39 @@ export function buildWorkoutEntries(
 
     let sets: WorkoutEntry['sets']
 
+    // Determine tracking mode: explicit template field OR inferred from history
+    const fromTemplate = entry.tracking === 'time'
+    const fromHistory =
+      lastSession != null &&
+      lastSession.sets
+        .filter((s) => !s.is_warmup)
+        .some((s) => s.duration_s != null && s.duration_s > 0)
+    const isTime = fromTemplate || fromHistory
+
     if (lastSession && lastSession.sets.length > 0) {
       const workingSets = lastSession.sets.filter((s) => !s.is_warmup)
       if (workingSets.length > 0) {
-        sets = workingSets.map((s) => ({ weight: s.weight, reps: s.reps, is_warmup: false }))
+        sets = workingSets.map((s) =>
+          isTime
+            ? { weight: s.weight ?? 0, reps: 0, duration_s: s.duration_s ?? 0, is_warmup: false }
+            : { weight: s.weight ?? 0, reps: s.reps ?? 0, is_warmup: false },
+        )
       } else {
-        sets = Array.from({ length: entry.target_sets }, () => ({ weight: 0, reps: 0 }))
+        // only warmups in history - fall back to empty sets
+        sets = isTime
+          ? [{ weight: 0, reps: 0, duration_s: 0, is_warmup: false }]
+          : Array.from({ length: entry.target_sets }, () => ({ weight: 0, reps: 0 }))
       }
     } else {
-      sets = Array.from({ length: entry.target_sets }, () => ({ weight: 0, reps: 0 }))
+      sets = isTime
+        ? [{ weight: 0, reps: 0, duration_s: 0, is_warmup: false }]
+        : Array.from({ length: entry.target_sets }, () => ({ weight: 0, reps: 0 }))
     }
 
     return {
       exercise_id: entry.exercise_id,
       exercise_name: entry.exercise_name,
+      tracking: isTime ? 'time' : 'reps',
       superset_group: entry.superset_group ?? null,
       sets,
     }

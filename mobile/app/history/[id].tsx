@@ -14,6 +14,7 @@ import {
 import type { Workout, WorkoutListResponse } from '@fitness/shared-types'
 import { workoutsApi } from '../../src/services/api'
 import { colors, spacing, radius, card } from '../../src/theme'
+import { kgToDisplay, useWeightUnit } from '../../src/store/units'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,9 +25,10 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-function formatVolume(v: number): string {
-  if (v >= 1000) return (v / 1000).toFixed(1) + 'k kg'
-  return v + ' kg'
+function formatVolume(v: number, unit: 'kg' | 'lb'): string {
+  const d = kgToDisplay(v, unit)
+  if (d >= 1000) return (d / 1000).toFixed(1) + 'k ' + unit
+  return Math.round(d) + ' ' + unit
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +74,7 @@ export default function HistoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const unit = useWeightUnit()
 
   const { data: workout, status } = useQuery({
     queryKey: ['workout', id],
@@ -175,7 +178,7 @@ export default function HistoryDetailScreen() {
             {workout.entries.length} exercise{workout.entries.length === 1 ? '' : 's'}
           </Text>
           <Text style={styles.headerMetaDot}> · </Text>
-          <Text style={styles.headerMetaText}>{formatVolume(workout.total_volume)} total volume</Text>
+          <Text style={styles.headerMetaText}>{formatVolume(workout.total_volume, unit)} total volume</Text>
         </View>
         {workout.notes ? (
           <Text style={styles.notes}>{workout.notes}</Text>

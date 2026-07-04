@@ -90,10 +90,12 @@ def test_create_log_no_external_id_always_creates(mock_db):
 def test_list_logs_filters_by_user(mock_db):
     from app.services.cardio_service import list_logs
     snaps = [_make_snap({**BASE}, "l1"), _make_snap({**BASE, "date": "2026-06-12"}, "l2")]
+    # Chain: collection -> where(user_id) -> order_by -> offset -> limit -> stream
     (
         mock_db.collection.return_value
         .where.return_value
         .order_by.return_value
+        .offset.return_value
         .limit.return_value
         .stream.return_value
     ) = iter(snaps)
@@ -107,10 +109,41 @@ def test_list_logs_empty(mock_db):
         mock_db.collection.return_value
         .where.return_value
         .order_by.return_value
+        .offset.return_value
         .limit.return_value
         .stream.return_value
     ) = iter([])
     assert list_logs("u1") == []
+
+
+def test_list_logs_date_filter_applied(mock_db):
+    """When date_from / date_to are supplied the function adds where() calls for them."""
+    from app.services.cardio_service import list_logs
+
+    # Call with both bounds; result is empty (we care about the query structure).
+    result = list_logs("u1", date_from="2026-06-01", date_to="2026-06-30")
+    assert isinstance(result, list)
+
+    # After the first where(user_id), two more where() calls should be chained:
+    # one for date >= date_from, one for date <= date_to.
+    q_after_user = mock_db.collection.return_value.where.return_value
+    assert q_after_user.where.call_count == 1  # date_from
+    q_after_from = q_after_user.where.return_value
+    assert q_after_from.where.call_count == 1  # date_to
+
+
+def test_list_logs_offset_applied(mock_db):
+    """offset parameter is forwarded to the Firestore query."""
+    from app.services.cardio_service import list_logs
+
+    list_logs("u1", offset=10, limit=5)
+    # Verify .offset(10) was called on the ordered query.
+    ordered = (
+        mock_db.collection.return_value
+        .where.return_value
+        .order_by.return_value
+    )
+    ordered.offset.assert_called_once_with(10)
 
 
 # ---- get_log ----

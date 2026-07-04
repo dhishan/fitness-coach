@@ -1,14 +1,12 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../store/auth'
+import { useUnitsStore } from '../store/units'
 import { usageApi } from '../services/api'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
-
-const UNIT_KEY = 'fitness-unit-pref'
 
 const SOURCE_LABELS: Record<string, string> = {
   chat: 'Coach chat',
@@ -19,9 +17,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export default function SettingsSheet({ open, onClose }: Props) {
   const { user, logout } = useAuth()
-  const [unit, setUnitState] = useState<'kg' | 'lb'>(() => {
-    return (localStorage.getItem(UNIT_KEY) as 'kg' | 'lb') ?? 'kg'
-  })
+  const { unit, setUnit } = useUnitsStore()
 
   const { data: usage, isLoading: loadingUsage } = useQuery({
     queryKey: ['usage-summary'],
@@ -33,11 +29,6 @@ export default function SettingsSheet({ open, onClose }: Props) {
     queryFn: () => usageApi.summaryBySource(),
     enabled: open,
   })
-
-  const setUnit = (u: 'kg' | 'lb') => {
-    localStorage.setItem(UNIT_KEY, u)
-    setUnitState(u)
-  }
 
   if (!open) return null
 

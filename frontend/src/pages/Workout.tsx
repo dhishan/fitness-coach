@@ -12,6 +12,8 @@ import AddExerciseSheet from '../components/AddExerciseSheet'
 import { startFromPlan } from '../lib/startFromPlan'
 import SessionIntentModal, { type SessionIntent } from '../components/SessionIntentModal'
 import type { NextExerciseSuggestion } from '../services/api'
+import { useUnitsStore } from '../store/units'
+import { kgToDisplay, displayToKg, weightStep, weightLabel, formatWeight } from '../lib/units'
 
 // ---------------------------------------------------------------------------
 // Autosave hook
@@ -99,13 +101,17 @@ function SetRow({
 }) {
   const isWarmup = !!set.is_warmup
   const isTime = tracking === 'time'
+  const unit = useUnitsStore((s) => s.unit)
 
   // Local text state for duration input to allow free-form typing
   const [durationText, setDurationText] = useState<string | null>(null)
 
+  const step = weightStep(unit)
+
   const stepWeight = (delta: number) => {
-    const val = Math.max(0, (set.weight ?? 0) + delta)
-    onUpdate({ ...set, weight: val })
+    const displayVal = kgToDisplay(set.weight ?? 0, unit)
+    const newDisplay = Math.max(0, displayVal + delta)
+    onUpdate({ ...set, weight: displayToKg(newDisplay, unit) })
   }
 
   const stepDuration = (delta: number) => {
@@ -139,7 +145,7 @@ function SetRow({
       {/* Weight */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => stepWeight(-2.5)}
+          onClick={() => stepWeight(-step)}
           className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
           aria-label="decrease weight"
         >
@@ -147,19 +153,19 @@ function SetRow({
         </button>
         <input
           type="number"
-          value={set.weight}
-          onChange={(e) => onUpdate({ ...set, weight: parseFloat(e.target.value) || 0 })}
+          value={formatWeight(kgToDisplay(set.weight ?? 0, unit))}
+          onChange={(e) => onUpdate({ ...set, weight: displayToKg(parseFloat(e.target.value) || 0, unit) })}
           className="w-14 text-center border border-gray-200 rounded-lg h-7 text-sm focus:outline-none focus:border-blue-400"
           aria-label={`set ${index + 1} weight`}
         />
         <button
-          onClick={() => stepWeight(2.5)}
+          onClick={() => stepWeight(step)}
           className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center text-sm"
           aria-label="increase weight"
         >
           +
         </button>
-        <span className="text-xs text-gray-400">{isTime ? 'added kg' : 'kg'}</span>
+        <span className="text-xs text-gray-400">{isTime ? `added ${weightLabel(unit)}` : weightLabel(unit)}</span>
       </div>
 
       {/* Duration (time exercises) or Reps (reps exercises) */}
@@ -438,6 +444,8 @@ function FinishModal({
   startedAt: string | null
   onClose: () => void
 }) {
+  const unit = useUnitsStore((s) => s.unit)
+
   let duration = ''
   if (startedAt && data.ended_at) {
     const mins = Math.round(
@@ -446,6 +454,9 @@ function FinishModal({
     duration = mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}min`
   }
 
+  const displayVolume = Math.round(kgToDisplay(data.total_volume, unit)).toLocaleString()
+  const unitLabel = weightLabel(unit)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="bg-black/40 absolute inset-0" onClick={onClose} />
@@ -453,7 +464,7 @@ function FinishModal({
         <h2 className="text-xl font-bold text-gray-900 mb-1">Workout done!</h2>
         {duration && <p className="text-sm text-gray-500 mb-3">Duration: {duration}</p>}
         <p className="text-sm text-gray-700 mb-4">
-          Total volume: <span className="font-semibold">{Math.round(data.total_volume).toLocaleString()} kg</span>
+          Total volume: <span className="font-semibold">{displayVolume} {unitLabel}</span>
         </p>
         {data.prs.length > 0 && (
           <div className="mb-4">
@@ -463,7 +474,7 @@ function FinishModal({
                 <p key={pr.exercise_id} className="text-sm text-gray-800">
                   {pr.duration_s != null
                     ? `New PR: ${pr.exercise_name} ${formatDuration(pr.duration_s)}${pr.previous_best_duration_s != null ? ` (previous ${formatDuration(pr.previous_best_duration_s)})` : ''}`
-                    : `New PR: ${pr.exercise_name} ${pr.weight}kg (previous ${pr.previous_best}kg)`}
+                    : `New PR: ${pr.exercise_name} ${formatWeight(kgToDisplay(pr.weight ?? 0, unit))}${unitLabel} (previous ${formatWeight(kgToDisplay(pr.previous_best ?? 0, unit))}${unitLabel})`}
                 </p>
               ))}
             </div>
@@ -585,15 +596,29 @@ export default function Workout() {
   const [suggestLoading, setSuggestLoading] = useState(false)
   const [suggestAdding, setSuggestAdding] = useState(false)
 
-  // Sync server -> local state once on load (not on every re-render)
+  // Sync server -> local state on load AND when a new active session appears
+  // OR an external change happens (e.g. Library "Add to current workout").
+  // Mirror of mobile sync logic.
   useEffect(() => {
-    if (activeWorkout !== undefined && workout === null) {
-      setWorkout(activeWorkout)
-      if (activeWorkout) {
-        setEntries(activeWorkout.entries.map((e) => ({ ...e, lastTime: undefined })))
+    if (activeWorkout === undefined) return
+    if (activeWorkout === null) {
+      if (workout !== null) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setWorkout(null)
+        setEntries([])
       }
+      return
     }
-  }, [activeWorkout, workout])
+    // Sync when ID changed (new session) OR when server has more entries
+    // than local (external add). Local-only edits in flight are protected by
+    // the autosave hook's debounce queueing.
+    const idChanged = workout?.id !== activeWorkout.id
+    const serverHasMore = activeWorkout.entries.length > entries.length
+    if (idChanged || serverHasMore) {
+      setWorkout(activeWorkout)
+      setEntries(activeWorkout.entries.map((e) => ({ ...e, lastTime: undefined })))
+    }
+  }, [activeWorkout, workout, entries.length])
 
   // Sheet states
   const [showAdd, setShowAdd] = useState(false)
@@ -766,6 +791,7 @@ export default function Workout() {
         ['workouts'],
         (old: { pages: { items: Workout[]; total: number }[]; pageParams: number[] } | undefined) => {
           if (!old || old.pages.length === 0) return old // no cache yet: History fetches fresh
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { prs: _prs, ...finished } = result
           const exists = old.pages.some((p) => p.items.some((w) => w.id === finished.id))
           return {
@@ -784,6 +810,8 @@ export default function Workout() {
         },
       )
       void qc.invalidateQueries({ queryKey: ['workout', 'active'] })
+      setWorkout(null)
+      setEntries([])
       // Name the session asynchronously — never blocks the finish. Fired ONCE
       // here (not on render/refresh); the endpoint is idempotent + rate-limited
       // server-side, so it can't burn tokens. Refresh lists once it lands.

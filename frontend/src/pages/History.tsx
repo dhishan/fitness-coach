@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom'
 import { workoutsApi } from '../services/api'
 import { toLocalISODate } from '../lib/dates'
 import type { Workout } from '@fitness/shared-types'
+import { useUnitsStore } from '../store/units'
+import { kgToDisplay, weightLabel } from '../lib/units'
+import type { WeightUnit } from '../lib/units'
 
 // ---- helpers ----
 
@@ -12,9 +15,11 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function formatVolume(v: number): string {
-  if (v >= 1000) return (v / 1000).toFixed(1) + 'k kg'
-  return v + ' kg'
+function formatVolume(v: number, unit: WeightUnit): string {
+  const display = kgToDisplay(v, unit)
+  const label = weightLabel(unit)
+  if (display >= 1000) return (display / 1000).toFixed(1) + 'k ' + label
+  return Math.round(display) + ' ' + label
 }
 
 function exerciseNamesLine(w: Workout): string {
@@ -128,6 +133,7 @@ function CalendarView({ year, month, onPrev, onNext }: {
 
 function WorkoutRow({ workout }: { workout: Workout }) {
   const navigate = useNavigate()
+  const unit = useUnitsStore((s) => s.unit)
   return (
     <button
       className="card p-4 w-full text-left flex items-center justify-between hover:shadow-md transition-shadow"
@@ -139,7 +145,7 @@ function WorkoutRow({ workout }: { workout: Workout }) {
           {workout.title ? `${formatDate(workout.date)} · ` : ''}{exerciseNamesLine(workout)}
         </div>
       </div>
-      <div className="ml-3 text-sm font-medium text-gray-700 shrink-0">{formatVolume(workout.total_volume)}</div>
+      <div className="ml-3 text-sm font-medium text-gray-700 shrink-0">{formatVolume(workout.total_volume, unit)}</div>
     </button>
   )
 }
