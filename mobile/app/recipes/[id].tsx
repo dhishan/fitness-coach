@@ -219,7 +219,9 @@ export default function RecipeEditor() {
 
         {/* Totals preview */}
         <View style={[s.card, s.previewCard]}>
-          <Text style={s.previewLabel}>Per serving</Text>
+          <Text style={s.previewLabel}>
+            Per recipe serving{yieldsNum !== 1 ? ` (makes ${fmt(yieldsNum)})` : ''}
+          </Text>
           <View style={s.previewRow}>
             <PreviewStat label="kcal" value={previewTotals.per.calories} />
             <PreviewStat
@@ -419,6 +421,17 @@ function IngredientCard({
           onChange={(v) => onChange({ fat_g_per_serving: v })}
         />
       </View>
+
+      {/* Live contribution: label values x how-many, so scaling is visible here */}
+      {ingredient.servings_used > 0 && (ingredient.calories_per_serving || 0) > 0 ? (
+        <Text style={s.ingContribution}>
+          Adds {Math.round((ingredient.calories_per_serving || 0) * ingredient.servings_used)} kcal
+          {' · '}{fmt(round1((ingredient.protein_g_per_serving || 0) * ingredient.servings_used))}g P
+          {' · '}{fmt(round1((ingredient.carbs_g_per_serving || 0) * ingredient.servings_used))}g C
+          {' · '}{fmt(round1((ingredient.fat_g_per_serving || 0) * ingredient.servings_used))}g F
+          {ingredient.servings_used !== 1 ? ` for ${fmt(ingredient.servings_used)} servings` : ''}
+        </Text>
+      ) : null}
 
       <Pressable
         onPress={() => setShowMicros((v) => !v)}
@@ -627,6 +640,13 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: colors.gray500,
     marginTop: spacing.xs,
+  },
+  ingContribution: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.gray600,
+    marginTop: spacing.xs,
+    fontVariant: ['tabular-nums'],
   },
   previewCard: { backgroundColor: '#F7F8FA', borderColor: colors.border },
   previewLabel: {

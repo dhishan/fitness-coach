@@ -211,7 +211,7 @@ export default function RecipeEditor() {
         {/* Preview */}
         <div className="bg-gray-100 rounded-xl border border-gray-200 p-4">
           <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-            Per serving
+            Per recipe serving{yieldsNum !== 1 ? ` (makes ${fmt(yieldsNum)})` : ''}
           </div>
           <div className="flex justify-around mt-2">
             <Stat val={String(totals.per.calories)} label="kcal" />
@@ -364,6 +364,17 @@ function IngredientCard({
         <NumInput label="Carbs g" value={ingredient.carbs_g_per_serving} onChange={(v) => onChange({ carbs_g_per_serving: v })} />
         <NumInput label="Fat g" value={ingredient.fat_g_per_serving} onChange={(v) => onChange({ fat_g_per_serving: v })} />
       </div>
+
+      {/* Live contribution: label values x how-many, so scaling is visible here */}
+      {ingredient.servings_used > 0 && (ingredient.calories_per_serving || 0) > 0 ? (
+        <div className="text-xs font-medium text-gray-600 tabular-nums">
+          Adds {Math.round((ingredient.calories_per_serving || 0) * ingredient.servings_used)} kcal
+          {' · '}{fmt(round1((ingredient.protein_g_per_serving || 0) * ingredient.servings_used))}g P
+          {' · '}{fmt(round1((ingredient.carbs_g_per_serving || 0) * ingredient.servings_used))}g C
+          {' · '}{fmt(round1((ingredient.fat_g_per_serving || 0) * ingredient.servings_used))}g F
+          {ingredient.servings_used !== 1 ? ` for ${fmt(ingredient.servings_used)} servings` : ''}
+        </div>
+      ) : null}
 
       <button
         type="button"
