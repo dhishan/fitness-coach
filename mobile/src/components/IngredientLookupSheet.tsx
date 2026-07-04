@@ -10,7 +10,7 @@
  * micros).
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ActivityIndicator,
   Alert,
@@ -49,10 +49,30 @@ export default function IngredientLookupSheet({
   onFill: (patch: Patch) => void
 }) {
   const [tab, setTab] = useState<Tab>('search')
+  const qc = useQueryClient()
 
-  const apply = (patch: Patch) => {
+  // Fill the form, and (for external sources: barcode / label / search / AI)
+  // quietly save the item to My Foods so it's findable next time. Deduped by
+  // name; best-effort — a failed save never blocks the fill. Picks from
+  // "From your foods" pass saveAsFood=false since they already exist.
+  const apply = (patch: Patch, saveAsFood = true) => {
     onFill(patch)
     onClose()
+    if (!saveAsFood) return
+    void (async () => {
+      try {
+        const name = (patch.name || '').trim()
+        if (!name) return
+        const norm = (v: string) => v.trim().toLowerCase()
+        const favs =
+          qc.getQueryData<Favorite[]>(['favorites']) ?? (await nutritionApi.favorites.list())
+        if (favs.some((f) => norm(f.name) === norm(name))) return
+        await nutritionApi.favorites.create(patchToFavorite(patch))
+        void qc.invalidateQueries({ queryKey: ['favorites'] })
+      } catch {
+        // best-effort
+      }
+    })()
   }
 
   return (
@@ -122,13 +142,39 @@ function round1(v: number | undefined): number {
   return Math.round(v * 10) / 10
 }
 
+// Map an ingredient patch back to a FavoriteCreate body (per-serving values).
+function patchToFavorite(patch: Patch) {
+  return {
+    name: (patch.name || '').trim(),
+    serving: patch.serving_label || '1 serving',
+    macros: {
+      calories: patch.calories_per_serving || 0,
+      protein_g: patch.protein_g_per_serving || 0,
+      carbs_g: patch.carbs_g_per_serving || 0,
+      fat_g: patch.fat_g_per_serving || 0,
+    },
+    micros: {
+      fiber_g: patch.fiber_g_per_serving || 0,
+      sugar_g: patch.sugar_g_per_serving || 0,
+      sodium_mg: patch.sodium_mg_per_serving || 0,
+      potassium_mg: patch.potassium_mg_per_serving || 0,
+      calcium_mg: patch.calcium_mg_per_serving || 0,
+      iron_mg: patch.iron_mg_per_serving || 0,
+      vitamin_c_mg: patch.vitamin_c_mg_per_serving || 0,
+      vitamin_d_mcg: patch.vitamin_d_mcg_per_serving || 0,
+      saturated_fat_g: patch.saturated_fat_g_per_serving || 0,
+      cholesterol_mg: patch.cholesterol_mg_per_serving || 0,
+    },
+  }
+}
+
 // ---------------------------------------------------------------------------
 // "My foods" — favorites, saved recipes, and recent logs, mapped to a hit shape
 // that hitToPatch already understands (name + serving + per-serving macros +
 // micros). Mirrors the converters in the food-logging Add screen.
 // ---------------------------------------------------------------------------
 
-type MyFoodKind = 'favorite' | 'recipe' | 'recent'
+type MyFoodKind = 'favorite' | 'recipe' | 'ingredient' | 'recent'
 type MyFood = { key: string; kind: MyFoodKind; hit: IngredientHit }
 
 function toIngredientHit(
@@ -183,9 +229,42 @@ function logToMyFood(log: FoodLog): MyFood {
   }
 }
 
+// Ingredients from saved recipes are already per-single-serving, so they map
+// straight onto the hit shape — anything ever scanned into a recipe stays
+// findable here.
+function recipeIngredientToMyFood(recipeId: string, idx: number, ing: RecipeIngredient): MyFood {
+  return {
+    key: `ing:${recipeId}:${idx}`,
+    kind: 'ingredient',
+    hit: toIngredientHit(
+      ing.name,
+      ing.serving_label || '1 serving',
+      {
+        calories: ing.calories_per_serving || 0,
+        protein_g: ing.protein_g_per_serving || 0,
+        carbs_g: ing.carbs_g_per_serving || 0,
+        fat_g: ing.fat_g_per_serving || 0,
+      },
+      {
+        fiber_g: ing.fiber_g_per_serving || 0,
+        sugar_g: ing.sugar_g_per_serving || 0,
+        sodium_mg: ing.sodium_mg_per_serving || 0,
+        potassium_mg: ing.potassium_mg_per_serving || 0,
+        calcium_mg: ing.calcium_mg_per_serving || 0,
+        iron_mg: ing.iron_mg_per_serving || 0,
+        vitamin_c_mg: ing.vitamin_c_mg_per_serving || 0,
+        vitamin_d_mcg: ing.vitamin_d_mcg_per_serving || 0,
+        saturated_fat_g: ing.saturated_fat_g_per_serving || 0,
+        cholesterol_mg: ing.cholesterol_mg_per_serving || 0,
+      },
+    ),
+  }
+}
+
 const MYFOOD_TAG: Record<MyFoodKind, { label: string; bg: string; fg: string }> = {
   favorite: { label: 'Fav', bg: '#fef2f2', fg: '#dc2626' },
   recipe: { label: 'Recipe', bg: '#ecfdf5', fg: '#16a34a' },
+  ingredient: { label: 'Ingredient', bg: '#eff6ff', fg: '#2563eb' },
   recent: { label: 'Recent', bg: '#fff7ed', fg: '#ea580c' },
 }
 
@@ -193,7 +272,7 @@ const MYFOOD_TAG: Record<MyFoodKind, { label: string; bg: string; fg: string }> 
 // Search
 // ---------------------------------------------------------------------------
 
-function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
+function SearchPane({ onPick }: { onPick: (p: Patch, saveAsFood?: boolean) => void }) {
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
   const [hits, setHits] = useState<IngredientHit[]>([])
@@ -217,20 +296,27 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
     queryFn: () => nutritionApi.logs.list(today),
   })
 
-  // "My foods": favorites + saved recipes + recent logs, filtered by the query
-  // and deduped by name (recipe > favorite > recent). Mirrors the Add screen.
+  // "My foods": favorites + saved recipes + their ingredients + recent logs,
+  // filtered by the query and deduped by name (recipe > favorite > ingredient
+  // > recent). Mirrors the Add screen.
   const myFoods: MyFood[] = useMemo(() => {
     const query = q.trim().toLowerCase()
     const match = (name: string) => !query || name.toLowerCase().includes(query)
     const favs = favorites.filter((f) => match(f.name)).map(favToMyFood)
     const recs = recipes.filter((r) => match(r.name)).map(recipeToMyFood)
+    const ings = recipes.flatMap((r) =>
+      (r.ingredients ?? [])
+        .map((ing, i) => ({ ing, i }))
+        .filter(({ ing }) => match(ing.name))
+        .map(({ ing, i }) => recipeIngredientToMyFood(r.id, i, ing)),
+    )
     const recent = [...(dayLogs?.items ?? [])]
       .reverse()
       .filter((l) => match(l.name) || (l.description ?? '').toLowerCase().includes(query))
       .map(logToMyFood)
     const seen = new Set<string>()
     const out: MyFood[] = []
-    for (const mf of [...recs, ...favs, ...recent]) {
+    for (const mf of [...recs, ...favs, ...ings, ...recent]) {
       const key = mf.hit.name.trim().toLowerCase()
       if (!key || seen.has(key)) continue
       seen.add(key)
@@ -318,7 +404,7 @@ function SearchPane({ onPick }: { onPick: (p: Patch) => void }) {
             {myFoods.map((mf) => {
               const tag = MYFOOD_TAG[mf.kind]
               return (
-                <Pressable key={mf.key} style={s.hitRow} onPress={() => onPick(hitToPatch(mf.hit))}>
+                <Pressable key={mf.key} style={s.hitRow} onPress={() => onPick(hitToPatch(mf.hit), false)}>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={s.hitName} numberOfLines={2}>{mf.hit.name}</Text>
