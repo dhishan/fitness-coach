@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     # Backstop on NEW funny-workout-name generations per user per hour (the LLM
     # call). Idempotency makes re-fires free; this caps a looping client. <=0 off.
     workout_title_limit_per_hour: int = 40
+    # Per-user cap (per 60s) on LLM-backed REST endpoints (nutrition estimates,
+    # goal suggestions, next-workout suggestions). Cost-abuse backstop. <=0 off.
+    llm_rate_limit_per_min: int = 20
+    # Dedicated token for POST /internal/sentry-test. Empty = endpoint disabled.
+    # Never reuse the JWT secret for this.
+    sentry_test_token: str = ""
 
     model_config = {"extra": "ignore", "env_file": ".env"}
 

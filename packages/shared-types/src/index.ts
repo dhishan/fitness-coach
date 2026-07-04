@@ -130,6 +130,7 @@ export interface StartChatResponse {
 }
 
 export interface TemplateEntry {
+  tracking?: Tracking // denormalized from the exercise at plan-creation time; defaults 'reps'
   exercise_id: string
   exercise_name: string
   target_sets: number
