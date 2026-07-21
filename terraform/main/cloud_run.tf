@@ -26,6 +26,10 @@ resource "google_cloud_run_v2_service" "backend" {
         # CPU throttled when no request is active; SSE streams keep CPU allocated
         # during chat generation.
         cpu_idle = true
+        # Full CPU during container startup so the import-heavy app (litellm,
+        # Firestore, MCP SDK) cold-starts fast enough for scale-to-zero to be
+        # usable. Only applies during boot, so it does not affect steady cost.
+        startup_cpu_boost = true
         limits = {
           cpu    = "1"
           memory = "512Mi"
